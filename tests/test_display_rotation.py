@@ -25,7 +25,7 @@ class DisplayRotationTests(unittest.TestCase):
         self.assertIn('class="system-tabs" aria-label="System settings" role="tablist"', html)
         self.assertEqual(html.count('data-system-panel='), 6)
         self.assertIn('aria-controls="system-web"', html)
-        self.assertIn('data-system-anchor="system-web">Password</button>', html)
+        self.assertIn('data-system-anchor="system-web">Access</button>', html)
         self.assertIn('.system-tabs button[aria-selected="true"]', css)
         self.assertIn('.system-tab-panel>summary{display:none}', css)
 
