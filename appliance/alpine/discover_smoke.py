@@ -51,6 +51,7 @@ assert horizontal == Gtk.PolicyType.AUTOMATIC and vertical == Gtk.PolicyType.NEV
 recommendations = scroller.get_next_sibling()
 assert isinstance(recommendations, Gtk.ScrolledWindow)
 recommendation_track = recommendations.get_child()
+if not isinstance(recommendation_track, Gtk.Box): recommendation_track = recommendation_track.get_child()
 context = recommendation_track.get_first_child()
 assert context.has_css_class("recommendation-card")
 reason = context.get_first_child().get_next_sibling()
