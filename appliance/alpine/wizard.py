@@ -63,7 +63,7 @@ class Wizard(Gtk.Application):
             self.progress = result.get("progress", {})
             if self.progress.get("complete"): self.quit(); return
             if self.initial and self.progress:
-                self.stage = next((index + 1 for index, key in enumerate(("hostname", "network", "roon", "display")) if not self.progress.get(key)), 5)
+                self.stage = next((index for index, key in enumerate(("orientation", "hostname", "network", "roon", "display")) if not self.progress.get(key)), 5)
             self.initial = False
             self.snapshot = result; self.render()
         self.async_call({"action": "status"}, loaded)
@@ -121,7 +121,7 @@ class Wizard(Gtk.Application):
 
     def render(self):
         self.clear(self.content); self.clear(self.footer); self.keyboard.set_visible(False); self.entry = None
-        titles = ["Welcome to Pi Home", "Name your device", "Connect to your network", "Connect to Roon", "Set up your display", "Finish setup"]
+        titles = ["Choose your display", "Name your device", "Connect to your network", "Connect to Roon", "Choose theme and region", "Finish setup"]
         self.title.set_text(f"{self.stage + 1}/6 · {titles[self.stage]}")
         if self.progress.get("theme") == "fresh-mint": self.window.add_css_class("mint")
         else: self.window.remove_css_class("mint")
@@ -129,8 +129,20 @@ class Wizard(Gtk.Application):
             self.footer.append(self.button("Back", lambda: self.back()))
         self.footer.append(self.button("Refresh", self.refresh))
         if self.stage == 0:
-            self.content.append(self.label("A native music touchscreen. We’ll name this Pi, connect it, choose a Roon zone and prepare the display. No terminal needed."))
-            self.footer.append(self.button("Get started", lambda: self.next()))
+            self.content.append(self.label("First choose your display and orientation. This screen uses the panel’s native orientation so touch matches. We’ll restart to apply picture and touch together, then continue setup."))
+            profiles = ["auto", "original", "touch2-5", "touch2-7", "touch2-10"]
+            profile = Gtk.DropDown.new_from_strings(["Automatic / HDMI", "Original Touch Display", "Touch Display 2 · 5-inch", "Touch Display 2 · 7-inch", "Touch Display 2 · 10-inch"])
+            profile.set_selected(profiles.index(self.progress.get("profile", "auto"))); self.content.append(profile)
+            rotations = ["normal", "90", "180", "270"]
+            rotation = Gtk.DropDown.new_from_strings(["Native orientation", "90° clockwise · landscape", "180°", "270° clockwise · landscape"])
+            rotation.set_selected(rotations.index(self.progress.get("rotation", "normal"))); self.content.append(rotation)
+            profile.connect("notify::selected", lambda *_: rotation.set_selected(1 if profiles[profile.get_selected()].startswith("touch2-") else 0))
+            def apply_orientation():
+                def saved(result):
+                    self.progress = result["progress"]
+                    self.async_call({"action": "reboot"}, lambda _: self.status.set_text("Restarting to apply display and touch orientation…"))
+                self.async_call({"action": "orientation", "profile": profiles[profile.get_selected()], "rotation": rotations[rotation.get_selected()]}, saved)
+            self.footer.append(self.button("Apply and restart", apply_orientation))
         elif self.stage == 1:
             self.content.append(self.label("This is its network name—for example pi-home-lounge. Web settings will be at http://NAME.local:8765/admin."))
             name = self.field("Device name", self.progress.get("hostname", "pi-home"))
@@ -147,13 +159,7 @@ class Wizard(Gtk.Application):
             select = self.button("Use this zone", lambda: self.advance({"action": "roon", "zone": zones[chooser.get_selected()]})); select.set_sensitive(bool(zones)); self.footer.append(select)
             self.content.append(self.button("Set up Roon later", lambda: self.advance({"action": "roon", "skip": True})))
         elif self.stage == 4:
-            self.content.append(self.label("Choose your display and region. Touch Display 2 starts in landscape. Driver changes apply after restarting."))
-            profiles = ["auto", "original", "touch2-5", "touch2-7", "touch2-10"]
-            profile = Gtk.DropDown.new_from_strings(["Automatic / HDMI", "Original Touch Display", "Touch Display 2 · 5-inch", "Touch Display 2 · 7-inch", "Touch Display 2 · 10-inch"])
-            profile.set_selected(profiles.index(self.progress.get("profile", "auto"))); self.content.append(profile)
-            rotations = ["normal", "90", "180", "270"]; rotation = Gtk.DropDown.new_from_strings(["Normal", "90° clockwise", "180°", "270° clockwise"])
-            rotation.set_selected(rotations.index(self.progress.get("rotation", "normal"))); self.content.append(rotation)
-            profile.connect("notify::selected", lambda *_: rotation.set_selected(1 if profiles[profile.get_selected()].startswith("touch2-") else 0))
+            self.content.append(self.label("Your display orientation is saved. Choose your theme and local region."))
             theme = Gtk.DropDown.new_from_strings(["Roon · purple", "Fresh Mint · full colour"]); theme.set_selected(1 if self.progress.get("theme") == "fresh-mint" else 0); self.content.append(theme)
             theme.connect("notify::selected", lambda *_: self.window.add_css_class("mint") if theme.get_selected() == 1 else self.window.remove_css_class("mint"))
             self.content.append(self.label("Choose your local timezone; it cannot be inferred reliably from the Pi. UTC is not selected automatically."))
@@ -161,7 +167,7 @@ class Wizard(Gtk.Application):
             regions = ["Choose region…", "Asia/Singapore", "Europe/London", "Europe/Paris", "America/New_York", "America/Los_Angeles", "Australia/Sydney", "Pacific/Auckland", "UTC"]
             region = Gtk.DropDown.new_from_strings(regions); self.content.append(region)
             region.connect("notify::selected", lambda *_: timezone.set_text(regions[region.get_selected()]) if region.get_selected() else None)
-            self.footer.append(self.button("Save display", lambda: self.advance({"action": "display", "profile": profiles[profile.get_selected()], "rotation": rotations[rotation.get_selected()], "theme": ("roon", "fresh-mint")[theme.get_selected()], "timezone": timezone.get_text()})))
+            self.footer.append(self.button("Save and continue", lambda: self.advance({"action": "display", "profile": self.progress["profile"], "rotation": self.progress["rotation"], "theme": ("roon", "fresh-mint")[theme.get_selected()], "timezone": timezone.get_text()})))
         elif self.stage == 5:
             self.content.append(self.label(f"Web settings: http://{self.progress.get('hostname')}.local:8765/admin\nUsername: admin · Choose at least 10 characters.\nWhen SSH is enabled, admin uses this same initial password. Keep it somewhere safe."))
             password = self.secret_field("Choose password")

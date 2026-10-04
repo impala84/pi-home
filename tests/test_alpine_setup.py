@@ -36,7 +36,7 @@ class AlpineSetupTests(unittest.TestCase):
         config = (self.root / "etc/pi-home/config.toml").read_text()
         self.assertIn('roon_zone_name = "Lounge"', config); self.assertIn('timezone = "Europe/London"', config)
         boot = (self.root / "boot/config.txt").read_text()
-        self.assertIn("ili79600-10-1inch", boot); self.assertNotIn("swapxy", boot); self.assertIn("kernel=vmlinuz-rpi", boot)
+        self.assertIn("ili79600-10-1inch,swapxy,invx", boot); self.assertIn("kernel=vmlinuz-rpi", boot)
         self.assertNotIn("password", self.setup.progress.read_text())
         env = self.root / "etc/pi-home/secrets.env"
         self.assertIn("ADMIN_PASSWORD=my-private-password", env.read_text()); self.assertEqual(env.stat().st_mode & 0o777, 0o600)
@@ -76,7 +76,7 @@ class AlpineSetupTests(unittest.TestCase):
         for rotation in ("90", "270"):
             self.setup.handle({"action": "display", "profile": "touch2-7", "rotation": rotation})
         text = (self.root / "boot/config.txt").read_text()
-        self.assertEqual(text.count("# BEGIN PI HOME SETUP"), 1); self.assertNotIn("swapxy", text)
+        self.assertEqual(text.count("# BEGIN PI HOME SETUP"), 1); self.assertIn("swapxy,invy", text)
         self.assertIn("kernel=vmlinuz-rpi", text)
 
     def test_invalid_zone_rotation_and_timezone_are_rejected(self):
@@ -131,6 +131,9 @@ class AlpineSetupTests(unittest.TestCase):
         orientation = importlib.util.module_from_spec(spec); spec.loader.exec_module(orientation)
         self.assertEqual(orientation.choose_output('HDMI-A-1 "HDMI"\n  1920x1080 px, 60 Hz (current)\nDSI-1 "DSI"\n  720x1280 px, 60 Hz (preferred, current)\n'), ("DSI-1", True))
         self.assertEqual(orientation.choose_output('HDMI-A-1 "HDMI"\n  720x1280 px, 60 Hz (current)\n'), (None, False))
+        with patch.object(orientation.Path, "exists", return_value=False), patch.object(orientation.subprocess, "run", return_value=Mock(stdout='DSI-1 "DSI"\n  720x1280 px, 60 Hz (current)\n')) as run:
+            orientation.main()
+        self.assertEqual(run.call_args.args[0], ["wlr-randr", "--output", "DSI-1", "--transform", "normal"])
 
     def test_touch_mapping_is_scoped_to_goodix_and_one_connected_dsi(self):
         import sys
@@ -143,11 +146,28 @@ class AlpineSetupTests(unittest.TestCase):
         self.assertEqual(mapping.connected_output(self.root), "DSI-1")
         rule = mapping.mapping_rule("DSI-1")
         self.assertIn('ATTRS{name}=="Goodix Capacitive TouchScreen"', rule)
-        self.assertIn('ENV{WL_OUTPUT}="DSI-1"', rule)
+        self.assertIn('ENV{WL_OUTPUT}=""', rule)
         self.assertIn('LIBINPUT_CALIBRATION_MATRIX}="1 0 0 0 1 0"', rule)
         (drm / "card2-DSI-2/status").write_text("connected")
         self.assertIsNone(mapping.connected_output(self.root))
         with self.assertRaises(ValueError): mapping.mapping_rule('DSI-1", RUN+="bad')
+
+    def test_orientation_is_first_and_does_not_complete_region(self):
+        self.setup.handle({"action": "orientation", "profile": "touch2-7", "rotation": "90"})
+        state = self.setup.saved()
+        self.assertTrue(state["orientation"])
+        self.assertNotIn("display", state)
+        self.assertNotIn("timezone", state)
+        self.assertIn("ili9881-7inch,swapxy,invx", (self.root / "boot/config.txt").read_text())
+        with patch.object(module.threading, "Timer") as timer:
+            self.assertTrue(self.setup.handle({"action": "reboot"})["ok"])
+            timer.assert_called_once()
+
+    def test_all_touch_rotations_have_one_kernel_owner(self):
+        for rotation, flags in (("normal", ""), ("90", ",swapxy,invx"), ("180", ",invx,invy"), ("270", ",swapxy,invy")):
+            self.setup.handle({"action": "orientation", "profile": "touch2-7", "rotation": rotation})
+            boot = (self.root / "boot/config.txt").read_text()
+            self.assertIn(f"dtoverlay=vc4-kms-dsi-ili9881-7inch{flags}\n", boot)
 
 
 if __name__ == "__main__": unittest.main()

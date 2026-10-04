@@ -1,8 +1,4 @@
-"""Bind the built-in Goodix touchscreen to its DSI output before Cage starts.
-
-wlroots rotates absolute input only when it is mapped to an output. Do not
-also apply a libinput calibration matrix or Device Tree input rotation.
-"""
+"""Keep Cage input transforms off: the Touch Display 2 kernel overlay rotates touch."""
 from pathlib import Path
 import re
 import subprocess
@@ -21,10 +17,10 @@ def connected_output(root):
 
 def mapping_rule(output):
     if not re.fullmatch(r"DSI-\d+", output): raise ValueError("Invalid DSI output")
-    return ('# Pi Home: one rotation owner, the mapped Cage output.\n'
+    return ('# Pi Home: kernel owns built-in touch rotation, not Cage.\n'
             'ACTION!="remove", SUBSYSTEM=="input", KERNEL=="event*", '
             'ENV{ID_INPUT_TOUCHSCREEN}=="1", ATTRS{name}=="Goodix Capacitive TouchScreen", '
-            f'ENV{{WL_OUTPUT}}="{output}", ENV{{LIBINPUT_CALIBRATION_MATRIX}}="1 0 0 0 1 0"\n')
+            'ENV{WL_OUTPUT}="", ENV{LIBINPUT_CALIBRATION_MATRIX}="1 0 0 0 1 0"\n')
 
 
 def main():
@@ -40,7 +36,7 @@ def main():
     subprocess.run(["udevadm", "control", "--reload-rules"], check=True, timeout=10)
     subprocess.run(["udevadm", "trigger", "--subsystem-match=input", "--action=change"], check=True, timeout=10)
     subprocess.run(["udevadm", "settle", "--timeout=10"], check=True, timeout=15)
-    print(f"Pi Home touch mapping: Goodix -> {output}" if output else "Pi Home touch mapping: no unambiguous DSI output")
+    print(f"Pi Home touch rotation: kernel overlay; Cage mapping disabled on {output}" if output else "Pi Home touch mapping: no unambiguous DSI output")
 
 
 if __name__ == "__main__": main()

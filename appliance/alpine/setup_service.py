@@ -96,7 +96,7 @@ class Setup:
             atomic(self.root / "var/lib/pi-home/update-status", "Update · Queued…\n")
             subprocess.Popen(["/usr/local/sbin/pi-home-alpine-update"], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
             return {"ok": True, "queued": True}
-        if action == "reboot" and state.get("complete"):
+        if action == "reboot" and (state.get("complete") or state.get("orientation")):
             threading.Timer(2, lambda: self.run(["/sbin/reboot"])).start()
             return {"ok": True}
         if state.get("complete"): raise ValueError("Setup is already complete.")
@@ -126,7 +126,7 @@ class Setup:
                     raise ValueError("Authorise Pi Home in Roon, refresh, then choose an available zone.")
             else: zone = ""
             self.setting("roon_zone_name", zone); state["roon"] = True; state["zone"] = zone
-        elif action == "display":
+        elif action in {"orientation", "display"}:
             profile = data.get("profile"); rotation = data.get("rotation")
             if not isinstance(profile, str) or not isinstance(rotation, str) or profile not in PROFILES or rotation not in {"normal", "90", "180", "270"}:
                 raise ValueError("Choose a supported display and orientation.")
@@ -144,14 +144,17 @@ class Setup:
             overlay = PROFILES[profile]
             if overlay:
                 if not (self.root / f"boot/overlays/{overlay}.dtbo").is_file(): raise ValueError("Display driver is missing from this image.")
-                # Cage transforms both output and touch coordinates. Rotating
-                # the input again in the overlay can map taps twice.
-                text += f"\n# BEGIN PI HOME SETUP\n[all]\ndtoverlay={overlay}\n# END PI HOME SETUP\n"
+                # Kernel owns built-in touch rotation; Cage owns picture only.
+                # WL_OUTPUT must stay unset to avoid a second input transform.
+                flags = {"90": ",swapxy,invx", "180": ",invx,invy", "270": ",swapxy,invy"}.get(rotation, "") if profile.startswith("touch2-") else ""
+                text += f"\n# BEGIN PI HOME SETUP\n[all]\ndtoverlay={overlay}{flags}\n# END PI HOME SETUP\n"
             atomic(boot, text)
             config = self.root / "etc/pi-home"
             atomic(config / "display-profile", profile); atomic(config / "display-transform", rotation)
-            self.setting("display_theme", theme); self.setting("timezone", timezone)
-            state.update(display=True, profile=profile, rotation=rotation, theme=theme, timezone=timezone)
+            state.update(orientation=True, profile=profile, rotation=rotation)
+            if action == "display":
+                self.setting("display_theme", theme); self.setting("timezone", timezone)
+                state.update(display=True, theme=theme, timezone=timezone)
         elif action == "finish":
             if not all(state.get(key) for key in ("hostname", "network", "roon", "display")):
                 raise ValueError("Complete the setup steps first.")

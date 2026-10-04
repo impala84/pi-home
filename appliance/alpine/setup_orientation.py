@@ -23,7 +23,8 @@ def main():
             result = subprocess.run(["wlr-randr"], capture_output=True, text=True, timeout=3)
             output, portrait = choose_output(result.stdout)
             if output:
-                transform = {"90": "270", "270": "90"}.get(rotation, rotation) if rotation else ("270" if portrait else "normal")
+                # First screen stays native: no output-only rotation before choice.
+                transform = {"90": "270", "270": "90"}.get(rotation, rotation) if rotation else "normal"
                 if transform in {"normal", "90", "180", "270"}:
                     subprocess.run(["wlr-randr", "--output", output, "--transform", transform], check=True, timeout=3)
                     print(f"Pi Home setup orientation: {output} transform={transform}", flush=True)

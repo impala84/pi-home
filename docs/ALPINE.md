@@ -6,6 +6,15 @@ Do not install it over the working Pi. Use a separate SD card.
 
 ## Combined recovery image — 4 October 2026
 
+**Physical test failed:** `764694f` still left touch in portrait coordinates
+while the picture was landscape. Its automated checks did not validate touch.
+The next revision starts in native orientation with display selection first,
+saves the Touch Display 2 kernel overlay's `swapxy`/`invx`/`invy` parameters,
+and restarts before continuing to device naming. Cage rotates the picture only;
+the Goodix rule explicitly clears `WL_OUTPUT` to prevent double input rotation.
+Region/theme remain a later step. This replaces the mapping strategy described
+in the historical notes below; physical acceptance is still required.
+
 Revision `764694f`: [combined ARM64 image and update checks](https://github.com/impala84/pi-home/actions/runs/37191573089)
 passed, including both API services, real GTK setup/icons, SSH policy, real
 Python/npm staging, atomic rollback after a simulated failed health check,
@@ -171,10 +180,11 @@ touch keyboard behaviour and Roon LAN pairing still require physical acceptance.
 
 Display auto-detection is initially enabled. The build must include the Pi 5 device tree
 and 10-inch Touch Display 2 overlay, but package presence does not prove hardware
-operation. The wizard writes a backed-up, managed display overlay. Cage handles
-both output and touch rotation, without duplicate input overlay transforms.
-Setup rotates a native portrait DSI output to landscape before showing GTK;
-saved orientation wins on later boots and HDMI is left unchanged.
+operation. The first wizard screen chooses display type and orientation in
+native portrait. The wizard writes a backed-up, managed display overlay with
+matching kernel touch rotation and restarts into the naming screen. Cage
+rotates the picture only; built-in Goodix input remains unmapped in Cage.
+Saved orientation wins on later boots and HDMI is left unchanged.
 Touch Display 2 output rotation uses the existing Cage
 launcher on the next boot. Automatic/HDMI and original display profiles support
 Normal only in this prototype. The wizard rejects other rotations for those

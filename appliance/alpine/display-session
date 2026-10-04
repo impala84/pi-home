@@ -1,8 +1,8 @@
 #!/bin/sh
 set -eu
 # The helper reports completion; the unprivileged display never reads its state.
-# Rotate a native portrait DSI panel before showing the keyboard. Leave HDMI
-# and already-landscape panels untouched. Saved transforms win on later boots.
+# First boot stays native for orientation selection. Later boots use the saved
+# picture rotation alongside the boot overlay's matching touch rotation.
 python3 /opt/pi-home/appliance/alpine/setup_orientation.py
 python3 /opt/pi-home/appliance/alpine/wizard.py
 exec /opt/pi-home/scripts/pi-bus-cage-launch
