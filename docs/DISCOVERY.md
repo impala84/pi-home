@@ -1,7 +1,7 @@
 # v1.1 Discover beta — 4 October 2026
 
 Development branch: `discover-v1.1`. Production `main` and `v1.0.0` remain unchanged.
-This branch contains the v1.1.0-beta.11 candidate, not completed stable v1.1. Native Daily is a single vertically continuous feed: Mixes render first and For You follows when ready, while each row is a compact horizontal carousel with touch swiping and subtle arrows. Recent history, added albums, Daily groups and releases request bounded previews rather than waiting for complete private Roon graphs. The outer touchscreen lists intentionally hide scrollbars. Recommendation reasons use the theme accent while the seed album remains white. Genre tiles use bundled symbolic SVGs instead of font glyphs. Regression coverage includes the production asset handler and a real Alpine GTK/Xvfb Discover smoke test.
+This branch contains the v1.1.0-beta.12 candidate, not completed stable v1.1. Native Daily is a single vertically continuous feed: Mixes render first and For You follows when ready, while each roomy row is an arrow-free kinetic horizontal swipe track. Touchscreen discovery requests no longer wait behind the general device poll, and leaving Daily invalidates its obsolete queued private-API work. Recent history, added albums, Daily groups and releases request bounded previews rather than complete private Roon graphs. The outer touchscreen lists intentionally hide scrollbars. Recommendation reasons use the theme accent while the seed album remains white. Genre tiles use bundled symbolic SVGs instead of font glyphs. Regression coverage includes the production asset handler and a real Alpine GTK/Xvfb Discover smoke test.
 
 ## Starting point and isolation
 

@@ -9,7 +9,7 @@ const discoverTabs = [['recent','RECENT','RECENT'],['browse','BROWSE','BROWSE'],
 function responsiveLabel(element,full,compact){const normal=document.createElement('span'),short=document.createElement('span');normal.className='nav-label-full';short.className='nav-label-compact';normal.textContent=full;short.textContent=compact;element.replaceChildren(normal,short);}
 function loadingNotice(){const status=document.createElement('p');status.className='loading-notice';status.setAttribute('role','status');status.setAttribute('aria-live','polite');status.textContent='Loading…';return status;}
 function initDiscover() {
-  const css=document.createElement('link');css.rel='stylesheet';css.href='discovery.css?v=1108';document.head.append(css);
+  const css=document.createElement('link');css.rel='stylesheet';css.href='discovery.css?v=1112';document.head.append(css);
   const nav=document.createElement('nav');nav.id='discover-nav';nav.className='music-subnav';nav.setAttribute('aria-label','Discover');nav.hidden=true;
   for(const [id,label,compact] of discoverTabs){const button=document.createElement('button');responsiveLabel(button,label,compact);button.dataset.discover=id;button.onclick=()=>openDiscover(id);nav.append(button);} document.body.append(nav);
   const panel=document.createElement('section');panel.id='discovery-view';panel.className='discovery-view';panel.hidden=true;document.body.append(panel);
@@ -73,17 +73,9 @@ function renderDiscover(data) {
   const group=(title,items)=>{
     const section=document.createElement('section');
     if(title){const heading=document.createElement('h2');heading.className='browser-section';heading.textContent=title;section.append(heading);}
-    const paged=discoveryTab==='daily'&&!discoveryMix;
     const grid=document.createElement('div');grid.className='discovery-grid';
-    if(paged)grid.classList.add('daily-grid');
-    let page=0;const pages=Math.ceil(items.length/4);
-    const pager=document.createElement('nav');pager.className='daily-pager';pager.setAttribute('aria-label',`${title||'Mixes'} pages`);
-    const previous=document.createElement('button'),next=document.createElement('button'),position=document.createElement('span');
-    previous.textContent='PREVIOUS';next.textContent='NEXT';
-    const draw=()=>{grid.replaceChildren(...(paged?items.slice(page*4,page*4+4):items).map(discoveryCard));previous.disabled=page===0;next.disabled=page+1>=pages;position.textContent=`${page+1} / ${pages}`;};
-    previous.onclick=()=>{if(page>0){page--;draw();}};next.onclick=()=>{if(page+1<pages){page++;draw();}};
-    draw();section.append(grid);
-    if(paged&&pages>1){pager.append(previous,position,next);section.append(pager);}
+    if(discoveryTab==='daily'&&!discoveryMix)grid.classList.add('daily-grid');
+    grid.replaceChildren(...items.map(discoveryCard));section.append(grid);
     content.append(section);
   };
   group(null,data.items||[]);

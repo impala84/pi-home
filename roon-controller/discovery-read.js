@@ -117,7 +117,7 @@ async function readDiscovery(client, sdk, section, id) {
   let result;
   if (section === 'added') return recentlyAdded(client,sdk);
   if (section === 'recent') {
-    const history = await exportPlayHistory(client, {limit: 40, pageSize: 20, timeoutMs: 5000});
+    const history = await exportPlayHistory(client, {limit: 16, pageSize: 16, timeoutMs: 3500});
     return {items: model.recentAlbums(client.graph, history.events, 8)};
   }
   if (section === 'picks') {

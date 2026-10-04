@@ -63,13 +63,15 @@ class NativeBrowserControlsTests(unittest.TestCase):
             function()
             self.assertEqual((run / "display-source-commit").read_text().strip(), "a" * 40)
 
-    def test_daily_uses_swipeable_carousels_without_pagination_controls(self):
+    def test_daily_uses_roomy_native_swipe_tracks_without_arrow_controls(self):
         code = SOURCE.read_text(encoding="utf-8")
         self.assertIn('scroller.set_kinetic_scrolling(True)', code)
-        self.assertIn('"go-previous-symbolic"', code)
-        self.assertIn('"go-next-symbolic"', code)
-        self.assertIn('self.discovery_daily_sections.setdefault(section_key, overlay)', code)
-        self.assertNotIn('("PREVIOUS", page - 1)', code)
+        self.assertIn('scroller.set_overlay_scrolling(True)', code)
+        self.assertIn('Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=18)', code)
+        self.assertIn('self.discovery_daily_sections.setdefault(section_key, scroller)', code)
+        self.assertNotIn('"go-previous-symbolic"', code)
+        self.assertNotIn('"go-next-symbolic"', code)
+        self.assertNotIn('carousel-arrow', code)
 
     def test_genre_icons_are_bundled_svgs_not_font_glyphs(self):
         import xml.etree.ElementTree as ET
@@ -139,8 +141,23 @@ class NativeBrowserControlsTests(unittest.TestCase):
         self.assertEqual(min(172,size),172)
         source=SOURCE.read_text(encoding="utf-8")
         self.assertIn('columns, size = self.browser_grid_metrics()',source)
-        self.assertIn('size = min(192 if self.discovery_section == "daily" else 172, size)',source)
+        self.assertIn('size = min(212 if self.discovery_section == "daily" else 172, size)',source)
         self.assertNotIn('MORE RECOMMENDATIONS',source)
+
+    def test_discover_fetch_is_not_queued_behind_the_general_status_poll(self):
+        source=SOURCE.read_text(encoding="utf-8")
+        poll=source[source.index('    def poll(self):'):source.index('    def capture_display',source.index('    def poll(self):'))]
+        self.assertNotIn('/api/discovery?',poll)
+        self.assertIn('threading.Thread(target=self._fetch_discovery',source)
+        self.assertIn('GLib.timeout_add(600 if data and data.get("status") == "loading" else 1200',source)
+
+    def test_reboot_confirmation_uses_a_full_overlay_with_a_centred_card(self):
+        source=SOURCE.read_text(encoding="utf-8")
+        confirm=source[source.index('    def confirm_reboot'):source.index('    def _request_update',source.index('    def confirm_reboot'))]
+        self.assertIn('shade = Gtk.Overlay()',confirm)
+        self.assertIn('card.set_halign(Gtk.Align.CENTER)',confirm)
+        self.assertIn('card.set_valign(Gtk.Align.CENTER)',confirm)
+        self.assertIn('shade.add_overlay(card)',confirm)
 
     def test_mix_tracks_use_playlist_rows_and_register_lazy_thumbnail_without_playback(self):
         owner=SimpleNamespace(label=lambda text,style,*args:LayoutWidget(text=text,style=style),set_browser_placeholder=Mock(),open_discovery_item=Mock(),discovery_pictures={},discovery_cards=[],queue_thumbnail_cache={})

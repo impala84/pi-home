@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.0-beta.12 Alpine — 4 October 2026
+
+- Replaces Daily's arrow overlays and paging with roomy, kinetic horizontal swipe tracks.
+- Centres the restart confirmation card within its full-screen dimmed backdrop.
+- Fetches touchscreen Discover independently of the general device refresh and cancels obsolete Daily work when another page is selected, avoiding a private-API backlog.
+- Bounds Recent history more tightly so its first useful view arrives sooner.
+
 ## 1.1.0-beta.11 Alpine — 4 October 2026
 
 - Makes an unchanged update self-repair a stale touchscreen process instead of incorrectly returning “unchanged”.

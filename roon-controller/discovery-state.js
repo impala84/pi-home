@@ -13,17 +13,19 @@ class DiscoveryManager {
     if (JSON.stringify(target) === JSON.stringify(this.target)) return;
     this.target = target; this.cache.clear(); this.images.clear(); this.pending.clear(); this.interests.clear(); this.child?.kill();
   }
-  state(section, id = '', client = '') {
+  rememberInterest(client, keys) {
+    if (!client) return;
+    if (!/^[\w-]{1,80}$/.test(client)) throw new Error('Invalid Discover session');
+    this.interests.set(client,{keys:new Set(keys),at:this.now()});
+    while(this.interests.size>64)this.interests.delete(this.interests.keys().next().value);
+  }
+  state(section, id = '', client = '', keepInterest = false) {
     if (!['recent', 'added', 'daily', 'picks', 'releases', 'mix'].includes(section)) throw new Error('Unknown Discover section');
     if (section === 'mix' && (!/^[a-f0-9]{2,160}$/i.test(id) || id.length % 2)) throw new Error('Invalid mix reference');
     if (!this.target) return {status: 'unavailable', message: 'Connect and authorise Roon to use Discover.', items: []};
     const key = `${section}:${id}`; const cached = this.cache.get(key);
-    if (client) {
-      if (!/^[\w-]{1,80}$/.test(client)) throw new Error('Invalid Discover session');
-      this.interests.set(client,{key,at:this.now()});
-      while(this.interests.size>64)this.interests.delete(this.interests.keys().next().value);
-    }
-    const wanted = () => !client || [...this.interests.values()].some(value=>value.key===key && this.now()-value.at<60000);
+    if (client && !keepInterest) this.rememberInterest(client,[key]);
+    const wanted = () => !client || [...this.interests.values()].some(value=>value.keys?.has(key) && this.now()-value.at<60000);
     if ((!cached || cached.expires <= this.now()) && !this.actionBusy && !this.pending.has(key) && this.pending.size < 4) {
       const target = this.target;
       const job = this.tail.catch(() => {}).then(() => {
@@ -41,8 +43,9 @@ class DiscoveryManager {
     return {status: 'loading', message: 'Loading…', items: []};
   }
   home(client = '') {
-    const mixes = this.state('daily', '', client ? `${client}-mixes` : '');
-    const picks = this.state('picks', '', client ? `${client}-picks` : '');
+    if (client) this.rememberInterest(client,['daily:','picks:']);
+    const mixes = this.state('daily', '', client, true);
+    const picks = this.state('picks', '', client, true);
     const ready = mixes.status === 'ready' || picks.status === 'ready';
     if (!ready) {
       const unavailable = mixes.status === 'unavailable' && picks.status === 'unavailable';

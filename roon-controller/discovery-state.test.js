@@ -45,3 +45,9 @@ test('Daily home progressively combines mixes and recommendations',()=>{
   manager.cache.set('picks:',{status:'ready',items:[],groups:[{seed:{title:'Seed'},items:[]}],expires:99});
   home=manager.home('touch');assert.equal(home.groups.length,1);assert.equal(home.refreshing,false);
 });
+test('leaving Daily drops its queued recommendation work instead of delaying the selected page',async()=>{
+  const manager=new DiscoveryManager();manager.setTarget({host:'example'});const calls=[];
+  manager.run=async(_target,section)=>{calls.push(section);return {status:'ready',items:[]};};
+  manager.home('touch');manager.state('releases','','touch');
+  await manager.tail;assert.deepEqual(calls,['releases']);
+});

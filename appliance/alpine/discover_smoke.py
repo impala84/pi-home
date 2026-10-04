@@ -28,10 +28,9 @@ display.roon_views.set_visible_child_name("discover")
 items = [{"title": f"Mix {number}", "artist": "Artist", "kind": "mix"} for number in range(1, 6)]
 groups = [{"reason":"recent","seed":{"title":"Altered State"},"items":items}]
 assert display.render_discover(1, {"status": "ready", "items": items, "groups": groups}) is False
-overlay = display.discovery_list.get_first_child()
-assert isinstance(overlay, Gtk.Overlay)
-scroller = overlay.get_child(); track = scroller.get_child()
+scroller = display.discovery_list.get_first_child()
 assert isinstance(scroller, Gtk.ScrolledWindow)
+track = scroller.get_child()
 if not isinstance(track, Gtk.Box): track = track.get_child()
 assert isinstance(track, Gtk.Box)
 cards=[]; child=track.get_first_child()
@@ -39,9 +38,17 @@ while child: cards.append(child); child=child.get_next_sibling()
 assert len(cards) == 5
 first = cards[0]
 assert first.has_css_class("daily-card")
-heading = overlay.get_next_sibling()
+heading = scroller.get_next_sibling()
 assert isinstance(heading, Gtk.Box) and heading.has_css_class("recommendation-heading")
 assert heading.get_first_child().get_text() == "Because you listened to"
 assert heading.get_last_child().get_text() == "Altered State"
 assert display.discovery_daily_sections.keys() == {"mixes", "recommendations"}
-print("Native Alpine GTK Discover shows a swipeable Daily feed with compact cards and split recommendation headings.")
+assert display.discovery_daily_sections["mixes"] is scroller
+display.root_overlay = Gtk.Overlay(); display.root_overlay.set_child(Gtk.Box())
+display.device_status = display.label("")
+display.confirm_reboot()
+shade = display.reboot_confirmation
+assert isinstance(shade, Gtk.Overlay)
+card = shade.get_last_child()
+assert card.get_halign() == Gtk.Align.CENTER and card.get_valign() == Gtk.Align.CENTER
+print("Native Alpine GTK Discover shows roomy arrow-free swipe tracks and a centred restart panel.")

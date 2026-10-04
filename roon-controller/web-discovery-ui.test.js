@@ -25,15 +25,15 @@ test('source display uses the selected player or zone name, not the protocol bra
 test('Recent modes and optional recommendations have restorable URLs and shared desktop typography',()=>{
   assert.match(read('discovery.js'),/Recently Listened/);assert.match(read('discovery.js'),/Recently Added/);assert.match(read('discovery.js'),/FOR YOU/);assert.match(read('app.js'),/params.get\('view'\)==='picks'/);assert.match(read('discovery.css'),/@media\(min-width:901px\)\{#music-nav button,#discover-nav button\{font-size:14px/);
 });
-test('Daily pages keep four cards and retain the remaining selections without truncating mix tracks',()=>{
+test('Daily pages expose every tile in one arrow-free horizontal swipe track',()=>{
   const panel=element('panel');panel.append=(...items)=>panel.children.push(...items);panel.scrollTop=0;
   const create=tag=>{const node=element(tag);node.append=(...items)=>node.children.push(...items);node.classList={add:()=>{}};return node;};
   const context={document:{createElement:create},$:()=>panel};
   vm.createContext(context);vm.runInContext(read('discovery.js')+'; discoveryTab="daily"; discoveryCard=item=>item;',context);
   context.data={status:'ready',items:[1,2,3,4,5]};vm.runInContext('renderDiscover(data)',context);
-  const section=panel.children[0],grid=section.children[0],pager=section.children[1];
-  assert.deepEqual(Array.from(grid.children),[1,2,3,4]);
-  assert.equal(pager.children[0].disabled,true);pager.children[2].onclick();
-  assert.deepEqual(Array.from(grid.children),[5]);assert.equal(pager.children[2].disabled,true);
-  pager.children[0].onclick();assert.deepEqual(Array.from(grid.children),[1,2,3,4]);
+  const section=panel.children[0],grid=section.children[0];
+  assert.deepEqual(Array.from(grid.children),[1,2,3,4,5]);
+  assert.equal(section.children.length,1);
+  assert.doesNotMatch(read('discovery.js'),/PREVIOUS|NEXT|daily-pager/);
+  assert.match(read('discovery.css'),/\.daily-grid\{display:flex;gap:22px;overflow-x:auto/);
 });
