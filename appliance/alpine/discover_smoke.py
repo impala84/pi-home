@@ -40,7 +40,8 @@ while child: cards.append(child); child=child.get_next_sibling()
 assert len(cards) == 5
 first = cards[0]
 assert first.has_css_class("daily-card")
-assert first.get_width_request() > 0 and first.get_height_request() > 0
+requested_width, requested_height = first.get_size_request()
+assert requested_width > 0 and requested_height > 0
 art = first.get_child().get_first_child()
 assert isinstance(art, Gtk.ScrolledWindow)
 assert art.get_min_content_width() == art.get_max_content_width()
