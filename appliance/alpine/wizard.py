@@ -170,12 +170,14 @@ class Wizard(Gtk.Application):
             region.connect("notify::selected", lambda *_: timezone.set_text(regions[region.get_selected()]) if region.get_selected() else None)
             self.footer.append(self.button("Save and continue", lambda: self.advance({"action": "display", "profile": self.progress["profile"], "rotation": self.progress["rotation"], "theme": ("roon", "fresh-mint")[theme.get_selected()], "timezone": timezone.get_text()})))
         elif self.stage == 5:
-            self.content.append(self.label(f"Web settings: http://{self.progress.get('hostname')}.local:8765/admin\nUsername: admin · Choose at least 8 characters.\nWhen SSH is enabled, admin uses this same initial password. Keep it somewhere safe."))
+            self.content.append(self.label(f"Web settings: http://{self.progress.get('hostname')}.local:8765/admin\nChoose the device account used for both Pi Home settings and SSH recovery."))
+            username = self.field("Device username", self.progress.get("username", "admin"))
             password = self.secret_field("Choose password")
             confirmation = self.secret_field("Enter password again")
+            self.content.append(self.label("Use 8–128 characters. Pi Home may warn about a simple password, but the choice is yours; keep it private because it controls the appliance."))
             ssh = Gtk.CheckButton(label="Enable SSH (recommended for recovery)"); ssh.set_active(True); self.content.append(ssh)
-            self.footer.append(self.button("Finish and restart", lambda: self.finish(password.get_text(), True, confirmation.get_text(), ssh.get_active())))
-            self.content.append(self.button("Finish without restart", lambda: self.finish(password.get_text(), False, confirmation.get_text(), ssh.get_active())))
+            self.footer.append(self.button("Finish and restart", lambda: self.finish(username.get_text(), password.get_text(), True, confirmation.get_text(), ssh.get_active())))
+            self.content.append(self.button("Finish without restart", lambda: self.finish(username.get_text(), password.get_text(), False, confirmation.get_text(), ssh.get_active())))
         child = self.footer.get_first_child()
         while child:
             child.set_hexpand(True)
@@ -184,14 +186,14 @@ class Wizard(Gtk.Application):
 
     def next(self): self.stage += 1; self.render()
     def back(self): self.stage -= 1; self.render()
-    def finish(self, password, reboot, confirmation="", ssh=True):
+    def finish(self, username, password, reboot, confirmation="", ssh=True):
         if password != confirmation:
             self.status.set_text("Passwords do not match. Please enter them again."); return
         def saved(_):
             if reboot:
                 self.async_call({"action": "reboot"}, lambda _: self.quit())
             else: self.quit()
-        self.async_call({"action": "finish", "password": password, "confirmation": confirmation, "ssh": ssh}, saved)
+        self.async_call({"action": "finish", "username": username, "password": password, "confirmation": confirmation, "ssh": ssh}, saved)
 
 
 if __name__ == "__main__": Wizard().run(None)

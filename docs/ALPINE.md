@@ -1,10 +1,11 @@
 # Alpine Beta appliance
 
-Current version: **1.1.0-beta.16 Alpine Beta**. Updates stop the display once and restart
-backends without OpenRC dependency cascades. Genre, playlist and fallback tiles use
-bundled SVGs, not font glyphs. This update is available on the Alpine branch.
+Current version: **1.1.0-beta.17 Alpine Beta**. First-run setup creates an
+owner-chosen device/SSH account, and Settings can manage the installed Netdata
+Agent and its Cloud connection without an Alpine shell. This update is available
+on the Alpine branch.
 
-Software version labels include “Alpine” (for example, “1.1.0-beta.16 Alpine”)
+Software version labels include “Alpine” (for example, “1.1.0-beta.17 Alpine”)
 to distinguish these builds from Raspberry Pi OS. Setup and web password changes
 require at least eight characters; setup still requires confirmation.
 Sleep and brightness are applied by the local root-owned helper: sleep writes zero
@@ -21,8 +22,11 @@ Do not install it over the working Pi. Use a separate SD card.
 
 Feature parity follow-up: new images include grim for screenshot capture and
 Netdata/OpenRC packages (monitoring remains opt-in, not boot-enabled by the
-factory). Netdata status and enable/disable actions now use OpenRC rather than
-systemd. Existing images can use System → Services → Install system tools after updating.
+factory). System → Services shows the installed Agent version, running state,
+local dashboard and Cloud claim state. It can connect, reconnect or disconnect
+the existing Agent using that installed version's supported claim mechanism;
+it does not reinstall Netdata. Existing images can use System → Services →
+Install system tools after updating.
 This explicit action installs fixed screenshot, process diagnostics, network time
 and Netdata packages, without enabling Netdata automatically. Reboot afterwards
 applies the transparent touchscreen cursor theme. Application updates do not
@@ -164,17 +168,19 @@ Alpine 3.24.2 ARM64, Raspberry Pi-patched kernel and firmware, persistent
 ext4 root filesystem (not a whole-system RAM disk), OpenRC supervised services,
 seatd/Cage/Wayland and the existing Python GTK4 native display. Node runs the
 existing Roon controller. No desktop, Chromium or shared root password.
-OpenSSH starts by default, with root login forbidden and only `admin` allowed.
-The admin account stays locked until setup saves a confirmed password.
+OpenSSH starts by default, with root login forbidden and only the account chosen
+during setup allowed. The suggested username is `admin`, but it is not fixed.
+The account stays locked until setup saves a confirmed owner-chosen password.
 Setup offers Enable SSH, on by default; turning it off stops the service and
-removes its boot entry. SSH and web settings share the initial password, but
-later password changes are independent. Do not forward SSH to the internet.
+removes its boot entry. SSH and web settings share the initial credentials.
+System → Access can update the device/SSH credentials, while the separate web
+controls can subsequently diverge. Do not forward SSH to the internet.
 SSH host keys are generated on-device, not distributed with the image.
 Ethernet DHCP and mDNS are included. Pi Home configuration and Roon pairing
 persist on the root filesystem. Bus Times is off; the initial theme is Roon.
 The native first-boot wizard now covers device naming, Ethernet/Wi-Fi,
 Roon authorisation/zone selection (or explicit setup-later), display profile,
-orientation, theme/timezone and a confirmed user-chosen admin password. Fields
+orientation, theme/timezone and confirmed owner-chosen credentials. Fields
 offer password visibility, larger touch keys and pressed-state feedback.
 Timezone requires a regional choice rather than silently defaulting to UTC.
 An on-screen
@@ -184,7 +190,11 @@ setup complete; subsequent boots go straight into the main native display.
 
 A root-owned Unix socket helper accepts bounded setup actions only from the
 local `morningbus` account; it is not an HTTP endpoint. Names, zones, display
-profiles and password lengths are validated. Wi-Fi secrets are passed to
+profiles and password lengths are validated. Passwords of 8–128 characters are
+accepted after a plain-language warning even when Alpine's interactive `passwd`
+would call them weak; the image's BusyBox `chpasswd` receives the secret only on
+standard input. Credentials are not stored in setup progress or command output.
+Wi-Fi secrets are passed to
 NetworkManager without shell interpretation or command-output logging and are
 not recorded in the progress file. Privileged setup mutations are locked after
 completion (status and an explicit completion reboot remain available).
@@ -231,9 +241,10 @@ selected card). Start with Pi 5, wired Ethernet and HDMI if necessary to
 separate boot bring-up from DSI compatibility. The intended boot path starts
 Pi Home automatically; actual boot, DRM/seat ownership and touch are unproven.
 Follow the native wizard. It explains Roon Settings → Extensions, lists available
-zones and lets you choose a password for web settings (username `admin`).
-Use at least ten characters. The password is stored privately, not printed in
-logs or embedded in the build artifact. The Finish screen shows the named
+zones and lets you choose the device/SSH username and initial shared web password.
+Use at least eight characters. Simple passwords produce advice but remain the
+owner's choice. The password is stored privately, not printed in logs or embedded
+in the build artifact. The Finish screen shows the named
 device's `.local:8765/admin` address. Use the assigned IP if mDNS is unavailable.
 NetworkManager handles Ethernet DHCP and saved Wi-Fi connections. Wi-Fi/DSI,
 touch keyboard behaviour and Roon LAN pairing still require physical acceptance.
@@ -252,7 +263,8 @@ profiles rather than claiming they work. Display changes require restarting.
 
 ## SSH password recovery
 
-After setup, connect with `ssh admin@DEVICE.local`, using your setup password.
+After setup, connect with `ssh USERNAME@DEVICE.local`, using the username and
+password chosen during setup.
 Run `sudo pi-home-reset-password` to enter and confirm a new web password
 without printing it or changing your SSH password. Settings and Roon pairing
 are retained; restarting the web API invalidates existing web sessions.
@@ -263,9 +275,10 @@ the network. This revision still requires a new image or local shell access.
 
 - Roon **controller**, not Roon Bridge audio endpoint. Roon Bridge's Linux
   compatibility/redistribution is a separate gate; this image does not bundle it.
-- OS controls (Wi-Fi changes, reboot, profile/rotation, brightness and
-  LED actions) reject requests explicitly in prototype mode. Their systemd-based
-  privileged worker is not installed. UI settings may still show those controls.
+- Routine Wi-Fi, hostname, reboot, profile/rotation, brightness, status-light,
+  update, access and Netdata controls are handled by fixed Alpine helper actions.
+  Arbitrary package management and a general-purpose root console remain outside
+  the web interface by design.
 - No recovery console, rootfs expansion, OS rollback, Stable/Beta OS-channel
   integration or power-loss qualification yet. Application rollback is present;
   the new image starts with atomic deployment links, but power-loss safety is

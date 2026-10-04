@@ -132,17 +132,29 @@ class NativeBrowserControlsTests(unittest.TestCase):
         sidebar.children[-1].properties["callback"]()
         owner.open_discover.assert_called_once_with("daily","aabb",False)
 
-    def test_discover_uses_browse_four_column_metrics_on_the_landscape_touchscreen(self):
+    def test_discover_uses_large_fixed_four_column_metrics_on_the_landscape_touchscreen(self):
         monitor=SimpleNamespace(get_geometry=lambda:SimpleNamespace(width=1280))
         monitors=SimpleNamespace(get_n_items=lambda:1,get_item=lambda _index:monitor)
         gdk=SimpleNamespace(Display=SimpleNamespace(get_default=lambda:SimpleNamespace(get_monitors=lambda:monitors)))
         columns,size=native_method("browser_grid_metrics",{"Gdk":gdk})(SimpleNamespace())
         self.assertEqual(columns,4)
-        self.assertEqual(min(172,size),172)
+        discovery=native_method("discovery_grid_metrics",{"Gdk":gdk})(SimpleNamespace(),True)
+        self.assertEqual(discovery,(4,253))
         source=SOURCE.read_text(encoding="utf-8")
-        self.assertIn('columns, size = self.browser_grid_metrics()',source)
-        self.assertIn('size = min(212 if self.discovery_section == "daily" else 172, size)',source)
+        self.assertIn('columns, size = self.discovery_grid_metrics(self.discovery_section == "recent")',source)
+        self.assertIn('size = min(212, size)',source)
         self.assertNotIn('MORE RECOMMENDATIONS',source)
+
+    def test_daily_lazy_load_uses_each_horizontal_viewport(self):
+        source=SOURCE.read_text(encoding="utf-8")
+        self.assertIn('self.discovery_card_scrollers[id(card)] = scroller',source)
+        self.assertIn('horizontal.get_hadjustment()',source)
+        self.assertIn('get_hadjustment().connect("value-changed", self.load_visible_discovery_artwork)',source)
+
+    def test_new_release_detail_uses_discover_back_rail_not_browse_search(self):
+        source=SOURCE.read_text(encoding="utf-8")
+        self.assertIn('self.discovery_section in {"recent", "daily", "releases"}',source)
+        self.assertIn('from_browser and self.discovery_section == "releases"',source)
 
     def test_discover_fetch_is_not_queued_behind_the_general_status_poll(self):
         source=SOURCE.read_text(encoding="utf-8")

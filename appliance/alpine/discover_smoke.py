@@ -48,10 +48,15 @@ assert art.get_min_content_width() == art.get_max_content_width()
 assert art.get_min_content_height() == art.get_max_content_height()
 horizontal, vertical = scroller.get_policy()
 assert horizontal == Gtk.PolicyType.AUTOMATIC and vertical == Gtk.PolicyType.NEVER
-heading = scroller.get_next_sibling()
-assert isinstance(heading, Gtk.Box) and heading.has_css_class("recommendation-heading")
-assert heading.get_first_child().get_text() == "Because you listened to"
-assert heading.get_last_child().get_text() == "Altered State"
+recommendations = scroller.get_next_sibling()
+assert isinstance(recommendations, Gtk.ScrolledWindow)
+recommendation_track = recommendations.get_child()
+context = recommendation_track.get_first_child()
+assert context.has_css_class("recommendation-card")
+reason = context.get_first_child().get_next_sibling()
+seed = reason.get_next_sibling()
+assert reason.get_text() == "Because you listened to"
+assert seed.get_text() == "Altered State"
 assert display.discovery_daily_sections.keys() == {"mixes", "recommendations"}
 assert display.discovery_daily_sections["mixes"] is scroller
 display.browser_sidebar.set_visible(True)

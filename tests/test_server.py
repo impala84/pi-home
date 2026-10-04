@@ -7,7 +7,7 @@ from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
 from pi_bus_time_display.config import Config, load_config
-from pi_bus_time_display.server import State, active_wifi_ssid, automatic_display_target, clear_sleep_mode_on_start, display_target, home_assistant_set_state, home_assistant_set_value, read_display_mode, service_state, set_display_mode, system_snapshot, within_sleep_window, write_config, write_control_request
+from pi_bus_time_display.server import State, active_wifi_ssid, automatic_display_target, clear_sleep_mode_on_start, display_target, home_assistant_set_state, home_assistant_set_value, netdata_snapshot, read_display_mode, service_state, set_display_mode, system_snapshot, within_sleep_window, write_config, write_control_request
 
 
 class DisplayModeTests(unittest.TestCase):
@@ -154,6 +154,13 @@ class DisplayModeTests(unittest.TestCase):
             command.assert_called_once_with(["rc-service", "netdata", "status"])
         with patch.dict(os.environ, {"PI_HOME_APPLIANCE_PLATFORM": "alpine-prototype"}), patch("pi_bus_time_display.server.Path.is_file", return_value=False):
             self.assertEqual(service_state("netdata.service"), "not_installed")
+
+    def test_netdata_snapshot_reports_installed_version_and_cloud_state(self):
+        with patch("pi_bus_time_display.server.service_state", return_value="running"), patch("pi_bus_time_display.server.command_output", side_effect=["netdata v2.1.0", "Available: Yes\nClaimed: Yes\nClaimed Id: node-123\nOnline: Yes\n"]):
+            details = netdata_snapshot()
+        self.assertEqual(details["version"], "v2.1.0")
+        self.assertEqual(details["cloud_status"], "online")
+        self.assertEqual(details["claim_id"], "node-123")
 
     def test_unknown_mode_defaults_to_auto(self):
         with tempfile.TemporaryDirectory() as directory:

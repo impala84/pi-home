@@ -23,8 +23,8 @@ class AlpineSetupTests(unittest.TestCase):
         for overlay in module.PROFILES.values():
             if overlay: (boot / "overlays" / (overlay + ".dtbo")).touch()
         self.run = Mock(return_value="connected")
-        self.login_password = Mock()
-        self.setup = module.Setup(self.root, self.run, lambda: {"zones": [{"name": "Lounge"}]}, self.login_password)
+        self.login_credentials = Mock()
+        self.setup = module.Setup(self.root, self.run, lambda: {"zones": [{"name": "Lounge"}]}, self.login_credentials)
 
     def test_full_setup_persists_password_and_does_not_play_audio(self):
         self.setup.handle({"action": "name", "hostname": "Pi-Home-Lounge"})
@@ -42,7 +42,7 @@ class AlpineSetupTests(unittest.TestCase):
         env = self.root / "etc/pi-home/secrets.env"
         self.assertIn("ADMIN_PASSWORD=my-private-password", env.read_text()); self.assertEqual(env.stat().st_mode & 0o777, 0o600)
         self.assertEqual(self.run.call_args.args[0], ["rc-service", "pi-home-api", "restart"])
-        self.login_password.assert_called_once_with("my-private-password")
+        self.login_credentials.assert_called_once_with("admin", "my-private-password", self.root, self.run)
 
     def test_invalid_names_never_execute_commands(self):
         for name in ("-bad", "bad-", "x;reboot", "a b", "../root", "x\n", "x" * 64):
@@ -149,7 +149,7 @@ class AlpineSetupTests(unittest.TestCase):
         for password, confirmation in (("valid-password", "different-password"), (" valid-password", " valid-password"), ('"valid-password"', '"valid-password"')):
             with self.assertRaises(ValueError): self.setup.handle({"action": "finish", "password": password, "confirmation": confirmation})
         self.assertEqual(before, (self.root / "etc/pi-home/secrets.env").read_text())
-        self.login_password.assert_not_called()
+        self.login_credentials.assert_not_called()
 
     def test_ssh_can_be_disabled_explicitly(self):
         self.setup.save({"hostname": "pi-home", "network": True, "roon": True, "display": True})
@@ -158,10 +158,48 @@ class AlpineSetupTests(unittest.TestCase):
         self.assertIn(unittest.mock.call(["rc-update", "del", "sshd", "default"]), self.run.call_args_list)
 
     def test_ssh_password_is_stdin_not_process_arguments(self):
+        etc = self.root / "etc"; etc.mkdir(exist_ok=True)
+        (etc / "passwd").write_text("admin:x:1000:1000::/home/admin:/bin/ash\n")
+        (etc / "ssh/sshd_config.d").mkdir(parents=True)
         with patch.object(module.subprocess, "run", return_value=Mock(returncode=0)) as run:
-            module.set_login_password("safe-private-password")
+            module.set_login_credentials("admin", "safe-private-password", self.root, self.run)
         self.assertEqual(run.call_args.args[0], ["chpasswd"])
         self.assertEqual(run.call_args.kwargs["input"], "admin:safe-private-password\n")
+        self.assertIs(run.call_args.kwargs["stdout"], module.subprocess.DEVNULL)
+        self.assertNotIn("safe-private-password", " ".join(run.call_args.args[0]))
+
+    def test_custom_device_username_and_simple_password_are_allowed(self):
+        self.setup.save({"hostname": "pi-home", "network": True, "roon": True, "display": True})
+        self.setup.handle({"action": "finish", "username": "philip", "password": "12345678", "confirmation": "12345678"})
+        self.login_credentials.assert_called_once_with("philip", "12345678", self.root, self.run)
+        self.assertEqual(self.setup.saved()["username"], "philip")
+        self.assertNotIn("12345678", self.setup.progress.read_text())
+
+    def test_changing_device_username_locks_the_previous_local_account(self):
+        self.setup.save({"complete": True, "username": "admin"})
+        self.setup.handle({"action": "device_credentials", "username": "philip", "password": "12345678", "confirmation": "12345678"})
+        self.login_credentials.assert_called_once_with("philip", "12345678", self.root, self.run)
+        self.assertIn(unittest.mock.call(["passwd", "-l", "admin"]), self.run.call_args_list)
+        self.assertEqual(self.setup.saved()["username"], "philip")
+
+    def test_netdata_cloud_claim_writes_private_config_and_restarts_only_agent(self):
+        self.setup.save({"complete": True})
+        service = self.root / "etc/init.d/netdata"; service.parent.mkdir(parents=True); service.touch()
+        self.setup.handle({"action": "netdata_claim", "token": "private-token", "rooms": "room-1234"})
+        claim = self.root / "etc/netdata/claim.conf"
+        self.assertIn("rooms = room-1234", claim.read_text())
+        self.assertEqual(claim.stat().st_mode & 0o777, 0o640)
+        self.assertNotIn("private-token", self.setup.progress.read_text())
+        self.assertEqual(self.run.call_args.args[0], ["rc-service", "netdata", "start"])
+
+    def test_installed_legacy_netdata_claim_helper_is_used_without_capturing_token(self):
+        helper = self.root / "usr/sbin/netdata-claim.sh"; helper.parent.mkdir(parents=True); helper.touch()
+        with patch.object(module.subprocess, "run", return_value=Mock(returncode=0)) as run:
+            module.claim_netdata(self.root, "private-token", "room-1234")
+        self.assertEqual(run.call_args.args[0][0], str(helper))
+        self.assertIn("-daemon-not-running", run.call_args.args[0])
+        self.assertIs(run.call_args.kwargs["stdout"], module.subprocess.DEVNULL)
+        self.assertFalse((self.root / "etc/netdata/claim.conf").exists())
 
     def test_update_requires_completed_setup_and_uses_fixed_updater(self):
         with patch.object(module.subprocess, "Popen") as spawn:

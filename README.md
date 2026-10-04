@@ -2,7 +2,7 @@
 
 Pi Home is an independent Raspberry Pi touchscreen interface for Roon, with optional Singapore bus arrivals and Home Assistant controls. It runs a native GTK4 display in Cage/Wayland, alongside a phone/desktop web interface. Chromium is not required.
 
-The Stable baseline is **v1.0.0**. The separate **v1.1.0-beta.16 Alpine Beta** focuses on the touchscreen appliance: Recent, Daily and New Releases have working kinetic touch scrolling and fixed card geometry; Surprise Me clears stale Browse content before loading; genre artwork uses bundled SVGs; restart confirmation is centred over a full-display dimmer; and the updater reclaims old staging space, waits for valid network time and resets the DRM seat before relaunching Cage. Alpine appliances follow their own verified Alpine Beta updates. This is not stable v1.1.
+The Stable baseline is **v1.0.0**. The separate **v1.1.0-beta.17 Alpine Beta** focuses on the finished-appliance experience: first-run setup accepts an owner-chosen device/SSH account without imposing Alpine's interactive password-strength policy; Settings manages the installed Netdata Agent and its Cloud connection; and the touchscreen uses larger fixed discovery cards, an in-flow recommendation tile, release-specific Back navigation and viewport-aware artwork loading for smoother horizontal swipes. Alpine appliances follow their own verified Alpine Beta updates. This is not stable v1.1.
 
 ## Features
 

@@ -1,5 +1,30 @@
 # Changelog
 
+## 1.1.0-beta.17 Alpine Beta — 5 October 2026
+
+- Turned first-run credentials into an appliance-owned flow: the owner chooses
+  the device/SSH username and a confirmed 8–128 character password. Simple
+  passwords receive a warning but remain allowed, using the BusyBox `chpasswd`
+  path confirmed in the Alpine image rather than interactive `passwd` policy.
+  No universal password is shipped, and credentials are excluded from progress
+  data and command output.
+- Added Netdata appliance management to System → Services for the already
+  installed Agent: running state, version, local dashboard, Cloud claim state,
+  Connect/Reconnect and Disconnect. The root helper selects the claim interface
+  supplied by the installed Netdata version and restarts only Netdata; it does
+  not replace or rerun the Agent installation.
+- Added System → Access controls for changing the local device/SSH account from
+  Pi Home, preserving the separate web-access controls and leaving room for
+  additional appliance settings without exposing Alpine administration.
+- Reworked touchscreen discovery geometry: Daily recommendation context is a
+  square in-flow tile, horizontal rows bleed cleanly to the right edge, Recent
+  and New Releases use larger fixed-size four-column cards, and long titles get
+  a stable text slot. New Release details now show their track list with a
+  dedicated Back rail instead of the Browse/Search sidebar.
+- Reduced horizontal swipe jank by loading artwork only for cards close to the
+  horizontal viewport, avoiding unnecessary downloads and repaints for the
+  entire off-screen row.
+
 ## 1.1.0-beta.16 Alpine Beta — 5 October 2026
 
 - Enables actual kinetic touch scrolling for Recent, Daily and New Releases while keeping their scrollbars visually hidden.

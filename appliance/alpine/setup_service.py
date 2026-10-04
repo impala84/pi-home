@@ -43,9 +43,31 @@ def command(args):
     return result.stdout.strip()
 
 
-def set_login_password(password):
-    result = subprocess.run(["chpasswd"], input="admin:" + password + "\n", capture_output=True, text=True, timeout=15)
-    if result.returncode: raise ValueError("Could not set the SSH password. Please retry.")
+def validate_username(username):
+    if not re.fullmatch(r"[a-z_][a-z0-9_-]{2,31}", username):
+        raise ValueError("Use 3–32 lowercase letters, numbers, hyphens or underscores; start with a letter.")
+
+
+def set_login_credentials(username, password, root=Path("/"), run=command):
+    """Create/enable one recovery account and set its password without PAM policy.
+
+    Alpine's interactive BusyBox ``passwd`` applies a strength check. BusyBox
+    ``chpasswd`` is present in the appliance image and deliberately accepts the
+    owner's chosen password. The password travels only over stdin and is never
+    written to progress or command output.
+    """
+    validate_username(username); validate_password(password)
+    root = Path(root)
+    passwd_file = root / "etc/passwd"
+    accounts = {line.split(":", 1)[0] for line in read(passwd_file).splitlines()} if passwd_file.exists() else set()
+    if username not in accounts:
+        run(["adduser", "-D", "-h", f"/home/{username}", username])
+        run(["addgroup", username, "wheel"])
+    result = subprocess.run(["chpasswd"], input=username + ":" + password + "\n", stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, text=True, timeout=15)
+    if result.returncode: raise ValueError("Could not set the device password. Please retry.")
+    ssh = root / "etc/ssh/sshd_config.d/pi-home.conf"
+    if ssh.parent.exists():
+        atomic(ssh, "PermitRootLogin no\nPasswordAuthentication yes\nPermitEmptyPasswords no\nAllowUsers " + username + "\n", 0o600)
 
 
 def validate_password(password):
@@ -53,6 +75,26 @@ def validate_password(password):
         raise ValueError("Choose a password of 8–128 characters.")
     if password != password.strip().strip("'\""):
         raise ValueError("Do not start or end the password with spaces or quotation marks.")
+
+
+def claim_netdata(root, token, rooms):
+    """Use the claim interface supplied by the installed Agent version."""
+    root = Path(root)
+    legacy = next((path for path in (root / "usr/sbin/netdata-claim.sh", root / "usr/libexec/netdata/netdata-claim.sh") if path.is_file()), None)
+    if legacy:
+        args = [str(legacy), "-url=https://app.netdata.cloud", "-token=" + token, "-daemon-not-running"]
+        if rooms: args.append("-rooms=" + rooms)
+        result = subprocess.run(args, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=90)
+        if result.returncode: raise ValueError("Netdata Cloud rejected the claim. Check the token, Room ID and clock, then retry.")
+        return
+    claim = root / "etc/netdata/claim.conf"; claim.parent.mkdir(parents=True, exist_ok=True)
+    room_line = "    rooms = " + rooms + "\n" if rooms else ""
+    atomic(claim, "[global]\n    url = https://app.netdata.cloud\n    token = " + token + "\n" + room_line + "    insecure = no\n", 0o640)
+    try:
+        netdata = __import__("grp").getgrnam("netdata")
+        os.chown(claim, 0, netdata.gr_gid)
+    except KeyError:
+        pass
 
 
 def display_power(root, powered, brightness_percent=100):
@@ -126,9 +168,9 @@ def update_locked(root=Path("/")):
 
 
 class Setup:
-    def __init__(self, root=Path("/"), run=command, roon=None, login_password=set_login_password):
+    def __init__(self, root=Path("/"), run=command, roon=None, login_credentials=set_login_credentials):
         self.root = Path(root); self.run = run; self.roon = roon or self.roon_state
-        self.login_password = login_password
+        self.login_credentials = login_credentials
         self.tools_lock = threading.Lock()
         self.update_process = None
         self.progress = self.root / "var/lib/pi-home-setup/progress.json"
@@ -194,6 +236,53 @@ class Setup:
                 self.run(["rc-service", "netdata", "stop"])
                 self.run(["rc-update", "del", "netdata", "default"])
             return {"ok": True}
+        if action in {"netdata_claim", "netdata_disconnect"}:
+            if not state.get("complete"): raise ValueError("Finish setup before changing Netdata Cloud.")
+            if not (self.root / "etc/init.d/netdata").is_file(): raise ValueError("Netdata is not installed.")
+            if action == "netdata_claim":
+                token = str(data.get("token", "")).strip(); rooms = str(data.get("rooms", "")).strip()
+                if not 8 <= len(token) <= 512 or any(character.isspace() or ord(character) < 33 for character in token):
+                    raise ValueError("Enter the claim token shown by Netdata Cloud.")
+                room_values = [value.strip() for value in rooms.split(",") if value.strip()]
+                if any(not re.fullmatch(r"[A-Za-z0-9._:-]{4,128}", value) for value in room_values):
+                    raise ValueError("Enter valid Netdata Room IDs, separated by commas.")
+            self.run(["rc-service", "netdata", "stop"])
+            try:
+                if action == "netdata_disconnect":
+                    claim = self.root / "etc/netdata/claim.conf"
+                    if claim.exists() and not claim.is_symlink(): claim.unlink()
+                cloud = self.root / "var/lib/netdata/cloud.d"
+                if cloud.exists():
+                    if cloud.is_symlink() or not cloud.is_dir(): raise ValueError("Netdata Cloud identity needs manual repair.")
+                    shutil.rmtree(cloud)
+                if action == "netdata_claim": claim_netdata(self.root, token, ",".join(room_values))
+            except Exception:
+                # Claim failure must not leave local monitoring unavailable.
+                self.run(["rc-service", "netdata", "start"])
+                raise
+            self.run(["rc-update", "add", "netdata", "default"])
+            self.run(["rc-service", "netdata", "start"])
+            return {"ok": True}
+        if action == "device_credentials":
+            if not state.get("complete"): raise ValueError("Finish setup before changing device access.")
+            username = str(data.get("username", "")).strip(); password = str(data.get("password", ""))
+            validate_username(username); validate_password(password)
+            if password != data.get("confirmation"): raise ValueError("The two passwords do not match.")
+            previous = str(state.get("username", "admin"))
+            self.login_credentials(username, password, self.root, self.run)
+            if previous != username:
+                # Retain the account/home for recovery, but remove its login
+                # credential so changing the appliance username does not leave
+                # an unnoticed second local account behind.
+                self.run(["passwd", "-l", previous])
+            env = self.root / "etc/pi-home/secrets.env"
+            text = re.sub(r"^ADMIN_USERNAME=.*$", lambda _: "ADMIN_USERNAME=" + username, read(env), flags=re.M)
+            text = re.sub(r"^ADMIN_PASSWORD=.*$", lambda _: "ADMIN_PASSWORD=" + password, text, flags=re.M)
+            atomic(env, text, 0o600)
+            state["username"] = username; self.save(state)
+            self.run(["rc-service", "sshd", "restart"])
+            threading.Timer(1, lambda: self.run(["rc-service", "pi-home-api", "restart"])).start()
+            return {"ok": True}
         if action == "reboot" and (state.get("complete") or state.get("orientation")):
             threading.Timer(2, lambda: self.run(["/sbin/reboot"])).start()
             return {"ok": True}
@@ -256,20 +345,23 @@ class Setup:
             if not all(state.get(key) for key in ("hostname", "network", "roon", "display")):
                 raise ValueError("Complete the setup steps first.")
             password = str(data.get("password", ""))
+            username = str(data.get("username", "admin")).strip()
+            validate_username(username)
             validate_password(password)
             if password != data.get("confirmation"):
                 raise ValueError("The two passwords do not match. Please enter them again.")
             env = self.root / "etc/pi-home/secrets.env"
-            text = re.sub(r"^ADMIN_PASSWORD=.*$", lambda _: "ADMIN_PASSWORD=" + password, read(env), flags=re.M)
+            text = re.sub(r"^ADMIN_USERNAME=.*$", lambda _: "ADMIN_USERNAME=" + username, read(env), flags=re.M)
+            text = re.sub(r"^ADMIN_PASSWORD=.*$", lambda _: "ADMIN_PASSWORD=" + password, text, flags=re.M)
             atomic(env, text, 0o600)
-            self.login_password(password)
+            self.login_credentials(username, password, self.root, self.run)
             if data.get("ssh", True):
                 self.run(["rc-update", "add", "sshd", "default"])
                 self.run(["rc-service", "sshd", "start"])
             else:
                 self.run(["rc-update", "del", "sshd", "default"])
                 self.run(["rc-service", "sshd", "stop"])
-            state["ssh"] = bool(data.get("ssh", True))
+            state["ssh"] = bool(data.get("ssh", True)); state["username"] = username
             self.run(["rc-service", "pi-home-api", "restart"])
             state["complete"] = True
         else: raise ValueError("Unknown setup action.")
