@@ -2,7 +2,7 @@
 # ARM64 Linux factory: writes regular temporary files, never a physical disk.
 set -euo pipefail
 [[ $(uname -s) == Linux && $(uname -m) == aarch64 ]] || { echo 'Build on ARM64 Linux (or use the GitHub Alpine image workflow).'; exit 1; }
-for tool in docker sudo sfdisk mkfs.vfat mkfs.ext4 mcopy truncate dd gzip sha256sum; do command -v "$tool" >/dev/null || { echo "Missing build tool: $tool"; exit 1; }; done
+for tool in docker sudo sfdisk mkfs.vfat mkfs.ext4 mcopy truncate dd gzip sha256sum python3; do command -v "$tool" >/dev/null || { echo "Missing build tool: $tool"; exit 1; }; done
 repo=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 out="$repo/dist/alpine"
 mkdir -p "$out"
@@ -18,6 +18,16 @@ docker build --platform linux/arm64 -t pi-home-alpine:prototype -f "$repo/applia
 container=$(docker create pi-home-alpine:prototype)
 mkdir "$build_dir/rootfs" "$build_dir/boot"
 docker export "$container" | sudo tar --same-owner -x -C "$build_dir/rootfs"
+sudo python3 "$repo/appliance/alpine/prepare_rootfs.py" "$build_dir/rootfs"
+# Test the bare-metal export, not just the runtime inside Docker.
+test ! -e "$build_dir/rootfs/.dockerenv"
+test ! -e "$build_dir/rootfs/run/.containerenv"
+system_type=$(sudo chroot "$build_dir/rootfs" /sbin/openrc --sys)
+[[ -z $system_type ]] || { echo "Export still detected as virtual/container system: $system_type"; exit 1; }
+sudo chroot "$build_dir/rootfs" /sbin/rc-update -u
+test -x "$build_dir/rootfs/sbin/fsck.ext4"
+test -x "$build_dir/rootfs/sbin/fsck.vfat"
+echo 'Bare-metal export: OpenRC container detection, dependency generation and filesystem tools passed.'
 sudo cp -a "$build_dir/rootfs/boot/." "$build_dir/boot/"
 sudo cp "$repo/appliance/alpine/config.txt" "$repo/appliance/alpine/cmdline.txt" "$build_dir/boot/"
 truncate -s 256M "$build_dir/boot.fat"

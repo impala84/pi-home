@@ -2,6 +2,10 @@
 
 ## Alpine prototype — unreleased experiment
 
+- Fix bare-metal exports retaining Docker identity: remove container markers and
+  reset injected hostname/DNS files before creating the disk image. Verify OpenRC
+  detects a physical system, not Docker. Enable boot/service logs and include
+  filesystem check tools; do not silently abandon crashed services after five retries.
 - Alpine prototype and new installers use Pi Home installation/configuration/state paths, with legacy compatibility links preserving existing settings and pairing.
 - Add a native first-boot setup wizard with device naming, Ethernet/Wi-Fi,
   Roon authorisation and zone selection, display/theme/timezone, a web settings

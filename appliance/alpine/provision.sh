@@ -26,6 +26,10 @@ cp appliance/alpine/init.d/* /etc/init.d/
 chmod 755 /etc/init.d/pi-home-*
 cp appliance/alpine/display-launch /usr/local/bin/pi-home-display-launch
 chmod 755 /usr/local/bin/pi-home-display-launch
+mkdir -p /var/log/pi-home
+chown morningbus:morningbus /var/log/pi-home
+chmod 750 /var/log/pi-home
+printf '%s\n' 'rc_logger="YES"' 'rc_log_path="/var/log/rc.log"' >> /etc/rc.conf
 printf '%s\n' 'command_args="-g video"' > /etc/conf.d/seatd
 printf '%s\n' 'pi-home-alpine' > /etc/hostname
 printf '%s\n' 'auto lo' 'iface lo inet loopback' > /etc/network/interfaces

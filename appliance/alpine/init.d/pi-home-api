@@ -6,6 +6,9 @@ command_args="--config /etc/pi-home/config.toml --env /etc/pi-home/secrets.env -
 command_user=morningbus:morningbus
 directory=/opt/pi-home
 respawn_delay=3
+respawn_max=0
+output_log=/var/log/pi-home/api.log
+error_log=/var/log/pi-home/api-error.log
 export PYTHONUNBUFFERED=1
 export PI_HOME_APPLIANCE_PLATFORM=alpine-prototype
 depend() { need pi-home-firstboot; after networkmanager; }

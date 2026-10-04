@@ -6,5 +6,8 @@ command_args=/opt/pi-home/roon-controller/server.js
 command_user=morningbus:morningbus
 directory=/var/lib/pi-home/roon
 respawn_delay=5
+respawn_max=0
+output_log=/var/log/pi-home/roon.log
+error_log=/var/log/pi-home/roon-error.log
 export NODE_ENV=production
 depend() { need pi-home-firstboot; after networkmanager; }

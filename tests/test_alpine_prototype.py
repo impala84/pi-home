@@ -11,9 +11,33 @@ ROOT = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location("alpine_firstboot", ROOT / "appliance/alpine/firstboot.py")
 firstboot = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(firstboot)
+prepare_spec = importlib.util.spec_from_file_location("alpine_prepare", ROOT / "appliance/alpine/prepare_rootfs.py")
+prepare_rootfs = importlib.util.module_from_spec(prepare_spec)
+prepare_spec.loader.exec_module(prepare_rootfs)
 
 
 class AlpinePrototypeTests(unittest.TestCase):
+    def test_export_sanitizer_removes_container_identity_and_resets_network_identity(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / "etc").mkdir(); (root / "run").mkdir()
+            (root / "etc/alpine-release").write_text("3.24.2")
+            (root / "opt/pi-home/appliance/alpine").mkdir(parents=True)
+            (root / ".dockerenv").touch(); (root / "run/.containerenv").touch()
+            (root / "etc/hostname").write_text("docker-container-id")
+            (root / "etc/resolv.conf").write_text("nameserver 127.0.0.11")
+            prepare_rootfs.prepare(root)
+            self.assertFalse((root / ".dockerenv").exists())
+            self.assertFalse((root / "run/.containerenv").exists())
+            self.assertEqual((root / "etc/hostname").read_text(), "pi-home-alpine\n")
+            self.assertNotIn("127.0.0.11", (root / "etc/resolv.conf").read_text())
+            prepare_rootfs.prepare(root)
+
+    def test_export_sanitizer_rejects_live_root_and_non_image_tree(self):
+        with self.assertRaises(ValueError): prepare_rootfs.prepare("/")
+        with tempfile.TemporaryDirectory() as folder:
+            with self.assertRaises(ValueError): prepare_rootfs.prepare(folder)
+
     def test_unsupported_privileged_actions_fail_without_queuing(self):
         with tempfile.TemporaryDirectory() as folder, patch.dict(os.environ, {"PI_HOME_APPLIANCE_PLATFORM": "alpine-prototype"}):
             state = Path(folder)
