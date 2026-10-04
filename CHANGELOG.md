@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.0-beta.11 Alpine — 4 October 2026
+
+- Makes an unchanged update self-repair a stale touchscreen process instead of incorrectly returning “unchanged”.
+
 ## 1.1.0-beta.10 Alpine — 4 October 2026
 
 - Replaces Daily pagination with compact swipeable carousels and a continuous Mixes → For You feed.

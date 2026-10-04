@@ -80,5 +80,11 @@ class AlpineUpdaterTests(unittest.TestCase):
     def test_current_revision_does_not_download_or_restart(self):
         with tempfile.TemporaryDirectory() as folder:
             app = Path(folder); (app / ".source-commit").write_text("a" * 40)
-            with patch.object(updater, "APP", app), patch.object(updater, "status"), patch.object(updater, "verified_revision", return_value="a" * 40), patch.object(updater, "restart") as restart:
+            with patch.object(updater, "APP", app), patch.object(updater, "status"), patch.object(updater, "verified_revision", return_value="a" * 40), patch.object(updater, "healthy", return_value=True), patch.object(updater, "restart") as restart:
                 updater.update(); restart.assert_not_called()
+
+    def test_current_files_restart_a_stale_touchscreen(self):
+        with tempfile.TemporaryDirectory() as folder:
+            app = Path(folder); (app / ".source-commit").write_text("a" * 40)
+            with patch.object(updater, "APP", app), patch.object(updater, "status") as status, patch.object(updater, "verified_revision", return_value="a" * 40), patch.object(updater, "healthy", side_effect=[False, True]), patch.object(updater, "restart") as restart:
+                updater.update(); restart.assert_called_once(); self.assertIn("now running", status.call_args.args[0])

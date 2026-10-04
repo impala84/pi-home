@@ -114,7 +114,12 @@ def update():
     status("Update · Checking verified Alpine prototype builds…")
     sha = verified_revision()
     if (APP / ".source-commit").exists() and (APP / ".source-commit").read_text().strip() == sha:
-        status("Update unchanged. Latest verified Alpine prototype is installed."); return
+        if healthy(sha):
+            status("Update unchanged. Latest verified Alpine prototype is installed and running."); return
+        status("Update files are current · Restarting the stale touchscreen…")
+        restart()
+        if not healthy(sha): raise RuntimeError("Current files are installed but the touchscreen could not be restarted on that revision")
+        status("Touchscreen repaired. Alpine prototype " + sha[:7] + " is now running."); return
     releases = Path("/opt/pi-home-releases"); releases.mkdir(exist_ok=True, mode=0o755)
     if shutil.disk_usage(releases).free < 400_000_000:
         raise RuntimeError("Not enough free space to stage an update; current application unchanged")
