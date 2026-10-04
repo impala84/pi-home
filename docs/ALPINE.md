@@ -16,6 +16,13 @@ private helper as well, avoiding stale service-control code. The first update
 from an older image still uses its old standalone updater: restart pi-home-setup
 once after that update. Branch selection remains intentionally Alpine-only.
 
+Live bus status showed certificate verification failing because the system
+clock was 1970, not because of disabled buses or missing stop configuration.
+New images enable chronyd at boot with initial clock stepping. HTTPS certificate
+verification remains enabled. Existing images need chrony/chrony-openrc installed
+and chronyd enabled once; first correct the clock so HTTPS package/update
+downloads can work. Changing timezone alone does not synchronize system time.
+
 The user confirmed direct libinput calibration `0 1 0 -1 0 1` aligns touch
 with the 90° clockwise saved setting / Cage transform 270. Live device evidence
 showed two separate faults: initial Goodix probe failed with I2C error -5 but

@@ -58,6 +58,11 @@ rc-update add udev-trigger sysinit
 for service in hwclock modules sysctl bootmisc hostname localmount hwdrivers; do rc-update add "$service" boot; done
 for service in killprocs savecache mount-ro; do rc-update add "$service" shutdown; done
 for service in networking dbus networkmanager avahi-daemon seatd pi-home-firstboot pi-home-api pi-home-roon pi-home-setup pi-home-input pi-home-display; do rc-update add "$service" default; done
+# Pi 4 has no battery-backed RTC. An epoch clock breaks HTTPS (LTA/updates).
+# Allow an initial step, then use normal chrony discipline; keep package servers.
+sed -i '/^[[:space:]]*makestep[[:space:]]/d' /etc/chrony/chrony.conf
+printf '%s\n' 'makestep 1.0 3' >> /etc/chrony/chrony.conf
+rc-update add chronyd default
 # SSH is enabled, but admin stays locked until setup supplies a unique password.
 awk -F: '$1 == "root" && $2 ~ /^[!*]/ {locked=1} END {exit !locked}' /etc/shadow
 sed -i '/^[^#].*getty/s/^/#/' /etc/inittab

@@ -11,4 +11,4 @@ output_log=/var/log/pi-home/api.log
 error_log=/var/log/pi-home/api-error.log
 export PYTHONUNBUFFERED=1
 export PI_HOME_APPLIANCE_PLATFORM=alpine-prototype
-depend() { need pi-home-firstboot; after networkmanager; }
+depend() { need pi-home-firstboot; after networkmanager chronyd; }
