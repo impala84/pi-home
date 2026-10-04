@@ -5,6 +5,7 @@ from pathlib import Path
 import pwd
 import re
 import secrets
+import shutil
 import socket
 import struct
 import subprocess
@@ -57,6 +58,7 @@ class Setup:
     def __init__(self, root=Path("/"), run=command, roon=None, login_password=set_login_password):
         self.root = Path(root); self.run = run; self.roon = roon or self.roon_state
         self.login_password = login_password
+        self.tools_lock = threading.Lock()
         self.progress = self.root / "var/lib/pi-home-setup/progress.json"
         self.progress.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
 
@@ -95,6 +97,13 @@ class Setup:
             if not state.get("complete"): raise ValueError("Finish setup before updating.")
             atomic(self.root / "var/lib/pi-home/update-status", "Update · Queued…\n")
             subprocess.Popen(["/usr/bin/python3", "/opt/pi-home/appliance/alpine/updater.py"], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+            return {"ok": True, "queued": True}
+        if action == "install_tools":
+            if not state.get("complete"): raise ValueError("Finish setup before installing tools.")
+            if not self.tools_lock.acquire(blocking=False):
+                return {"ok": True, "queued": False}
+            atomic(self.root / "var/lib/pi-home/tools-status", "Installing system tools…\n")
+            threading.Thread(target=self.install_tools, daemon=True).start()
             return {"ok": True, "queued": True}
         if action in {"netdata_enable", "netdata_disable"}:
             if not state.get("complete"): raise ValueError("Finish setup before changing services.")
@@ -188,6 +197,24 @@ class Setup:
         else: raise ValueError("Unknown setup action.")
         self.save(state)
         return {"ok": True, "progress": state}
+
+
+    def install_tools(self):
+        path = self.root / "var/lib/pi-home/tools-status"
+        try:
+            # Fixed allowlist only: never accept package names from HTTP clients.
+            result = subprocess.run(["apk", "add", "--no-cache", "grim", "procps", "netdata", "netdata-openrc", "chrony", "chrony-openrc"], capture_output=True, text=True, timeout=240)
+            if result.returncode: raise ValueError("Installation failed. Check the network, clock and free disk space, then retry.")
+            self.run(["rc-update", "add", "chronyd", "default"])
+            self.run(["rc-service", "chronyd", "start"])
+            launcher = self.root / "usr/local/bin/pi-home-display-launch"
+            shutil.copyfile(Path(__file__).with_name("display-launch"), launcher)
+            launcher.chmod(0o755)
+            atomic(path, "System tools installed. Enable Netdata if wanted; reboot to apply the cursor theme.\n")
+        except (OSError, ValueError, subprocess.TimeoutExpired):
+            atomic(path, "Installation failed. Check the network, clock and free disk space, then retry.\n")
+        finally:
+            self.tools_lock.release()
 
 
 def serve():

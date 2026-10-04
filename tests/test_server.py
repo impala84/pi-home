@@ -11,6 +11,13 @@ from pi_bus_time_display.server import State, active_wifi_ssid, automatic_displa
 
 
 class DisplayModeTests(unittest.TestCase):
+    def test_alpine_diagnostics_uses_openrc_service_names(self):
+        from pi_bus_time_display.server import diagnostics_snapshot
+        with patch.dict(os.environ, {"PI_HOME_APPLIANCE_PLATFORM": "alpine-prototype"}), patch("pi_bus_time_display.server.command_output", return_value=""), patch("pi_bus_time_display.server.service_state", return_value="running") as services:
+            data = diagnostics_snapshot()
+        self.assertTrue(all(process["active"] for process in data["processes"]))
+        self.assertEqual({call.args[0] for call in services.call_args_list}, {"pi-home-roon", "pi-home-api", "pi-home-display", "roonbridge"})
+
     def test_bus_disabled_persists_and_automatic_stays_on_music(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "config.toml"

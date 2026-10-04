@@ -21,6 +21,8 @@ jobs:
       - name: Verify time sync and optional service tools
         run: |
           docker run --rm pi-home-alpine:prototype sh -ec 'test -x /usr/bin/grim; test -x /etc/init.d/netdata; test -e /etc/runlevels/default/chronyd; chronyd -p -f /etc/chrony/chrony.conf'
+          docker run --rm pi-home-alpine:prototype python3 appliance/alpine/cursor_smoke.py
+          docker run --rm pi-home-alpine:prototype ps -eo pid=,rss=,pcpu=,args=
       - name: Exercise native setup pages using a disposable test-only display
         run: |
           docker run --rm pi-home-alpine:prototype sh -c 'apk add --no-cache xvfb-run && GDK_BACKEND=x11 GSK_RENDERER=cairo dbus-run-session xvfb-run -a -s "-screen 0 800x480x24" python3 appliance/alpine/wizard_smoke.py'

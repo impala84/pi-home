@@ -494,7 +494,7 @@ def diagnostics_snapshot() -> dict:
             group = "controller"
         elif "roonbridge" in lowered or "roon bridge" in lowered:
             group = "bridge"
-        elif "pi-bus-time-display" in lowered and "native" not in lowered:
+        elif ("pi-bus-time-display" in lowered or "/pi-home " in lowered) and "native" not in lowered:
             group = "api"
         if group:
             try:
@@ -504,10 +504,12 @@ def diagnostics_snapshot() -> dict:
                 groups[group]["active"] = True
             except ValueError:
                 pass
-    groups["controller"]["active"] = command_output(["systemctl", "is-active", "pi-bus-roon-controller.service"]) == "active" or groups["controller"]["active"]
-    groups["api"]["active"] = command_output(["systemctl", "is-active", "pi-bus-time-display.service"]) == "active" or groups["api"]["active"]
-    groups["display"]["active"] = command_output(["systemctl", "is-active", "pi-bus-native.service"]) == "active" or groups["display"]["active"]
-    groups["bridge"]["active"] = any(command_output(["systemctl", "is-active", name]) == "active" for name in ("roonbridge.service", "RoonBridge.service")) or groups["bridge"]["active"]
+    alpine = os.getenv("PI_HOME_APPLIANCE_PLATFORM") == "alpine-prototype"
+    services = {"controller": "pi-home-roon", "api": "pi-home-api", "display": "pi-home-display", "bridge": "roonbridge"} if alpine else {"controller": "pi-bus-roon-controller.service", "api": "pi-bus-time-display.service", "display": "pi-bus-native.service", "bridge": "roonbridge.service"}
+    for group, service in services.items():
+        groups[group]["active"] = service_state(service) == "running" or groups[group]["active"]
+    if not alpine:
+        groups["bridge"]["active"] = service_state("RoonBridge.service") == "running" or groups["bridge"]["active"]
     try:
         uptime = float(Path("/proc/uptime").read_text(encoding="ascii").split()[0])
     except (OSError, ValueError, IndexError):
@@ -622,6 +624,8 @@ def system_snapshot(state_dir: Path, include_diagnostics: bool = False) -> dict:
         "display_profile": display_profile,
         "reboot_required": reboot_required,
         "app_version": display_version(),
+        "alpine_tools": os.getenv("PI_HOME_APPLIANCE_PLATFORM") == "alpine-prototype",
+        "tools_status": (state_dir / "tools-status").read_text().strip() if (state_dir / "tools-status").is_file() else "",
     }
     if include_diagnostics:
         snapshot["diagnostics"] = diagnostics_snapshot()
@@ -637,13 +641,13 @@ def write_control_request(state_dir: Path, request: dict) -> bool:
     as display-off immediately followed by display-on.
     """
     if os.getenv("PI_HOME_APPLIANCE_PLATFORM") == "alpine-prototype":
-        if request.get("action") in {"update", "reboot", "netdata_enable", "netdata_disable"}:
+        if request.get("action") in {"update", "reboot", "netdata_enable", "netdata_disable", "install_tools"}:
             try:
                 with socket.socket(socket.AF_UNIX) as client:
                     client.settimeout(5); client.connect("/run/pi-home-setup.sock")
                     client.sendall((json.dumps({"action": request["action"]}) + "\n").encode())
                     result = json.loads(client.makefile("rb").readline(4096))
-            except OSError as error: raise ValueError("Alpine update helper is not ready. Please retry.") from error
+            except OSError as error: raise ValueError("Alpine system helper is not ready. Please retry.") from error
             if not result.get("ok"): raise ValueError(result.get("error", "Could not start Alpine update"))
             return bool(result.get("queued", result.get("ok")))
         raise ValueError("OS controls are unavailable in the Alpine prototype")
@@ -884,11 +888,11 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
                     self.send_header("Location", "/login.html?error=1")
                     self.end_headers()
                 return
-            if self.path == "/api/device/update":
+            if self.path in {"/api/device/update", "/api/device/reboot"}:
                 if self.client_address[0] not in {"127.0.0.1", "::1"} or any(self.headers.get(name) for name in ("X-Forwarded-For", "Forwarded", "X-Real-IP")):
                     self.send_json(403, b'{"error":"Touchscreen only"}')
                     return
-                try: queued = write_control_request(mode_path.parent, {"action": "update"})
+                try: queued = write_control_request(mode_path.parent, {"action": self.path.rsplit("/", 1)[-1]})
                 except (OSError, ValueError) as error:
                     self.send_json(503, json.dumps({"error": str(error)}).encode()); return
                 self.send_json(202, json.dumps({"ok": True, "queued": queued}).encode())
@@ -1036,7 +1040,7 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
                     return
                 if self.path == "/api/admin/system-action":
                     action = str(data.get("action", ""))
-                    allowed = {"update", "reboot", "roon_start", "roon_stop", "roon_restart", "netdata_enable", "netdata_disable", "leds_enable", "leds_disable", "set_hostname", "set_wifi", "set_rotation", "set_display"}
+                    allowed = {"update", "reboot", "roon_start", "roon_stop", "roon_restart", "netdata_enable", "netdata_disable", "install_tools", "leds_enable", "leds_disable", "set_hostname", "set_wifi", "set_rotation", "set_display"}
                     if action not in allowed:
                         raise ValueError("Unknown system action")
                     request = {"action": action}

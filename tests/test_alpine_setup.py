@@ -53,6 +53,39 @@ class AlpineSetupTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "8–128"):
             module.validate_password("abcdefg")
 
+    def test_tools_install_is_fixed_and_requires_completed_setup(self):
+        with self.assertRaises(ValueError): self.setup.handle({"action": "install_tools"})
+        self.setup.save({"complete": True})
+        (self.root / "var/lib/pi-home").mkdir(parents=True, exist_ok=True)
+        (self.root / "usr/local/bin").mkdir(parents=True, exist_ok=True)
+        with patch.object(module.threading, "Thread") as thread:
+            self.assertTrue(self.setup.handle({"action": "install_tools", "packages": ["untrusted"]})["queued"])
+            self.assertFalse(self.setup.handle({"action": "install_tools"})["queued"])
+            thread.assert_called_once()
+        with patch.object(module.subprocess, "run", return_value=Mock(returncode=0)) as run:
+            self.setup.install_tools()
+            self.assertEqual(run.call_args.args[0], ["apk", "add", "--no-cache", "grim", "procps", "netdata", "netdata-openrc", "chrony", "chrony-openrc"])
+        self.assertIn("installed", (self.root / "var/lib/pi-home/tools-status").read_text())
+        self.assertFalse(self.setup.tools_lock.locked())
+
+    def test_tools_install_failure_is_visible_and_retryable(self):
+        (self.root / "var/lib/pi-home").mkdir(parents=True, exist_ok=True)
+        self.setup.tools_lock.acquire()
+        with patch.object(module.subprocess, "run", return_value=Mock(returncode=1)):
+            self.setup.install_tools()
+        self.assertIn("failed", (self.root / "var/lib/pi-home/tools-status").read_text())
+        self.assertFalse(self.setup.tools_lock.locked())
+
+    def test_transparent_cursor_theme_file(self):
+        import struct
+        spec = importlib.util.spec_from_file_location("cursor_theme", ROOT / "appliance/alpine/cursor_theme.py")
+        cursor = importlib.util.module_from_spec(spec); spec.loader.exec_module(cursor)
+        theme = cursor.prepare(self.root / "cursors")
+        data = (theme / "cursors/left_ptr").read_bytes()
+        self.assertEqual(struct.unpack("<4I", data[:16]), (0x72756358, 16, 0x10000, 1))
+        self.assertEqual(len(data), 68)
+        self.assertEqual(data[-4:], b"\0\0\0\0")
+
     def test_version_label_identifies_alpine_only(self):
         from pi_bus_time_display import server, __version__
         with patch.dict("os.environ", {"PI_HOME_APPLIANCE_PLATFORM": "alpine-prototype"}):

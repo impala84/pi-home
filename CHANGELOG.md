@@ -2,6 +2,9 @@
 
 ## Alpine prototype — unreleased experiment
 
+- Fix diagnostics to read OpenRC service names on Alpine. Add an explicit system
+  tools installer for existing images, a confirmed native touchscreen reboot
+  action and a transparent Cage cursor theme alongside child-widget cursor hiding.
 - Identify Alpine builds explicitly in Software version labels. Setup and web
   password changes accept eight characters minimum; confirmation remains required.
 - Include automatic network time, screenshot capture tooling and optional OpenRC

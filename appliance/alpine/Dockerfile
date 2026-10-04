@@ -5,7 +5,7 @@ RUN apk add --no-cache alpine-base linux-rpi raspberrypi-bootloader \
     python3 py3-pip py3-setuptools py3-gobject3 py3-cairo gtk4.0 \
     nodejs npm git ca-certificates tzdata font-inter dbus avahi avahi-tools bash \
     networkmanager networkmanager-cli networkmanager-wifi networkmanager-openrc wpa_supplicant \
-    e2fsprogs dosfstools openssh sudo adwaita-icon-theme librsvg grim netdata netdata-openrc chrony chrony-openrc
+    e2fsprogs dosfstools openssh sudo adwaita-icon-theme librsvg grim procps netdata netdata-openrc chrony chrony-openrc
 WORKDIR /opt/pi-home
 COPY pyproject.toml ./
 COPY src ./src

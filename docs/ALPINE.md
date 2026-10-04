@@ -13,8 +13,11 @@ Do not install it over the working Pi. Use a separate SD card.
 Feature parity follow-up: new images include grim for screenshot capture and
 Netdata/OpenRC packages (monitoring remains opt-in, not boot-enabled by the
 factory). Netdata status and enable/disable actions now use OpenRC rather than
-systemd. Existing images need `apk add --no-cache grim netdata netdata-openrc`
-once; application updates deliberately do not install OS packages. Updates
+systemd. Existing images can use System → Services → Install system tools after updating.
+This explicit action installs fixed screenshot, process diagnostics, network time
+and Netdata packages, without enabling Netdata automatically. Reboot afterwards
+applies the transparent touchscreen cursor theme. Application updates do not
+silently install OS packages. Updates
 now run the root-owned updater from the active application and restart the
 private helper as well, avoiding stale service-control code. The first update
 from an older image still uses its old standalone updater: restart pi-home-setup

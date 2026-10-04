@@ -339,6 +339,7 @@ class Display(Gtk.Application):
         self.stack.set_hhomogeneous(False); self.stack.set_vhomogeneous(False)
         self.stack.add_named(self.build_boot_splash(), "boot"); self.stack.add_named(self.build_bus(), "bus"); self.stack.add_named(self.build_roon(), "roon"); self.stack.add_named(self.build_home(), "home"); self.stack.add_named(self.build_settings(), "settings"); self.stack.add_named(self.build_sleep(), "sleep")
         self.window.set_child(self.stack); self.window.present()
+        GLib.timeout_add_seconds(1, self.hide_touch_cursor)
         for _ in range(3): threading.Thread(target=self.thumbnail_worker, daemon=True).start()
         threading.Thread(target=self.touchscreen_wake_worker, daemon=True).start()
         GLib.idle_add(self.adapt_display)
@@ -526,7 +527,7 @@ class Display(Gtk.Application):
         self.touch_profile = Gtk.DropDown.new_from_strings(["Profile · Original 800×480", "Profile · Touch 2 5-inch", "Profile · Touch 2 7-inch", "Profile · Touch 2 10-inch"]); self.touch_profile.add_css_class("settings-select"); display_column.append(self.touch_profile)
         self.touch_orientation = Gtk.DropDown.new_from_strings(["Orientation · Normal", "Orientation · 90°", "Orientation · 180°", "Orientation · 270°"]); self.touch_orientation.add_css_class("settings-select"); display_column.append(self.touch_orientation); controls.append(display_column); card.append(controls)
         brightness_row = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3); brightness_row.add_css_class("setting-line"); brightness_row.add_css_class("brightness-setting"); brightness_row.append(self.label("Display brightness", "muted")); self.touch_brightness = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 10, 100, 1); self.touch_brightness.set_draw_value(True); self.touch_brightness.set_value_pos(Gtk.PositionType.RIGHT); self.touch_brightness.connect("value-changed", self.change_brightness); brightness_row.append(self.touch_brightness); display_column.append(brightness_row)
-        actions = Gtk.Box(spacing=12); actions.set_valign(Gtk.Align.END); self.apply_display_button = self.button("APPLY DISPLAY", self.request_display_settings, "settings-action"); self.apply_display_button.set_hexpand(True); actions.append(self.apply_display_button); self.update_button = self.button("INSTALL UPDATE", self.request_update, "settings-action"); self.update_button.set_hexpand(True); actions.append(self.update_button); card.append(actions); page.append(card)
+        actions = Gtk.Box(spacing=12); actions.set_valign(Gtk.Align.END); self.apply_display_button = self.button("APPLY DISPLAY", self.request_display_settings, "settings-action"); self.apply_display_button.set_hexpand(True); actions.append(self.apply_display_button); self.update_button = self.button("INSTALL UPDATE", self.request_update, "settings-action"); self.update_button.set_hexpand(True); actions.append(self.update_button); actions.append(self.button("REBOOT", self.confirm_reboot, "settings-action")); card.append(actions); page.append(card)
         return page
 
     def build_sleep(self):
@@ -684,7 +685,7 @@ class Display(Gtk.Application):
                 raise ValueError("Invalid screenshot")
             data["image"] = base64.b64encode(result.stdout).decode("ascii")
         except FileNotFoundError:
-            data["error"] = "Capture support is missing. Install the latest Pi Home update."
+            data["error"] = "Capture support is missing. Install the latest Pi Home update; on Alpine, open System → Services and install system tools."
         except (subprocess.SubprocessError, OSError, ValueError):
             data["error"] = "The display could not be captured. Ensure it is awake; this compositor may not support screenshots."
         post_json(BUS + "/api/device/display-capture", data, timeout=5)
@@ -1833,6 +1834,29 @@ class Display(Gtk.Application):
     def request_update(self, *_):
         self.update_in_progress = True; self.update_status_seen = False; self.update_button.set_sensitive(False); self.device_status.set_text("Update · Requesting installation…")
         threading.Thread(target=self._request_update, daemon=True).start()
+
+    def hide_touch_cursor(self):
+        # Child widgets (entries, scales and buttons) can override the window
+        # cursor. Include newly rendered children rather than hiding only once.
+        def hide(widget):
+            widget.set_cursor_from_name("none")
+            child = widget.get_first_child()
+            while child:
+                hide(child)
+                child = child.get_next_sibling()
+        hide(self.window)
+        return True
+
+    def confirm_reboot(self, *_):
+        dialog = Gtk.MessageDialog(transient_for=self.window, modal=True, text="Restart Pi Home?", secondary_text="The display will be unavailable briefly.", buttons=Gtk.ButtonsType.OK_CANCEL)
+        def respond(window, response):
+            window.destroy()
+            if response == Gtk.ResponseType.OK:
+                self.device_status.set_text("Restarting Pi Home…")
+                threading.Thread(target=post_json, args=(BUS + "/api/device/reboot", {}), daemon=True).start()
+        dialog.connect("response", respond)
+        dialog.set_cursor_from_name("none")
+        dialog.present()
 
     def _request_update(self):
         result = post_json(BUS + "/api/device/update", {})

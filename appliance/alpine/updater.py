@@ -126,12 +126,16 @@ def update():
         APP.rename(previous)
     try:
         activate(target)
+        shutil.copyfile(target / "appliance/alpine/display-launch", "/usr/local/bin/pi-home-display-launch")
+        Path("/usr/local/bin/pi-home-display-launch").chmod(0o755)
         status("Update · Restarting and checking Pi Home…")
         restart()
         if not healthy(): raise RuntimeError("New application did not become healthy")
         status("Update installed. Alpine prototype " + sha[:7] + "; settings and pairing preserved.")
     except Exception:
         activate(previous)
+        shutil.copyfile(previous / "appliance/alpine/display-launch", "/usr/local/bin/pi-home-display-launch")
+        Path("/usr/local/bin/pi-home-display-launch").chmod(0o755)
         restart()
         if not healthy(): raise RuntimeError("Update failed; previous files restored but services need attention")
         raise RuntimeError("Update failed; previous working application restored")
