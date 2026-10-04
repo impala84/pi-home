@@ -12,6 +12,23 @@ updater = importlib.util.module_from_spec(spec); spec.loader.exec_module(updater
 
 
 class AlpineUpdaterTests(unittest.TestCase):
+    def test_restart_stops_display_once_and_disables_dependency_cascades(self):
+        with patch.object(updater, "run") as run:
+            updater.restart()
+        self.assertEqual([call.args[0] for call in run.call_args_list], [
+            ["rc-service", "--nodeps", "pi-home-display", "stop"],
+            ["rc-service", "--nodeps", "pi-home-setup", "restart"],
+            ["rc-service", "--nodeps", "pi-home-api", "restart"],
+            ["rc-service", "--nodeps", "pi-home-roon", "restart"],
+            ["rc-service", "--nodeps", "pi-home-display", "start"],
+        ])
+
+    def test_restart_failure_does_not_start_display_over_a_failing_backend(self):
+        with patch.object(updater, "run", side_effect=[None, None, RuntimeError("backend failed")]) as run:
+            with self.assertRaisesRegex(RuntimeError, "backend failed"):
+                updater.restart()
+        self.assertEqual(run.call_count,3)
+
     def test_command_logs_are_private_and_timeout_is_explicit(self):
         import subprocess
         with tempfile.TemporaryDirectory() as folder, patch.object(updater, "STATE", Path(folder)):

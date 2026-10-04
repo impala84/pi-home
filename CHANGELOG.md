@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.0-beta.9 Alpine — 4 October 2026
+
+- Fix updater restart ordering: stop the display once, restart backends with
+  OpenRC dependency cascades disabled, then start the display once. Avoid the
+  display service lock conflict observed on the physical Pi during beta.8 update.
+- Retain the activation failure reason in rollback status. Existing beta.7/8
+  updater processes need the one-time SSH restart override for this update.
+
 ## 1.1.0-beta.8 Alpine — 4 October 2026
 
 - Rename Dailies to Daily, with Mixes and For You. Show four larger cards per

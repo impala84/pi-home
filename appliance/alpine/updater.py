@@ -97,8 +97,13 @@ def healthy():
 
 
 def restart():
-    for service in ("pi-home-setup", "pi-home-api", "pi-home-roon", "pi-home-display"):
-        run(["rc-service", service, "restart"], timeout=45)
+    # OpenRC otherwise cycles dependent services during each backend restart.
+    # Hold the display stopped until every backend has restarted so Cage/seatd
+    # cannot race a second display start for the service/DRM locks.
+    run(["rc-service", "--nodeps", "pi-home-display", "stop"], timeout=45)
+    for service in ("pi-home-setup", "pi-home-api", "pi-home-roon"):
+        run(["rc-service", "--nodeps", service, "restart"], timeout=45)
+    run(["rc-service", "--nodeps", "pi-home-display", "start"], timeout=45)
 
 
 def update():
@@ -147,13 +152,13 @@ def update():
         restart()
         if not healthy(): raise RuntimeError("New application did not become healthy")
         status("Update installed. Alpine prototype " + sha[:7] + "; settings and pairing preserved.")
-    except Exception:
+    except Exception as failure:
         activate(previous)
         shutil.copyfile(previous / "appliance/alpine/display-launch", "/usr/local/bin/pi-home-display-launch")
         Path("/usr/local/bin/pi-home-display-launch").chmod(0o755)
         restart()
         if not healthy(): raise RuntimeError("Update failed; previous files restored but services need attention")
-        raise RuntimeError("Update failed; previous working application restored")
+        raise RuntimeError("Update failed; previous working application restored: " + str(failure)) from failure
 
 
 def main():
