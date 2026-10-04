@@ -3,6 +3,7 @@ import html
 import importlib.util
 import os
 import subprocess
+import time
 from pathlib import Path
 
 import gi
@@ -44,6 +45,7 @@ def settle(rounds=40):
     for _ in range(rounds):
         while context.pending():
             context.iteration(False)
+        time.sleep(.01)
 
 
 def capture(name):
@@ -69,14 +71,18 @@ window.set_child(page)
 window.present()
 display.discovery_active = True
 display.discovery_request = 1
-display.roon_views.set_visible_child_name("discover")
+display.set_roon_view("discover")
 display.roon_clock.set_text("07:26")
+display.zone.set_text("NAD M33")
 
 
 def render(section, data):
     display.discovery_section = section
     display.discovery_mix = ""
     display.discovery_signature = None
+    for name, button in display.discover_tabs.items():
+        if name == section: button.add_css_class("active")
+        else: button.remove_css_class("active")
     display.render_discover(display.discovery_request, data)
     settle()
     for artwork_key, pictures in display.discovery_pictures.items():
