@@ -7,6 +7,9 @@ bundled SVGs, not font glyphs. This update is available on the Alpine branch.
 Software version labels include “Alpine” (for example, “1.1.0-beta.12 Alpine”)
 to distinguish these builds from Raspberry Pi OS. Setup and web password changes
 require at least eight characters; setup still requires confirmation.
+Sleep and brightness are applied by the local root-owned helper: sleep writes zero
+backlight brightness but deliberately leaves the DSI/Goodix pipeline alive so a
+touch can wake the screen again.
 
 Isolated branch: `alpine-appliance-prototype`, based on Discover beta.7.
 This is an experimental image factory, not a Stable/Beta application update.

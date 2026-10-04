@@ -54,6 +54,28 @@ def validate_password(password):
         raise ValueError("Do not start or end the password with spaces or quotation marks.")
 
 
+def display_power(root, powered, brightness_percent=100):
+    """Control the backlight without disabling the DSI touch controller."""
+    brightness_percent = int(brightness_percent)
+    if not 10 <= brightness_percent <= 100: raise ValueError("Brightness must be between 10 and 100.")
+    devices = sorted((Path(root) / "sys/class/backlight").glob("*"))
+    devices = [device for device in devices if (device / "brightness").exists() or (device / "bl_power").exists()]
+    if not devices: raise ValueError("No display backlight control was found.")
+    for device in devices:
+        brightness = device / "brightness"; power = device / "bl_power"
+        if powered:
+            if power.exists(): power.write_text("0", encoding="ascii")
+            if brightness.exists():
+                maximum = int((device / "max_brightness").read_text(encoding="ascii")) if (device / "max_brightness").exists() else 255
+                brightness.write_text(str(max(1, round(maximum * brightness_percent / 100))), encoding="ascii")
+        elif brightness.exists():
+            # Brightness zero switches the backlight off while leaving Goodix
+            # alive, so the next contact can still wake the application.
+            brightness.write_text("0", encoding="ascii")
+        elif power.exists():
+            power.write_text("4", encoding="ascii")
+
+
 class Setup:
     def __init__(self, root=Path("/"), run=command, roon=None, login_password=set_login_password):
         self.root = Path(root); self.run = run; self.roon = roon or self.roon_state
@@ -105,6 +127,10 @@ class Setup:
             atomic(self.root / "var/lib/pi-home/tools-status", "Installing system tools…\n")
             threading.Thread(target=self.install_tools, daemon=True).start()
             return {"ok": True, "queued": True}
+        if action in {"display_on", "display_off", "set_brightness"}:
+            if not state.get("complete"): raise ValueError("Finish setup before controlling the display.")
+            display_power(self.root, action != "display_off", data.get("brightness", 100))
+            return {"ok": True, "powered": action != "display_off"}
         if action in {"netdata_enable", "netdata_disable"}:
             if not state.get("complete"): raise ValueError("Finish setup before changing services.")
             if not (self.root / "etc/init.d/netdata").is_file():

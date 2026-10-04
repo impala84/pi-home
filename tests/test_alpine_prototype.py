@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from pi_bus_time_display.server import write_control_request
 
@@ -41,10 +41,20 @@ class AlpinePrototypeTests(unittest.TestCase):
     def test_unsupported_privileged_actions_fail_without_queuing(self):
         with tempfile.TemporaryDirectory() as folder, patch.dict(os.environ, {"PI_HOME_APPLIANCE_PLATFORM": "alpine-prototype"}):
             state = Path(folder)
-            for action in ("set_wifi", "set_display", "roon_start", "set_brightness"):
+            for action in ("set_wifi", "set_display", "roon_start"):
                 with self.assertRaisesRegex(ValueError, "unavailable in the Alpine prototype"):
                     write_control_request(state, {"action": action})
             self.assertEqual(list(state.iterdir()), [])
+
+    def test_alpine_backlight_actions_use_the_bounded_root_helper(self):
+        client = Mock(); client.__enter__ = Mock(return_value=client); client.__exit__ = Mock(return_value=False)
+        client.makefile.return_value.readline.return_value = b'{"ok":true}\n'
+        with patch.dict(os.environ, {"PI_HOME_APPLIANCE_PLATFORM": "alpine-prototype"}), patch("pi_bus_time_display.server.socket.socket", return_value=client):
+            self.assertTrue(write_control_request(Path("/unused"), {"action": "display_on", "brightness": 63}))
+        self.assertEqual(client.sendall.call_args.args[0], b'{"action": "display_on", "brightness": 63}\n')
+        with patch.dict(os.environ, {"PI_HOME_APPLIANCE_PLATFORM": "alpine-prototype"}):
+            with self.assertRaisesRegex(ValueError, "between 10 and 100"):
+                write_control_request(Path("/unused"), {"action": "set_brightness", "brightness": 0})
 
     def test_credentials_are_unique_private_and_idempotent(self):
         passwords = []

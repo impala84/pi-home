@@ -181,6 +181,19 @@ class AlpineSetupTests(unittest.TestCase):
         self.setup.handle({"action": "netdata_disable"})
         self.assertEqual(self.run.call_args.args[0], ["rc-update", "del", "netdata", "default"])
 
+    def test_sleep_extinguishes_backlight_and_wake_restores_saved_brightness(self):
+        backlight = self.root / "sys/class/backlight/rpi_backlight"; backlight.mkdir(parents=True)
+        (backlight / "brightness").write_text("255"); (backlight / "max_brightness").write_text("255"); (backlight / "bl_power").write_text("0")
+        self.setup.save({"complete": True})
+        self.setup.handle({"action": "display_off"})
+        self.assertEqual((backlight / "brightness").read_text(), "0")
+        self.assertEqual((backlight / "bl_power").read_text(), "0")
+        self.setup.handle({"action": "display_on", "brightness": 63})
+        self.assertEqual((backlight / "brightness").read_text(), "161")
+        self.assertEqual((backlight / "bl_power").read_text(), "0")
+        with self.assertRaisesRegex(ValueError, "between 10 and 100"):
+            self.setup.handle({"action": "set_brightness", "brightness": 0})
+
     def test_dsi_orientation_only_selects_current_dsi_mode(self):
         spec = importlib.util.spec_from_file_location("orientation", ROOT / "appliance/alpine/setup_orientation.py")
         orientation = importlib.util.module_from_spec(spec); spec.loader.exec_module(orientation)

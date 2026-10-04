@@ -641,11 +641,16 @@ def write_control_request(state_dir: Path, request: dict) -> bool:
     as display-off immediately followed by display-on.
     """
     if os.getenv("PI_HOME_APPLIANCE_PLATFORM") == "alpine-prototype":
-        if request.get("action") in {"update", "reboot", "netdata_enable", "netdata_disable", "install_tools"}:
+        if request.get("action") in {"update", "reboot", "netdata_enable", "netdata_disable", "install_tools", "display_on", "display_off", "set_brightness"}:
+            payload = {"action": request["action"]}
+            if request["action"] in {"display_on", "set_brightness"}:
+                brightness = int(request.get("brightness", 100))
+                if not 10 <= brightness <= 100: raise ValueError("Brightness must be between 10 and 100")
+                payload["brightness"] = brightness
             try:
                 with socket.socket(socket.AF_UNIX) as client:
                     client.settimeout(5); client.connect("/run/pi-home-setup.sock")
-                    client.sendall((json.dumps({"action": request["action"]}) + "\n").encode())
+                    client.sendall((json.dumps(payload) + "\n").encode())
                     result = json.loads(client.makefile("rb").readline(4096))
             except OSError as error: raise ValueError("Alpine system helper is not ready. Please retry.") from error
             if not result.get("ok"): raise ValueError(result.get("error", "Could not start Alpine update"))
@@ -829,10 +834,7 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
             super().do_GET()
 
         def do_POST(self):
-            if os.getenv("PI_HOME_APPLIANCE_PLATFORM") == "alpine-prototype" and self.path in {
-                "/api/device/screen-power", "/api/device/brightness",
-                "/api/device/roon-bridge", "/api/admin/brightness",
-            }:
+            if os.getenv("PI_HOME_APPLIANCE_PLATFORM") == "alpine-prototype" and self.path == "/api/device/roon-bridge":
                 self.send_json(501, b'{"error":"OS controls are unavailable in the Alpine prototype"}')
                 return
             if self.path == "/api/admin/display-capture":

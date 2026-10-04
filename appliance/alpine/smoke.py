@@ -41,15 +41,8 @@ try:
                 if attempt == 29:
                     raise
                 time.sleep(0.2)
-    request = urllib.request.Request("http://127.0.0.1:8765/api/device/brightness", data=b"{}", headers={"Content-Type": "application/json"})
-    try:
-        urllib.request.urlopen(request, timeout=2)
-        raise AssertionError("Unsupported update was accepted")
-    except urllib.error.HTTPError as error:
-        assert error.code == 501
-        assert "unavailable" in json.load(error)["error"]
     assert not Path("/var/lib/pi-home/system-action-queue").exists()
-    print("Alpine ARM64: GTK/Cairo imports and both HTTP services passed; unsupported OS controls rejected.")
+    print("Alpine ARM64: GTK/Cairo imports and both HTTP services passed.")
 finally:
     for process in processes:
         process.terminate()
