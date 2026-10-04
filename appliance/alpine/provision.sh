@@ -8,7 +8,7 @@ addgroup morningbus video
 addgroup morningbus input
 adduser -D -h /home/admin admin
 addgroup admin wheel
-passwd -l admin
+awk -F: '$1 == "admin" && $2 ~ /^[!*]/ {locked=1} END {exit !locked}' /etc/shadow
 mkdir -p /etc/sudoers.d /etc/ssh/sshd_config.d
 printf '%s\n' '%wheel ALL=(ALL:ALL) ALL' > /etc/sudoers.d/pi-home
 chmod 440 /etc/sudoers.d/pi-home
@@ -56,7 +56,7 @@ for service in hwclock modules sysctl bootmisc hostname localmount hwdrivers; do
 for service in killprocs savecache mount-ro; do rc-update add "$service" shutdown; done
 for service in networking dbus networkmanager avahi-daemon seatd pi-home-firstboot pi-home-api pi-home-roon pi-home-setup pi-home-display; do rc-update add "$service" default; done
 # SSH is enabled, but admin stays locked until setup supplies a unique password.
-passwd -l root
+awk -F: '$1 == "root" && $2 ~ /^[!*]/ {locked=1} END {exit !locked}' /etc/shadow
 sed -i '/^[^#].*getty/s/^/#/' /etc/inittab
 printf '%s\n' 'features="base mmc ext4"' > /etc/mkinitfs/mkinitfs.conf
 kernel_version=$(find /lib/modules -mindepth 1 -maxdepth 1 -type d | head -n 1)
