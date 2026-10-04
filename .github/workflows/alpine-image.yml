@@ -1,5 +1,7 @@
 name: Alpine appliance prototype
 on:
+  push:
+    branches: [alpine-appliance-prototype]
   workflow_dispatch:
 jobs:
   image:
