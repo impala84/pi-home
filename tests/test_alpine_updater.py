@@ -12,6 +12,12 @@ updater = importlib.util.module_from_spec(spec); spec.loader.exec_module(updater
 
 
 class AlpineUpdaterTests(unittest.TestCase):
+    def test_update_leaves_live_release_directory_before_any_pruning(self):
+        with patch.object(updater.os, "chdir") as chdir, patch.object(updater, "wait_for_clock", side_effect=RuntimeError("stop")):
+            with self.assertRaisesRegex(RuntimeError, "stop"):
+                updater.update()
+        chdir.assert_called_once_with("/")
+
     def test_wait_for_clock_is_bounded_and_visible(self):
         with patch.object(updater.time, "gmtime", return_value=type("Clock", (), {"tm_year": 1970})()), patch.object(updater.time, "monotonic", side_effect=[0, 0, 2]), patch.object(updater.time, "sleep"), patch.object(updater, "status") as status:
             with self.assertRaisesRegex(RuntimeError, "clock is not ready"):

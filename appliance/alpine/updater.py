@@ -142,6 +142,10 @@ def restart():
 
 
 def update():
+    # The helper may have inherited /opt/pi-home as its working directory.
+    # Move away before pruning an inactive release so child installers never
+    # inherit a deleted current-working-directory inode.
+    os.chdir("/")
     wait_for_clock()
     status("Update · Checking verified Alpine prototype builds…")
     sha = verified_revision()
