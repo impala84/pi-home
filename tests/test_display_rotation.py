@@ -117,7 +117,7 @@ class DisplayRotationTests(unittest.TestCase):
         self.assertIn("left: 62px; right: 10px; width: auto; transform: none", css)
         self.assertIn(".browser-view.surprise-takeover .browser-list { display: block; }", css)
         self.assertIn("['▶', 'Play this album', 'surprise_play']", app)
-        self.assertIn('self.browser_sidebar.set_visible(not data.get("surprise_preview"))', display)
+        self.assertIn('self.browser_sidebar.set_visible(not data.get("surprise_preview") and not from_discover)', display)
         self.assertIn('("Play Now", "media-playback-start-symbolic", "surprise_play")', display)
         self.assertIn("['↻', 'Surprise me again', 'surprise']", app)
         self.assertIn('self.button("SURPRISE!"', display)

@@ -267,6 +267,7 @@ class Display(Gtk.Application):
         self.discovery_recent_mode = "listened"
         self.discovery_picks = False
         self.discovery_cards = []
+        self.discovery_browser_origin = False
         self.home_value_timeouts = {}
         self.brightness_updating = False
         self.brightness_timeout = None
@@ -402,7 +403,7 @@ class Display(Gtk.Application):
         header_overlay.add_overlay(subnav); page.append(header_overlay)
         self.discover_subnav = Gtk.Box(spacing=8); self.discover_subnav.add_css_class("roon-subnav"); self.discover_subnav.set_halign(Gtk.Align.CENTER); self.discover_subnav.set_valign(Gtk.Align.START)
         self.discover_tabs = {}
-        for section, title in (("recent", "RECENT"), ("browse", "BROWSE"), ("daily", "DAILY MIXES"), ("releases", "NEW RELEASES"), ("surprise", "SURPRISE ME")):
+        for section, title in (("recent", "RECENT"), ("browse", "BROWSE"), ("daily", "DAILIES"), ("releases", "NEW RELEASES"), ("surprise", "SURPRISE ME")):
             button = self.button(title, lambda _button, value=section: self.open_discover(value), "")
             self.discover_tabs[section] = button; self.discover_subnav.append(button)
         header_overlay.add_overlay(self.discover_subnav); self.discover_subnav.set_visible(False); self.browser_tab.set_visible(False)
@@ -412,7 +413,10 @@ class Display(Gtk.Application):
         self.discovery_scroll = Gtk.ScrolledWindow(); self.discovery_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC); self.discovery_scroll.set_kinetic_scrolling(True); self.discovery_scroll.set_propagate_natural_height(False); self.discovery_scroll.set_min_content_height(1); self.discovery_scroll.set_size_request(-1, 1); self.discovery_scroll.set_vexpand(True); self.discovery_scroll.set_hexpand(True); self.discovery_scroll.set_child(self.discovery_list)
         self.discovery_scroll.add_css_class("discovery-scroll")
         self.discovery_scroll.get_vadjustment().connect("value-changed", lambda *_: self.load_visible_discovery_artwork())
-        self.roon_views.add_named(self.discovery_scroll, "discover")
+        self.discovery_body = Gtk.Box(spacing=0); self.discovery_body.set_vexpand(True); self.discovery_body.set_hexpand(True)
+        self.discovery_sidebar = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2); self.discovery_sidebar.add_css_class("browser-sidebar"); self.discovery_sidebar.set_vexpand(True)
+        self.discovery_body.append(self.discovery_sidebar); self.discovery_body.append(self.discovery_scroll)
+        self.roon_views.add_named(self.discovery_body, "discover")
         content = Gtk.Box(spacing=26); content.set_vexpand(True); content.set_margin_start(8); content.set_margin_end(8); content.set_margin_top(8); content.set_margin_bottom(8)
         self.artwork = Gtk.Picture(); self.artwork.add_css_class("artwork"); self.artwork.set_size_request(280, 280); self.artwork.set_valign(Gtk.Align.CENTER); self.artwork.set_content_fit(Gtk.ContentFit.COVER)
         artwork_button = Gtk.Button(); artwork_button.add_css_class("artwork-button"); artwork_button.set_halign(Gtk.Align.CENTER); artwork_button.set_valign(Gtk.Align.CENTER); artwork_button.set_child(self.artwork); artwork_button.connect("clicked", lambda *_: self.set_roon_view("details")); content.append(artwork_button); self.artwork_button = artwork_button
@@ -448,6 +452,7 @@ class Display(Gtk.Application):
         self.browser_surprise_button = self.button("SURPRISE!", lambda *_: self.request_browser("surprise"), "browser-filter"); self.browser_surprise_button.get_child().set_xalign(0); self.browser_surprise_button.add_css_class("browser-surprise"); sidebar.append(self.browser_surprise_button)
         self.browser_back = self.button("BACK", lambda *_: self.request_browser("back"), "browser-back"); self.browser_back.set_visible(False); self.browser_back.set_halign(Gtk.Align.START); self.browser_back.set_valign(Gtk.Align.END)
         self.browser_sidebar = sidebar; browser_body.append(sidebar)
+        self.browser_discovery_sidebar = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2); self.browser_discovery_sidebar.add_css_class("browser-sidebar"); self.browser_discovery_sidebar.set_vexpand(True); self.browser_discovery_sidebar.set_visible(False); browser_body.append(self.browser_discovery_sidebar)
         browser_main = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2); browser_main.add_css_class("browser-main"); browser_main.set_vexpand(True); browser_main.set_hexpand(True)
         sidebar.set_vexpand(True); spacer = Gtk.Box(); spacer.set_vexpand(True); sidebar.append(spacer); sidebar.append(self.browser_back)
         self.browser_message = self.label("", "browser-message"); self.browser_message.set_ellipsize(Pango.EllipsizeMode.END); self.browser_message.set_visible(False); browser_main.append(self.browser_message)
@@ -651,7 +656,7 @@ class Display(Gtk.Application):
         target = target_response.get("target") if isinstance(target_response, dict) else None
         GLib.idle_add(self.apply, target, status, roon, config, system, device, key, None)
         self.polling = False
-        if self.discovery_active and self.last_mode == "roon" and not self.settings_open and not getattr(self, "discovery_opening", False) and self.discovery_section not in {"browse", "surprise"}:
+        if self.discovery_active and self.last_mode == "roon" and self.requested_audio_view == "discover" and not self.settings_open and not getattr(self, "discovery_opening", False) and self.discovery_section not in {"browse", "surprise"}:
             request = self.discovery_request
             section = "mix" if self.discovery_mix else self.discovery_section
             if section == "recent" and self.discovery_recent_mode == "added": section = "added"
@@ -965,11 +970,13 @@ class Display(Gtk.Application):
         self.set_roon_view("now")
 
     def show_browser(self, *_):
+        self.discovery_browser_origin = False
         self.discovery_active = True; self.discovery_section = "browse"
         self.set_roon_view("browse")
         if self.browser_state is None: self.request_browser("section", section="albums")
 
     def open_discover(self, section="recent", mix="", picks=False):
+        self.discovery_browser_origin = False
         self.discovery_active = True; self.discovery_section = section; self.discovery_mix = mix
         self.discovery_picks = picks
         self.discovery_opening = False
@@ -984,7 +991,9 @@ class Display(Gtk.Application):
         elif section == "surprise":
             self.request_browser("surprise")
         else:
+            self.sync_discovery_sidebar()
             while child := self.discovery_list.get_first_child(): self.discovery_list.remove(child)
+            self.discovery_pictures = {}; self.discovery_cards = []
             self.discovery_list.append(self.label("Loading…", "loading-notice"))
             self.discovery_scroll.get_vadjustment().set_value(0)
             self.start_poll()
@@ -998,17 +1007,7 @@ class Display(Gtk.Application):
         while child := self.discovery_list.get_first_child(): self.discovery_list.remove(child)
         self.discovery_pictures = {}
         self.discovery_cards = []
-        if self.discovery_section == "recent":
-            modes = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
-            for mode, label in (("listened", "Recently Listened"), ("added", "Recently Added")):
-                button = self.button(label, lambda _button, value=mode: self.open_recent(value), "browser-back")
-                if mode == self.discovery_recent_mode: button.add_css_class("active")
-                modes.append(button)
-            self.discovery_list.append(modes)
-        if self.discovery_picks:
-            back = self.button("BACK TO MIXES", lambda *_: self.open_discover("daily"), "browser-back"); back.set_halign(Gtk.Align.START); self.discovery_list.append(back)
-        if self.discovery_mix:
-            back = self.button("BACK", lambda *_: self.open_discover("daily"), "browser-back"); back.set_halign(Gtk.Align.START); self.discovery_list.append(back)
+        self.sync_discovery_sidebar()
         if data.get("status") != "ready":
             self.discovery_list.append(self.label("Loading…" if data.get("status") == "loading" else data.get("message", "Discover is unavailable."), "loading-notice" if data.get("status") == "loading" else "browser-message")); return False
         if self.discovery_mix:
@@ -1021,13 +1020,20 @@ class Display(Gtk.Application):
             self.discovery_list.append(controls)
         monitors = Gdk.Display.get_default().get_monitors()
         monitor = monitors.get_item(0) if monitors.get_n_items() else None
-        columns = 4 if monitor and monitor.get_geometry().width >= 1200 else 2
-        size = 220 if columns == 4 else 180
+        if self.discovery_section in {"recent", "daily"}:
+            columns, size = self.browser_grid_metrics()
+            size = min(172, size)
+        else:
+            columns = 4 if monitor and monitor.get_geometry().width >= 1200 else 2
+            size = 220 if columns == 4 else 180
         content = self.discovery_list
         def group(title, items):
             if title:
                 heading = self.label(title, "browser-section"); heading.set_wrap(True); content.append(heading)
-            grid = Gtk.Grid(column_spacing=20, row_spacing=20); grid.set_column_homogeneous(True); grid.set_hexpand(True)
+            if self.discovery_mix:
+                for item in items: content.append(self.discovery_track_row(item))
+                return
+            grid = Gtk.Grid(column_spacing=16 if self.discovery_section in {"recent", "daily"} else 20, row_spacing=20); grid.set_column_homogeneous(True); grid.set_hexpand(True)
             for index, item in enumerate(items):
                 card = Gtk.Button(); card.add_css_class("discovery-card"); card.set_hexpand(True)
                 body = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
@@ -1050,8 +1056,6 @@ class Display(Gtk.Application):
             seed = (recommendation.get("seed") or {}).get("title")
             group(f"{reason} {seed}" if seed else "Picked for you", recommendation.get("items", []))
         if not data.get("items") and not data.get("groups"): self.discovery_list.append(self.label("Nothing available here yet.", "browser-message"))
-        if self.discovery_section == "daily" and not self.discovery_mix and not self.discovery_picks:
-            more = self.button("MORE RECOMMENDATIONS", lambda *_: self.open_discover("daily", picks=True), "browser-back"); more.set_halign(Gtk.Align.START); content.append(more)
         if self.discovery_mix and data.get("total", 0) > len(data.get("items", [])):
             content.append(self.label("Track preview · the mix buttons request the whole mix.", "browser-message"))
         GLib.timeout_add(100, self.load_visible_discovery_artwork)
@@ -1060,6 +1064,51 @@ class Display(Gtk.Application):
     def open_recent(self, mode):
         self.discovery_recent_mode = mode
         self.open_discover("recent")
+
+    def discovery_secondary_navigation(self):
+        if self.discovery_section == "recent":
+            return (("added", "ADDED"), ("listened", "LISTENED")), self.discovery_recent_mode
+        if self.discovery_section == "daily":
+            return (("mixes", "MIXES"), ("recommendations", "RECOMMENDATIONS")), "recommendations" if self.discovery_picks else "mixes"
+        return (), ""
+
+    def select_discovery_secondary(self, value):
+        if self.discovery_section == "recent": self.open_recent(value)
+        else: self.open_discover("daily", picks=value == "recommendations")
+
+    def sync_discovery_sidebar(self, sidebar=None, from_browser=False):
+        sidebar = self.discovery_sidebar if sidebar is None else sidebar
+        while child := sidebar.get_first_child(): sidebar.remove(child)
+        entries, active = self.discovery_secondary_navigation()
+        sidebar.set_visible(bool(entries))
+        if not from_browser:
+            if entries: self.discovery_body.add_css_class("browser-view")
+            else: self.discovery_body.remove_css_class("browser-view")
+        for value, label in entries:
+            button = self.button(label, lambda _button, choice=value: self.select_discovery_secondary(choice), "browser-filter")
+            button.get_child().set_xalign(0)
+            if value == active: button.add_css_class("active")
+            sidebar.append(button)
+        spacer = Gtk.Box(); spacer.set_vexpand(True); sidebar.append(spacer)
+        if self.discovery_mix or from_browser:
+            back = self.button("BACK", lambda *_: self.open_discover(self.discovery_section, self.discovery_mix, self.discovery_picks) if from_browser else self.open_discover("daily"), "browser-back")
+            back.set_halign(Gtk.Align.START); back.set_valign(Gtk.Align.END); sidebar.append(back)
+
+    def discovery_track_row(self, item):
+        # Match Browse playlist rows, including the fixed thumbnail viewport.
+        row = Gtk.Box(spacing=14); row.set_hexpand(True)
+        picture = Gtk.Picture(); picture.add_css_class("queue-art"); picture.set_can_shrink(True); picture.set_content_fit(Gtk.ContentFit.COVER); self.set_browser_placeholder(picture)
+        art_slot = Gtk.ScrolledWindow(); art_slot.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.NEVER); art_slot.set_propagate_natural_width(False); art_slot.set_propagate_natural_height(False); art_slot.set_min_content_width(84); art_slot.set_max_content_width(84); art_slot.set_min_content_height(84); art_slot.set_max_content_height(84); art_slot.set_size_request(84, 84); art_slot.set_halign(Gtk.Align.START); art_slot.set_valign(Gtk.Align.CENTER); art_slot.set_child(picture); row.append(art_slot)
+        copy = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3); copy.set_valign(Gtk.Align.CENTER); copy.set_hexpand(True)
+        title = self.label(item.get("title") or "Untitled", "queue-title"); title.set_ellipsize(Pango.EllipsizeMode.END); copy.append(title)
+        subtitle = self.label(item.get("artist") or "Roon", "queue-meta"); subtitle.set_ellipsize(Pango.EllipsizeMode.END); copy.append(subtitle); row.append(copy)
+        row.append(self.label(item.get("duration") or "", "browser-arrow", 1))
+        button = Gtk.Button(); button.add_css_class("browser-row"); button.set_child(row); button.set_sensitive(bool(item.get("key"))); button.set_vexpand(False); button.set_valign(Gtk.Align.START)
+        button.connect("clicked", lambda *_: self.open_discovery_item(item.get("key")))
+        if key := item.get("artwork_key"):
+            key = "discover:" + key; self.discovery_pictures.setdefault(key, []).append(picture); self.discovery_cards.append((button, key))
+            if cached := self.queue_thumbnail_cache.get(key): picture.set_paintable(cached)
+        return button
 
     def load_visible_discovery_artwork(self, *_):
         if not self.discovery_active or self.roon_views.get_visible_child_name() != "discover": return False
@@ -1093,6 +1142,7 @@ class Display(Gtk.Application):
         threading.Thread(target=load, daemon=True).start()
 
     def open_discovery_item(self, key):
+        self.discovery_browser_origin = self.discovery_section in {"recent", "daily"}
         self.discovery_opening = True
         request = self.discovery_request = self.discovery_request + 1
         self.discovery_signature = None
@@ -1346,7 +1396,10 @@ class Display(Gtk.Application):
     def render_browser(self, data):
         self.browser_rendering = True; self.browser_loading = True; self.browser_state = data; self.browser_back.set_visible(bool(data.get("can_back")) and not data.get("surprise_preview")); self.browser_back.set_sensitive(bool(data.get("can_back"))); self.browser_scrubber.set_visible(bool(data.get("alpha_scrub")))
         active_section = "surprise" if data.get("surprise_preview") else (data.get("section") or "albums")
-        self.browser_sidebar.set_visible(not data.get("surprise_preview"))
+        from_discover = self.discovery_active and self.discovery_browser_origin
+        self.browser_sidebar.set_visible(not data.get("surprise_preview") and not from_discover)
+        self.browser_discovery_sidebar.set_visible(from_discover)
+        if from_discover: self.sync_discovery_sidebar(self.browser_discovery_sidebar, from_browser=True)
         self.browser_surprise_button.set_visible(False); self.browser_surprise_button.set_label("SURPRISE!")
         self.browser_surprise_button.get_child().set_xalign(0)
         if active_section == "surprise": self.browser_surprise_button.add_css_class("active")

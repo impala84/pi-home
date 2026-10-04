@@ -30,7 +30,92 @@ class Entry:
     def set_position(self, position): self.position = position
 
 
+class LayoutWidget:
+    """Record widget construction without pretending to allocate a GTK screen."""
+    def __init__(self, **kwargs):
+        self.children, self.classes, self.properties = [], set(), dict(kwargs)
+    def append(self, child): self.children.append(child)
+    def remove(self, child): self.children.remove(child)
+    def get_first_child(self): return self.children[0] if self.children else None
+    def get_child(self): return self.properties.get("child", self)
+    def set_child(self, child): self.properties["child"] = child
+    def add_css_class(self, name): self.classes.add(name)
+    def remove_css_class(self, name): self.classes.discard(name)
+    def connect(self, event, callback): self.properties[event] = callback
+    def __getattr__(self, name):
+        if name.startswith("set_"):
+            return lambda *args: self.properties.__setitem__(name[4:], args)
+        raise AttributeError(name)
+
+
+LAYOUT_GTK = SimpleNamespace(Box=LayoutWidget, Picture=LayoutWidget, ScrolledWindow=LayoutWidget, Button=LayoutWidget, Orientation=SimpleNamespace(VERTICAL="vertical"), Align=SimpleNamespace(START="start", END="end", CENTER="center"), PolicyType=SimpleNamespace(NEVER="never"), ContentFit=SimpleNamespace(COVER="cover"))
+
+
 class NativeBrowserControlsTests(unittest.TestCase):
+    def test_secondary_navigation_is_section_specific_and_actions_preserve_context(self):
+        navigation = native_method("discovery_secondary_navigation")
+        owner = SimpleNamespace(discovery_section="recent", discovery_recent_mode="added", discovery_picks=False, open_recent=Mock(), open_discover=Mock())
+        self.assertEqual(navigation(owner), ((("added", "ADDED"), ("listened", "LISTENED")), "added"))
+        select = native_method("select_discovery_secondary")
+        select(owner,"listened"); owner.open_recent.assert_called_once_with("listened")
+        owner.discovery_section="daily"; owner.discovery_picks=True
+        self.assertEqual(navigation(owner)[1],"recommendations")
+        select(owner,"mixes"); owner.open_discover.assert_called_with("daily",picks=False)
+        select(owner,"recommendations"); owner.open_discover.assert_called_with("daily",picks=True)
+        for section in ("releases", "surprise"):
+            owner.discovery_section=section
+            self.assertEqual(navigation(owner), ((), ""))
+
+    def test_secondary_rail_uses_browse_filters_and_bottom_back_outside_scroll(self):
+        def button(label, callback, style):
+            widget=LayoutWidget(label=label, callback=callback); widget.add_css_class(style); return widget
+        owner=SimpleNamespace(discovery_sidebar=LayoutWidget(),discovery_body=LayoutWidget(),discovery_mix="aabb", discovery_secondary_navigation=lambda:((("mixes","MIXES"),("recommendations","RECOMMENDATIONS")),"mixes"), button=button, select_discovery_secondary=Mock(),open_discover=Mock())
+        native_method("sync_discovery_sidebar",{"Gtk":LAYOUT_GTK})(owner)
+        widgets=owner.discovery_sidebar.children
+        self.assertEqual([w.properties.get("label") for w in widgets], ["MIXES","RECOMMENDATIONS",None,"BACK"])
+        self.assertIn("browser-filter",widgets[0].classes); self.assertIn("active",widgets[0].classes)
+        self.assertEqual(widgets[-2].properties["vexpand"],(True,))
+        self.assertEqual(widgets[-1].properties["valign"],("end",))
+        widgets[-1].properties["callback"](); owner.open_discover.assert_called_once_with("daily")
+        native_method("sync_discovery_sidebar",{"Gtk":LAYOUT_GTK})(owner)
+        self.assertEqual(len(owner.discovery_sidebar.children),4)
+
+    def test_loading_lives_in_right_content_without_replacing_sidebar(self):
+        owner=SimpleNamespace(discovery_request=1,discovery_active=True,roon_views=SimpleNamespace(get_visible_child_name=lambda:"discover"),discovery_signature=None,discovery_list=LayoutWidget(),sync_discovery_sidebar=Mock(),label=lambda text,style:LayoutWidget(text=text,style=style))
+        native_method("render_discover",{"json":__import__("json")})(owner,1,{"status":"loading"})
+        self.assertEqual(owner.discovery_list.children[0].properties,{"text":"Loading…","style":"loading-notice"})
+        owner.sync_discovery_sidebar.assert_called_once()
+
+    def test_opened_discover_item_back_restores_its_section_and_mix(self):
+        def button(label, callback, style): return LayoutWidget(label=label, callback=callback, style=style)
+        owner=SimpleNamespace(discovery_section="daily",discovery_mix="aabb",discovery_picks=False,discovery_secondary_navigation=lambda:((("mixes","MIXES"),("recommendations","RECOMMENDATIONS")),"mixes"),button=button,select_discovery_secondary=Mock(),open_discover=Mock())
+        sidebar=LayoutWidget()
+        native_method("sync_discovery_sidebar",{"Gtk":LAYOUT_GTK})(owner,sidebar,from_browser=True)
+        sidebar.children[-1].properties["callback"]()
+        owner.open_discover.assert_called_once_with("daily","aabb",False)
+
+    def test_discover_uses_browse_four_column_metrics_on_the_landscape_touchscreen(self):
+        monitor=SimpleNamespace(get_geometry=lambda:SimpleNamespace(width=1280))
+        monitors=SimpleNamespace(get_n_items=lambda:1,get_item=lambda _index:monitor)
+        gdk=SimpleNamespace(Display=SimpleNamespace(get_default=lambda:SimpleNamespace(get_monitors=lambda:monitors)))
+        columns,size=native_method("browser_grid_metrics",{"Gdk":gdk})(SimpleNamespace())
+        self.assertEqual(columns,4)
+        self.assertEqual(min(172,size),172)
+        source=SOURCE.read_text(encoding="utf-8")
+        self.assertIn('columns, size = self.browser_grid_metrics()',source)
+        self.assertIn('size = min(172, size)',source)
+        self.assertNotIn('MORE RECOMMENDATIONS',source)
+
+    def test_mix_tracks_use_playlist_rows_and_register_lazy_thumbnail_without_playback(self):
+        owner=SimpleNamespace(label=lambda text,style,*args:LayoutWidget(text=text,style=style),set_browser_placeholder=Mock(),open_discovery_item=Mock(),discovery_pictures={},discovery_cards=[],queue_thumbnail_cache={})
+        row=native_method("discovery_track_row",{"Gtk":LAYOUT_GTK,"Pango":SimpleNamespace(EllipsizeMode=SimpleNamespace(END="end"))})(owner,{"title":"Song","artist":"Artist","key":"track-key","artwork_key":"art"})
+        self.assertIn("browser-row",row.classes)
+        art=row.get_child().children[0]
+        self.assertEqual(art.properties["size_request"],(84,84))
+        self.assertEqual(owner.discovery_cards,[(row,"discover:art")])
+        owner.open_discovery_item.assert_not_called()
+        row.properties["clicked"](); owner.open_discovery_item.assert_called_once_with("track-key")
+
     def test_discover_artwork_only_queues_visible_and_nearby_cards(self):
         jobs = Mock()
         def card(y):
@@ -50,7 +135,7 @@ class NativeBrowserControlsTests(unittest.TestCase):
         code = SOURCE.read_text(encoding="utf-8")
         self.assertIn('section = "added"',code)
         self.assertIn('client=touch',code)
-        self.assertIn('MORE RECOMMENDATIONS',code)
+        self.assertIn('("recommendations", "RECOMMENDATIONS")',code)
 
     def test_mix_duotone_preserves_alpha_and_maps_black_white_and_coloured_pixels(self):
         tree = ast.parse(SOURCE.read_text(encoding="utf-8"))
@@ -71,7 +156,8 @@ class NativeBrowserControlsTests(unittest.TestCase):
         code = SOURCE.read_text(encoding="utf-8")
         self.assertIn('("releases", "NEW RELEASES")', code)
         self.assertIn('self.browser_tab.set_visible(False)', code)
-        self.assertIn('self.roon_views.add_named(self.discovery_scroll, "discover")', code)
+        self.assertIn('self.roon_views.add_named(self.discovery_body, "discover")', code)
+        self.assertIn('("daily", "DAILIES")', code)
         self.assertIn('background: transparent; background-image: none; box-shadow: none;', code)
 
     def test_discovery_thumbnail_has_its_own_proxy_not_official_image_keys(self):

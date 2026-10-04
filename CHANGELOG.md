@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.1.0-beta.7 — 4 October 2026
+
+- Focus on the native touchscreen: use Browse-style left secondary navigation for Recent (Added/Listened) and Dailies (Mixes/Recommendations); remove the competing top-row controls and More Recommendations button there. Web layout remains unchanged.
+- Rename the native Daily Mixes tab to Dailies. Keep recommendations on demand, rather than loading them before mixes.
+- Reuse Browse's landscape grid sizing for Recent/Dailies, with four columns at 1280px and compact covers capped at 172px. Keep rounded artwork, centred two-line titles and lazy thumbnails.
+- Show mix selections in Browse-style playlist rows with fixed 84px thumbnails, title and artist; keep Play This Mix/Queue This Mix above the rows and Back pinned at bottom left outside scrolling content.
+- Keep section navigation and a context-restoring Back when opening album/track actions from Recent/Dailies. Loading stays inside the right content pane; stop polling Discover while viewing those action pages.
+- Preserve native New Releases and Surprise Me layouts and all web layouts. No new API calls or playback behaviour.
+
+Verification: 128 Python and 91 Node checks pass, including widget-construction/navigation tests for the sidebar, loading placement, playlist rows, context-preserving Back and four-column sizing. These tests do not perform real GTK allocation or prove physical touch/scroll behaviour; touchscreen acceptance is still required. No remote installation, restart or playback.
+
 ## 1.1.0-beta.6 — 4 October 2026
 
 - Load Daily Mixes independently; fetch Daily Picks only when More Recommendations is requested, on web and touchscreen. Keep mix tracks and whole-mix controls.
