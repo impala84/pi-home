@@ -1,0 +1,8 @@
+#!/sbin/openrc-run
+description="Map the built-in touchscreen before starting Cage"
+depend() { need udev-trigger localmount; after hwdrivers; before pi-home-display; }
+start() {
+    ebegin "Mapping Pi Home touchscreen to DSI"
+    python3 /opt/pi-home/appliance/alpine/input_mapping.py
+    eend $?
+}

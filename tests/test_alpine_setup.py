@@ -123,5 +123,22 @@ class AlpineSetupTests(unittest.TestCase):
         self.assertEqual(orientation.choose_output('HDMI-A-1 "HDMI"\n  1920x1080 px, 60 Hz (current)\nDSI-1 "DSI"\n  720x1280 px, 60 Hz (preferred, current)\n'), ("DSI-1", True))
         self.assertEqual(orientation.choose_output('HDMI-A-1 "HDMI"\n  720x1280 px, 60 Hz (current)\n'), (None, False))
 
+    def test_touch_mapping_is_scoped_to_goodix_and_one_connected_dsi(self):
+        import sys
+        spec = importlib.util.spec_from_file_location("input_mapping", ROOT / "appliance/alpine/input_mapping.py")
+        mapping = importlib.util.module_from_spec(spec)
+        with patch.dict(sys.modules, {"setup_service": module}): spec.loader.exec_module(mapping)
+        drm = self.root / "sys/class/drm"; drm.mkdir(parents=True)
+        for name, status in (("card1-DSI-1", "connected"), ("card1-HDMI-A-1", "connected"), ("card2-DSI-2", "disconnected")):
+            connector = drm / name; connector.mkdir(); (connector / "status").write_text(status)
+        self.assertEqual(mapping.connected_output(self.root), "DSI-1")
+        rule = mapping.mapping_rule("DSI-1")
+        self.assertIn('ATTRS{name}=="Goodix Capacitive TouchScreen"', rule)
+        self.assertIn('ENV{WL_OUTPUT}="DSI-1"', rule)
+        self.assertIn('LIBINPUT_CALIBRATION_MATRIX}="1 0 0 0 1 0"', rule)
+        (drm / "card2-DSI-2/status").write_text("connected")
+        self.assertIsNone(mapping.connected_output(self.root))
+        with self.assertRaises(ValueError): mapping.mapping_rule('DSI-1", RUN+="bad')
+
 
 if __name__ == "__main__": unittest.main()

@@ -6,6 +6,18 @@ Do not install it over the working Pi. Use a separate SD card.
 
 ## Touch onboarding and SSH revision — 4 October 2026
 
+Physical testing of `c71d326` found that landscape output did not rotate touch.
+The earlier assertion that Cage handles both was incomplete: Cage/wlroots only
+transforms touch coordinates when the input device is mapped to the output.
+The Alpine image did not set that mapping. A new root-owned OpenRC input step
+associates only the built-in Goodix touchscreen with the single connected DSI
+connector using `WL_OUTPUT`, before Cage opens input devices. Calibration stays
+identity and Device Tree input rotation remains off, so rotation has one owner.
+Startup logs now record the selected connector/transform and Cage's mapping
+messages. This is a source-backed correction, not physical-touch acceptance.
+An attached USB mouse can complete onboarding and enable SSH on the already
+flashed image, allowing an in-place repair instead of another flash.
+
 Revision `c71d326`: [ARM64 image, GTK pages/icons and SSH policy checks](https://github.com/impala84/pi-home/actions/runs/37189662473)
 passed. Baseline checks passed 148 Python and 91 Node tests. Setup now starts
 portrait DSI panels in landscape, offers password visibility/confirmation and

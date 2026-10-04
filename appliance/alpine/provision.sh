@@ -54,7 +54,7 @@ rc-update add udev sysinit
 rc-update add udev-trigger sysinit
 for service in hwclock modules sysctl bootmisc hostname localmount hwdrivers; do rc-update add "$service" boot; done
 for service in killprocs savecache mount-ro; do rc-update add "$service" shutdown; done
-for service in networking dbus networkmanager avahi-daemon seatd pi-home-firstboot pi-home-api pi-home-roon pi-home-setup pi-home-display; do rc-update add "$service" default; done
+for service in networking dbus networkmanager avahi-daemon seatd pi-home-firstboot pi-home-api pi-home-roon pi-home-setup pi-home-input pi-home-display; do rc-update add "$service" default; done
 # SSH is enabled, but admin stays locked until setup supplies a unique password.
 awk -F: '$1 == "root" && $2 ~ /^[!*]/ {locked=1} END {exit !locked}' /etc/shadow
 sed -i '/^[^#].*getty/s/^/#/' /etc/inittab
