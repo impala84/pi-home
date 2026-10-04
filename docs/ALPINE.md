@@ -4,6 +4,18 @@ Isolated branch: `alpine-appliance-prototype`, based on Discover beta.7.
 This is an experimental image factory, not a Stable/Beta application update.
 Do not install it over the working Pi. Use a separate SD card.
 
+## Touch onboarding and SSH revision — 4 October 2026
+
+Revision `c71d326`: [ARM64 image, GTK pages/icons and SSH policy checks](https://github.com/impala84/pi-home/actions/runs/37189662473)
+passed. Baseline checks passed 148 Python and 91 Node tests. Setup now starts
+portrait DSI panels in landscape, offers password visibility/confirmation and
+an enabled-by-default SSH option, uses a regional timezone chooser, and shows
+a small theme-aware Pi Home wordmark. The main splash reads the saved theme
+before the first frame. Standard GTK icons and SVG support are included.
+Duplicate touch rotation was removed; actual finger input still needs retesting.
+No changes were installed on the running Pi, and the earlier image remains
+without SSH. This is an experimental image, not an updater release.
+
 ## Blank-screen investigation — 4 October 2026
 
 The `ce7da54` installer image failed its first physical Pi 4B / 7-inch Touch
