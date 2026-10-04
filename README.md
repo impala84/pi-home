@@ -6,6 +6,10 @@ The Stable baseline is **v1.0.0**. The separate **v1.1.0-beta.7** candidate focu
 
 ## Features
 
+An isolated [Alpine appliance experiment](docs/ALPINE.md) is being developed on
+`alpine-appliance-prototype`. Its image factory is not an application update or
+a hardware-qualified release; the existing Pi and update channels are unchanged.
+
 - Roon artwork, lead artist, track information, progress, playback, mute and volume.
 - Queue, library browsing, combined library/connected TIDAL search and Surprise playback, through Roon's official extension API. Catalogue availability depends on the connected Roon Server.
 - Optional BluOS amplifier/source controls, separate from Roon playback.

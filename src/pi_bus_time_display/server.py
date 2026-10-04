@@ -624,6 +624,8 @@ def write_control_request(state_dir: Path, request: dict) -> bool:
     one immutable file per action so ordering is preserved across bursts such
     as display-off immediately followed by display-on.
     """
+    if os.getenv("PI_HOME_APPLIANCE_PLATFORM") == "alpine-prototype":
+        raise ValueError("OS controls and in-app updates are unavailable in the Alpine prototype")
     with CONTROL_REQUEST_LOCK:
         state_dir.mkdir(parents=True, exist_ok=True)
         queue_dir = state_dir / "system-action-queue"

@@ -1,0 +1,8 @@
+#!/sbin/openrc-run
+description="Pi Home native GTK touchscreen"
+supervisor=supervise-daemon
+command=/usr/local/bin/pi-home-display-launch
+command_user=morningbus:morningbus
+respawn_delay=3
+depend() { need seatd dbus pi-home-api pi-home-roon; after udev-trigger; }
+start_pre() { checkpath -d -m 0700 -o morningbus:morningbus /run/pi-home; }

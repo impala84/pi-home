@@ -1,0 +1,8 @@
+#!/bin/sh
+set -eu
+export XDG_RUNTIME_DIR=/run/pi-home
+export XDG_SESSION_TYPE=wayland
+export GDK_BACKEND=wayland
+export LIBSEAT_BACKEND=seatd
+export PYTHONUNBUFFERED=1
+exec dbus-run-session cage -s -- /opt/pi-bus-time-display/scripts/pi-bus-cage-launch

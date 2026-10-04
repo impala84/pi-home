@@ -1,5 +1,14 @@
 # Changelog
 
+## Alpine prototype — unreleased experiment
+
+- Add an isolated ARM64 Alpine image factory, OpenRC service definitions,
+  Ethernet-first native Cage/GTK boot path and unique first-boot credentials.
+- Reject unsupported privileged OS actions rather than queue them to a missing
+  systemd worker. Normal Raspberry Pi OS behaviour is unchanged.
+- Keep the prototype outside application update channels. Hardware boot,
+  touchscreen acceptance, Wi-Fi onboarding and safe OS updates remain pending.
+
 ## 1.1.0-beta.7 — 4 October 2026
 
 - Focus on the native touchscreen: use Browse-style left secondary navigation for Recent (Added/Listened) and Dailies (Mixes/Recommendations); remove the competing top-row controls and More Recommendations button there. Web layout remains unchanged.

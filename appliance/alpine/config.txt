@@ -1,0 +1,9 @@
+arm_64bit=1
+kernel=vmlinuz-rpi
+initramfs initramfs-rpi followkernel
+cmdline=cmdline.txt
+disable_overscan=1
+display_auto_detect=1
+dtoverlay=vc4-kms-v3d
+# Official displays auto-detect. Explicit profile/rotation comes in a later
+# hardware-tested setup wizard; HDMI is also a useful initial bring-up path.
