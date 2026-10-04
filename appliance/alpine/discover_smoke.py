@@ -28,7 +28,7 @@ display.discovery_active = True
 display.discovery_request = 1
 display.roon_views.set_visible_child_name("discover")
 items = [{"title": f"Mix {number}", "artist": "Artist", "kind": "mix"} for number in range(1, 6)]
-groups = [{"reason":"recent","seed":{"title":"Altered State"},"items":items}]
+groups = [{"reason":"recent","seed":{"title":"Altered State","artist":"Tesseract","artwork_key":"seed-art"},"items":items}]
 assert display.render_discover(1, {"status": "ready", "items": items, "groups": groups}) is False
 scroller = display.discovery_list.get_first_child()
 assert isinstance(scroller, Gtk.ScrolledWindow)
@@ -54,10 +54,18 @@ recommendation_track = recommendations.get_child()
 if not isinstance(recommendation_track, Gtk.Box): recommendation_track = recommendation_track.get_child()
 context = recommendation_track.get_first_child()
 assert context.has_css_class("recommendation-card")
-reason = context.get_first_child().get_next_sibling()
-seed = reason.get_next_sibling()
-assert reason.get_text() == "Because you listened to"
+body = context.get_child()
+art = body.get_first_child()
+seed = art.get_next_sibling()
+artist = seed.get_next_sibling()
+overlay = art.get_child()
+if not isinstance(overlay, Gtk.Overlay): overlay = overlay.get_child()
+reason = overlay.get_last_child()
+assert reason.get_text() == "Inspired by"
 assert seed.get_text() == "Altered State"
+assert artist.get_text() == "Tesseract"
+assert art.get_min_content_width() == first.get_child().get_first_child().get_min_content_width()
+assert display.discovery_pictures["discover:seed-art"]
 assert display.discovery_daily_sections.keys() == {"mixes", "recommendations"}
 assert display.discovery_daily_sections["mixes"] is scroller
 display.browser_sidebar.set_visible(True)
