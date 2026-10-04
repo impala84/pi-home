@@ -4,6 +4,20 @@ Isolated branch: `alpine-appliance-prototype`, based on Discover beta.7.
 This is an experimental image factory, not a Stable/Beta application update.
 Do not install it over the working Pi. Use a separate SD card.
 
+## Combined recovery image — 4 October 2026
+
+Revision `764694f`: [combined ARM64 image and update checks](https://github.com/impala84/pi-home/actions/runs/37191573089)
+passed, including both API services, real GTK setup/icons, SSH policy, real
+Python/npm staging, atomic rollback after a simulated failed health check,
+and a real HTTP → private Unix socket → root updater privilege-boundary test
+using a harmless replacement worker. Baseline checks passed 154 Python and
+91 Node tests. OpenRC restarts/health checks in the staging test are simulated;
+physical touch mapping, Wi-Fi and subsequent live updates need Pi acceptance.
+Includes the explicit Goodix-to-DSI mapping correction, earlier setup/password/
+theme improvements and the Alpine application Update button. Nothing was
+flashed or installed on the user's device. This supersedes the earlier
+rotation-only and setup-only images for the user's next manual test.
+
 ## Touch onboarding and SSH revision — 4 October 2026
 
 Physical testing of `c71d326` found that landscape output did not rotate touch.
