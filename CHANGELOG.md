@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.0-beta.15 Alpine Beta — 5 October 2026
+
+- Standardises the appliance, updater, workflow and image names on **Alpine Beta**.
+- Moves ongoing Alpine work to `alpine-beta` while retaining `alpine-appliance-prototype` as a compatibility bridge for devices running beta.14 and earlier.
+- Removes internal branch terminology from the web settings update status.
+
 ## 1.1.0-beta.14 Alpine — 5 October 2026
 
 - Resets seatd between stopping and starting Cage during an application update, clearing the broken DRM-session pipe observed on the physical touchscreen.

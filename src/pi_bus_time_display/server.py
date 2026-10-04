@@ -655,7 +655,7 @@ def write_control_request(state_dir: Path, request: dict) -> bool:
             except OSError as error: raise ValueError("Alpine system helper is not ready. Please retry.") from error
             if not result.get("ok"): raise ValueError(result.get("error", "Could not start Alpine update"))
             return bool(result.get("queued", result.get("ok")))
-        raise ValueError("OS controls are unavailable in the Alpine prototype")
+        raise ValueError("OS controls are unavailable in Alpine Beta")
     with CONTROL_REQUEST_LOCK:
         state_dir.mkdir(parents=True, exist_ok=True)
         queue_dir = state_dir / "system-action-queue"
@@ -797,7 +797,7 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
                 if not self.authorised():
                     return
                 if os.getenv("PI_HOME_APPLIANCE_PLATFORM") == "alpine-prototype":
-                    result = {"installed_version": display_version(), "release_channel": "alpine", "latest_version": None, "update_available": False, "status": "prototype", "message": "Update follows verified alpine-appliance-prototype builds; Stable/Beta OS channels are not used."}
+                    result = {"installed_version": display_version(), "release_channel": "alpine-beta", "latest_version": None, "update_available": False, "status": "beta", "message": "This device follows verified Alpine Beta updates."}
                     self.send_json(200, json.dumps(result).encode()); return
                 result = releases.check(state.config.release_channel, __version__, refresh=self.path.endswith("refresh=1"))
                 self.send_json(200, json.dumps(result).encode())
@@ -835,7 +835,7 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
 
         def do_POST(self):
             if os.getenv("PI_HOME_APPLIANCE_PLATFORM") == "alpine-prototype" and self.path == "/api/device/roon-bridge":
-                self.send_json(501, b'{"error":"OS controls are unavailable in the Alpine prototype"}')
+                self.send_json(501, b'{"error":"OS controls are unavailable in Alpine Beta"}')
                 return
             if self.path == "/api/admin/display-capture":
                 if not self.authorised():

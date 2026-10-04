@@ -42,7 +42,7 @@ class AlpinePrototypeTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder, patch.dict(os.environ, {"PI_HOME_APPLIANCE_PLATFORM": "alpine-prototype"}):
             state = Path(folder)
             for action in ("set_wifi", "set_display", "roon_start"):
-                with self.assertRaisesRegex(ValueError, "unavailable in the Alpine prototype"):
+                with self.assertRaisesRegex(ValueError, "unavailable in Alpine Beta"):
                     write_control_request(state, {"action": action})
             self.assertEqual(list(state.iterdir()), [])
 
@@ -93,6 +93,8 @@ class AlpinePrototypeTests(unittest.TestCase):
         self.assertIn("-d \"$build_dir/rootfs\"", script)
         self.assertIn("sha256sum", script)
         self.assertIn("mktemp -d", script)
+        self.assertIn("pi-home-alpine-beta.img", script)
+        self.assertNotIn("pi-home-alpine-prototype.img", script)
 
 
 if __name__ == "__main__":

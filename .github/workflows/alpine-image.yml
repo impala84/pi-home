@@ -1,7 +1,8 @@
-name: Alpine appliance prototype
+name: Alpine Beta
 on:
   push:
-    branches: [alpine-appliance-prototype]
+    # Keep the old branch as a one-release bridge for beta.14 and older devices.
+    branches: [alpine-beta, alpine-appliance-prototype]
   workflow_dispatch:
 jobs:
   image:
@@ -17,26 +18,26 @@ jobs:
         run: bash appliance/alpine/build-image.sh
       - name: Validate Alpine runtime without pretending to boot the Pi
         run: |
-          docker run --rm --user morningbus pi-home-alpine:prototype .venv/bin/python appliance/alpine/smoke.py
+          docker run --rm --user morningbus pi-home-alpine:beta .venv/bin/python appliance/alpine/smoke.py
       - name: Verify time sync and optional service tools
         run: |
-          docker run --rm pi-home-alpine:prototype sh -ec 'test -x /usr/bin/grim; test -x /etc/init.d/netdata; test -e /etc/runlevels/default/chronyd; test -e /etc/runlevels/boot/pi-home-clock; test ! -e /etc/runlevels/boot/hwclock; grep -Eq "^(pool|server).* iburst" /etc/chrony/chrony.conf; grep -qx "makestep 0.1 -1" /etc/chrony/chrony.conf; chronyd -p -f /etc/chrony/chrony.conf'
-          docker run --rm pi-home-alpine:prototype python3 appliance/alpine/cursor_smoke.py
-          docker run --rm pi-home-alpine:prototype ps -eo pid=,rss=,pcpu=,args=
+          docker run --rm pi-home-alpine:beta sh -ec 'test -x /usr/bin/grim; test -x /etc/init.d/netdata; test -e /etc/runlevels/default/chronyd; test -e /etc/runlevels/boot/pi-home-clock; test ! -e /etc/runlevels/boot/hwclock; grep -Eq "^(pool|server).* iburst" /etc/chrony/chrony.conf; grep -qx "makestep 0.1 -1" /etc/chrony/chrony.conf; chronyd -p -f /etc/chrony/chrony.conf'
+          docker run --rm pi-home-alpine:beta python3 appliance/alpine/cursor_smoke.py
+          docker run --rm pi-home-alpine:beta ps -eo pid=,rss=,pcpu=,args=
       - name: Exercise native setup pages using a disposable test-only display
         run: |
-          docker run --rm pi-home-alpine:prototype sh -c 'apk add --no-cache xvfb-run && GDK_BACKEND=x11 GSK_RENDERER=cairo dbus-run-session xvfb-run -a -s "-screen 0 800x480x24" sh -ec "python3 appliance/alpine/wizard_smoke.py; python3 appliance/alpine/icon_smoke.py; python3 appliance/alpine/discover_smoke.py"'
+          docker run --rm pi-home-alpine:beta sh -c 'apk add --no-cache xvfb-run && GDK_BACKEND=x11 GSK_RENDERER=cairo dbus-run-session xvfb-run -a -s "-screen 0 800x480x24" sh -ec "python3 appliance/alpine/wizard_smoke.py; python3 appliance/alpine/icon_smoke.py; python3 appliance/alpine/discover_smoke.py"'
       - name: Verify SSH account and security policy
         run: |
-          docker run --rm pi-home-alpine:prototype sh -ec 'python3 -c "from appliance.alpine.setup_service import set_login_password; set_login_password(\"disposable-test-only\"); from pathlib import Path; entry=next(x for x in Path(\"/etc/shadow\").read_text().splitlines() if x.startswith(\"admin:\")); assert entry.split(\":\")[1].startswith(\"\u0024\")"; ssh-keygen -A; sshd -t; sshd -T | grep -q "permitrootlogin no"; sshd -T | grep -q "allowusers admin"; visudo -c'
+          docker run --rm pi-home-alpine:beta sh -ec 'python3 -c "from appliance.alpine.setup_service import set_login_password; set_login_password(\"disposable-test-only\"); from pathlib import Path; entry=next(x for x in Path(\"/etc/shadow\").read_text().splitlines() if x.startswith(\"admin:\")); assert entry.split(\":\")[1].startswith(\"\u0024\")"; ssh-keygen -A; sshd -t; sshd -T | grep -q "permitrootlogin no"; sshd -T | grep -q "allowusers admin"; visudo -c'
       - name: Exercise Alpine application staging and rollback
         run: |
           git archive --prefix=pi-home/ HEAD | gzip > /tmp/pi-home-update-source.tar.gz
-          docker run --rm -v /tmp/pi-home-update-source.tar.gz:/tmp/pi-home-update-source.tar.gz:ro pi-home-alpine:prototype python3 appliance/alpine/updater_smoke.py
+          docker run --rm -v /tmp/pi-home-update-source.tar.gz:/tmp/pi-home-update-source.tar.gz:ro pi-home-alpine:beta python3 appliance/alpine/updater_smoke.py
       - name: Verify the real update button privilege boundary
-        run: docker run --rm pi-home-alpine:prototype python3 appliance/alpine/update_button_smoke.py
+        run: docker run --rm pi-home-alpine:beta python3 appliance/alpine/update_button_smoke.py
       - uses: actions/upload-artifact@v4
         with:
-          name: pi-home-alpine-prototype
+          name: pi-home-alpine-beta
           path: dist/alpine/
           retention-days: 14

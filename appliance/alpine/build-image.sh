@@ -14,8 +14,8 @@ cleanup() {
   echo "Build working files: $build_dir"
 }
 trap cleanup EXIT
-docker build --platform linux/arm64 --build-arg "PI_HOME_SOURCE_SHA=$(git -C "$repo" rev-parse HEAD)" -t pi-home-alpine:prototype -f "$repo/appliance/alpine/Dockerfile" "$repo"
-container=$(docker create pi-home-alpine:prototype)
+docker build --platform linux/arm64 --build-arg "PI_HOME_SOURCE_SHA=$(git -C "$repo" rev-parse HEAD)" -t pi-home-alpine:beta -f "$repo/appliance/alpine/Dockerfile" "$repo"
+container=$(docker create pi-home-alpine:beta)
 mkdir "$build_dir/rootfs" "$build_dir/boot"
 docker export "$container" | sudo tar --same-owner -x -C "$build_dir/rootfs"
 sudo python3 "$repo/appliance/alpine/prepare_rootfs.py" "$build_dir/rootfs"
@@ -37,12 +37,12 @@ truncate -s 1792M "$build_dir/root.ext4"
 sudo mkfs.ext4 -F -L PIROOT -d "$build_dir/rootfs" "$build_dir/root.ext4"
 sudo e2fsck -fn "$build_dir/root.ext4"
 # Partition 1 starts at 1MiB, partition 2 at 257MiB. No loop device needed.
-truncate -s 2050M "$build_dir/pi-home-alpine-prototype.img"
-printf 'label: dos\nstart=2048,size=524288,type=c,bootable\nstart=526336,size=3670016,type=83\n' | sfdisk "$build_dir/pi-home-alpine-prototype.img"
-dd if="$build_dir/boot.fat" of="$build_dir/pi-home-alpine-prototype.img" bs=1M seek=1 conv=notrunc status=none
-dd if="$build_dir/root.ext4" of="$build_dir/pi-home-alpine-prototype.img" bs=1M seek=257 conv=notrunc status=none
-gzip -c "$build_dir/pi-home-alpine-prototype.img" > "$out/pi-home-alpine-prototype.img.gz"
-(cd "$out" && sha256sum pi-home-alpine-prototype.img.gz > pi-home-alpine-prototype.img.gz.sha256)
+truncate -s 2050M "$build_dir/pi-home-alpine-beta.img"
+printf 'label: dos\nstart=2048,size=524288,type=c,bootable\nstart=526336,size=3670016,type=83\n' | sfdisk "$build_dir/pi-home-alpine-beta.img"
+dd if="$build_dir/boot.fat" of="$build_dir/pi-home-alpine-beta.img" bs=1M seek=1 conv=notrunc status=none
+dd if="$build_dir/root.ext4" of="$build_dir/pi-home-alpine-beta.img" bs=1M seek=257 conv=notrunc status=none
+gzip -c "$build_dir/pi-home-alpine-beta.img" > "$out/pi-home-alpine-beta.img.gz"
+(cd "$out" && sha256sum pi-home-alpine-beta.img.gz > pi-home-alpine-beta.img.gz.sha256)
 cp "$build_dir/rootfs/opt/pi-home/appliance/alpine/packages-resolved.txt" "$out/"
 git -C "$repo" rev-parse HEAD > "$out/source-commit.txt"
-echo "Unverified hardware prototype: $out/pi-home-alpine-prototype.img.gz"
+echo "Alpine Beta image: $out/pi-home-alpine-beta.img.gz"

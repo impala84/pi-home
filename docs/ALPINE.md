@@ -1,18 +1,20 @@
-# Alpine appliance experiment
+# Alpine Beta appliance
 
-Current version: **1.1.0-beta.14 Alpine**. Updates stop the display once and restart
+Current version: **1.1.0-beta.15 Alpine Beta**. Updates stop the display once and restart
 backends without OpenRC dependency cascades. Genre, playlist and fallback tiles use
 bundled SVGs, not font glyphs. This update is available on the Alpine branch.
 
-Software version labels include “Alpine” (for example, “1.1.0-beta.14 Alpine”)
+Software version labels include “Alpine” (for example, “1.1.0-beta.15 Alpine”)
 to distinguish these builds from Raspberry Pi OS. Setup and web password changes
 require at least eight characters; setup still requires confirmation.
 Sleep and brightness are applied by the local root-owned helper: sleep writes zero
 backlight brightness but deliberately leaves the DSI/Goodix pipeline alive so a
 touch can wake the screen again.
 
-Isolated branch: `alpine-appliance-prototype`, based on Discover beta.7.
-This is an experimental image factory, not a Stable/Beta application update.
+Active branch: `alpine-beta`, based on Discover beta.7. The former
+`alpine-appliance-prototype` branch is a temporary update bridge for beta.14
+and older installations. Keep it available until those devices have installed
+beta.15. Alpine Beta is separate from the Raspberry Pi OS Stable/Beta channels.
 Do not install it over the working Pi. Use a separate SD card.
 
 ## Physical touch recovery — 4 October 2026
@@ -188,14 +190,14 @@ not recorded in the progress file. Privileged setup mutations are locked after
 completion (status and an explicit completion reboot remain available).
 General-purpose OS controls remain disabled. The Update button now calls a
 root-owned local helper, allowed only after setup is complete. It follows the
-latest successful Alpine image workflow revision on `alpine-appliance-prototype`,
+latest successful Alpine Beta workflow revision on `alpine-beta`,
 not arbitrary URLs or Stable/Beta Pi OS releases. Application source and real
 Python/npm dependencies are prepared separately under `/opt/pi-home-releases`.
 The current path switches atomically after preparation; service health failures
 restore the previous application. Configuration, secrets, Wi-Fi and Roon pairing
 remain outside deployment directories. Kernel, firmware and APK upgrades are not
-performed. Old application deployments are retained for recovery, so repeated
-updates need available disk space; automatic retention cleanup is not implemented.
+performed. The updater retains the live deployment while staging the next one,
+then removes inactive managed deployments after a successful activation.
 
 The image is approximately 2 GiB before compression. It does not expand its
 partition automatically yet; extra card capacity is unused. Build dependencies
@@ -205,7 +207,7 @@ this is not yet a byte-for-byte reproducible or signed image distribution.
 
 ## Build
 
-Run the **Alpine appliance prototype** GitHub Actions workflow on this branch.
+Run the **Alpine Beta** GitHub Actions workflow on this branch.
 It uses an ARM64 Linux runner and uploads the compressed `.img.gz`, checksum,
 resolved package list and source revision as a 14-day build artifact. It does
 not publish to the updater, flash a card, start audio or contact the running Pi.

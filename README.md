@@ -2,13 +2,13 @@
 
 Pi Home is an independent Raspberry Pi touchscreen interface for Roon, with optional Singapore bus arrivals and Home Assistant controls. It runs a native GTK4 display in Cage/Wayland, alongside a phone/desktop web interface. Chromium is not required.
 
-The Stable baseline is **v1.0.0**. The separate **v1.1.0-beta.14 Alpine** candidate focuses on the touchscreen appliance: Daily is one progressive feed with roomy, arrow-free horizontal swiping; obsolete private discovery work is cancelled when another page is selected; genre artwork uses bundled SVGs; restart confirmation is centred over a full-display dimmer; and the updater now reclaims old staging space, waits for valid network time and resets the DRM seat before relaunching Cage. Select the Beta update channel to try it. This is not stable v1.1.
+The Stable baseline is **v1.0.0**. The separate **v1.1.0-beta.15 Alpine Beta** focuses on the touchscreen appliance: Daily is one progressive feed with roomy, arrow-free horizontal swiping; obsolete private discovery work is cancelled when another page is selected; genre artwork uses bundled SVGs; restart confirmation is centred over a full-display dimmer; and the updater reclaims old staging space, waits for valid network time and resets the DRM seat before relaunching Cage. Alpine appliances follow their own verified Alpine Beta updates. This is not stable v1.1.
 
 ## Features
 
-An isolated [Alpine appliance experiment](docs/ALPINE.md) is being developed on
-`alpine-appliance-prototype`. Its image factory is not an application update or
-a hardware-qualified release; the existing Pi and update channels are unchanged.
+The [Alpine Beta appliance](docs/ALPINE.md) is developed on `alpine-beta`.
+The old `alpine-appliance-prototype` branch is retained temporarily only so
+beta.14 and older appliances can cross to the renamed channel safely.
 
 - Roon artwork, lead artist, track information, progress, playback, mute and volume.
 - Queue, library browsing, combined library/connected TIDAL search and Surprise playback, through Roon's official extension API. Catalogue availability depends on the connected Roon Server.

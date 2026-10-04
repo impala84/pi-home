@@ -12,6 +12,9 @@ updater = importlib.util.module_from_spec(spec); spec.loader.exec_module(updater
 
 
 class AlpineUpdaterTests(unittest.TestCase):
+    def test_updates_follow_the_renamed_alpine_beta_branch(self):
+        self.assertEqual(updater.BRANCH, "alpine-beta")
+
     def test_update_leaves_live_release_directory_before_any_pruning(self):
         with patch.object(updater.os, "chdir") as chdir, patch.object(updater, "wait_for_clock", side_effect=RuntimeError("stop")):
             with self.assertRaisesRegex(RuntimeError, "stop"):
