@@ -58,6 +58,7 @@ display.browser_sidebar.set_visible(True)
 display.browser_list.append(display.label("Stale Browse content"))
 requests = []
 display.request_browser = lambda action, **_payload: requests.append(action)
+display.set_mode = lambda _mode: None
 display.open_discover("surprise")
 assert requests == ["surprise"]
 assert not display.browser_sidebar.get_visible()
