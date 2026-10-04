@@ -49,7 +49,7 @@ try:
         assert error.code == 501
         assert "unavailable" in json.load(error)["error"]
     assert not Path("/var/lib/pi-home/system-action-queue").exists()
-    print("Alpine ARM64: GTK/Cairo imports and both HTTP services passed; unsupported updates rejected.")
+    print("Alpine ARM64: GTK/Cairo imports and both HTTP services passed; unsupported OS controls rejected.")
 finally:
     for process in processes:
         process.terminate()
