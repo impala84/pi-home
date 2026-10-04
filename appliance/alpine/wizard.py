@@ -29,6 +29,7 @@ class Wizard(Gtk.Application):
 
     def activate(self, *_):
         self.window = Gtk.ApplicationWindow(application=self); self.window.set_title("Set up Pi Home"); self.window.fullscreen()
+        self.window.set_cursor_from_name("none")
         css = Gtk.CssProvider(); css.load_from_data(b"window { background:#1c1b24; color:#f5f5f5; } button { min-height:40px; padding:4px 10px; background:#302d42; color:#fff; border-radius:8px; } button:active {background:#aaa2ff;color:#111;} entry { min-height:40px; font-size:20px; background:#282631;color:#fff; } .title {font-size:25px;font-weight:700;color:#aaa2ff;} .brand {font-size:15px;font-weight:800;color:#817aeb;letter-spacing:3px;} .primary {background:#817aeb;color:#111;} .key {min-height:34px;padding:2px;} label {font-size:17px;} .mint .brand, .mint .title {color:#6ed9ae;} .mint .primary, .mint button:active {background:#6ed9ae;}")
         Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), css, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
         self.outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)

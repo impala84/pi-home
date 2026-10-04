@@ -144,10 +144,9 @@ class Setup:
             overlay = PROFILES[profile]
             if overlay:
                 if not (self.root / f"boot/overlays/{overlay}.dtbo").is_file(): raise ValueError("Display driver is missing from this image.")
-                # Kernel owns built-in touch rotation; Cage owns picture only.
-                # WL_OUTPUT must stay unset to avoid a second input transform.
-                flags = {"90": ",swapxy,invx", "180": ",invx,invy", "270": ",swapxy,invy"}.get(rotation, "") if profile.startswith("touch2-") else ""
-                text += f"\n# BEGIN PI HOME SETUP\n[all]\ndtoverlay={overlay}{flags}\n# END PI HOME SETUP\n"
+                # Direct libinput calibration owns touch rotation. Do not add
+                # kernel swaps/inversions or WL_OUTPUT mapping on top of it.
+                text += f"\n# BEGIN PI HOME SETUP\n[all]\ndtoverlay={overlay}\n# END PI HOME SETUP\n"
             atomic(boot, text)
             config = self.root / "etc/pi-home"
             atomic(config / "display-profile", profile); atomic(config / "display-transform", rotation)

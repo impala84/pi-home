@@ -4,6 +4,25 @@ Isolated branch: `alpine-appliance-prototype`, based on Discover beta.7.
 This is an experimental image factory, not a Stable/Beta application update.
 Do not install it over the working Pi. Use a separate SD card.
 
+## Physical touch recovery — 4 October 2026
+
+The user confirmed direct libinput calibration `0 1 0 -1 0 1` aligns touch
+with the 90° clockwise saved setting / Cage transform 270. Live device evidence
+showed two separate faults: initial Goodix probe failed with I2C error -5 but
+module reload recovered it; its actual name is `10-005d Goodix Capacitive
+TouchScreen`, not the unprefixed name used in the old rule. `WL_OUTPUT=DSI-1`
+was present in udev but Cage still reported no output mapping.
+
+Current strategy: wildcard the Goodix name prefix, set direct calibration from
+the saved orientation, clear WL_OUTPUT, and leave kernel input inversion/swap
+off. A bounded two-attempt Goodix reload runs before Cage only when the built-in
+GT911 exists and no Goodix input has registered. GTK uses the named invisible
+cursor in setup/main, and the empty-event activity exception is guarded.
+Live calibration and manual driver recovery are verified by the user; automatic
+boot recovery, cursor hiding and updates still need physical acceptance.
+The historical image strategies below are superseded; the previous image
+`2b48d7b` is not a verified touchscreen image.
+
 ## Combined recovery image — 4 October 2026
 
 **Physical test failed:** `764694f` still left touch in portrait coordinates
@@ -189,9 +208,9 @@ touch keyboard behaviour and Roon LAN pairing still require physical acceptance.
 Display auto-detection is initially enabled. The build must include the Pi 5 device tree
 and 10-inch Touch Display 2 overlay, but package presence does not prove hardware
 operation. The first wizard screen chooses display type and orientation in
-native portrait. The wizard writes a backed-up, managed display overlay with
-matching kernel touch rotation and restarts into the naming screen. Cage
-rotates the picture only; built-in Goodix input remains unmapped in Cage.
+native portrait. The wizard writes a backed-up, managed display overlay without
+kernel touch rotation and restarts into the naming screen. Cage rotates the
+picture only; direct libinput calibration rotates the built-in Goodix input.
 Saved orientation wins on later boots and HDMI is left unchanged.
 Touch Display 2 output rotation uses the existing Cage
 launcher on the next boot. Automatic/HDMI and original display profiles support

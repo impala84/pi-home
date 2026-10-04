@@ -1,4 +1,4 @@
-"""Keep Cage input transforms off: the Touch Display 2 kernel overlay rotates touch."""
+"""Calibrate built-in Goodix touch before Cage starts; recover failed boot probes."""
 from pathlib import Path
 import re
 import subprocess
@@ -15,12 +15,40 @@ def connected_output(root):
     return next(iter(outputs)) if len(outputs) == 1 else None
 
 
-def mapping_rule(output):
+MATRICES = {"normal": "1 0 0 0 1 0", "90": "0 1 0 -1 0 1",
+            "180": "-1 0 1 0 -1 1", "270": "0 -1 1 1 0 0"}
+
+
+def mapping_rule(output, rotation="normal"):
     if not re.fullmatch(r"DSI-\d+", output): raise ValueError("Invalid DSI output")
-    return ('# Pi Home: kernel owns built-in touch rotation, not Cage.\n'
+    if rotation not in MATRICES: raise ValueError("Invalid touch rotation")
+    return ('# Pi Home: libinput owns touch rotation; kernel and Cage mapping stay unrotated.\n'
             'ACTION!="remove", SUBSYSTEM=="input", KERNEL=="event*", '
-            'ENV{ID_INPUT_TOUCHSCREEN}=="1", ATTRS{name}=="Goodix Capacitive TouchScreen", '
-            'ENV{WL_OUTPUT}="", ENV{LIBINPUT_CALIBRATION_MATRIX}="1 0 0 0 1 0"\n')
+            'ENV{ID_INPUT_TOUCHSCREEN}=="1", ATTRS{name}=="*Goodix Capacitive TouchScreen", '
+            f'ENV{{WL_OUTPUT}}="", ENV{{LIBINPUT_CALIBRATION_MATRIX}}="{MATRICES[rotation]}"\n')
+
+
+def touch_present(root):
+    return any(name.read_text().strip().endswith("Goodix Capacitive TouchScreen")
+               for name in (root / "sys/class/input").glob("event*/device/name"))
+
+
+def recover_touch(root, run=subprocess.run, sleep=time.sleep):
+    if touch_present(root): return True
+    # Do not reload touch drivers on unrelated HDMI/USB installations.
+    nodes = (root / "sys/bus/i2c/devices").glob("*/of_node/compatible")
+    if not any(b"goodix,gt911" in node.read_bytes() for node in nodes): return False
+    for attempt in range(2):
+        sleep(1)
+        print(f"Pi Home Goodix boot-probe recovery attempt {attempt + 1}", flush=True)
+        for args in (["modprobe", "-r", "goodix_ts"], ["modprobe", "goodix_ts"]):
+            result = run(args, check=False, timeout=10)
+            if result.returncode: break
+        else:
+            run(["udevadm", "settle", "--timeout=10"], check=False, timeout=15)
+            if touch_present(root): return True
+    print("Pi Home Goodix recovery failed; inspect kernel log", flush=True)
+    return False
 
 
 def main():
@@ -32,11 +60,19 @@ def main():
         time.sleep(.1)
     rules = root / "etc/udev/rules.d/99-pi-home-dsi-touch.rules"
     rules.parent.mkdir(parents=True, exist_ok=True)
-    atomic(rules, mapping_rule(output) if output else "# No single connected DSI output; leave external touch devices unchanged.\n")
+    saved = root / "etc/pi-home/display-transform"
+    rotation = saved.read_text().strip() if saved.exists() else "normal"
+    atomic(rules, mapping_rule(output, rotation) if output else "# No single connected DSI output; leave external touch devices unchanged.\n")
     subprocess.run(["udevadm", "control", "--reload-rules"], check=True, timeout=10)
     subprocess.run(["udevadm", "trigger", "--subsystem-match=input", "--action=change"], check=True, timeout=10)
     subprocess.run(["udevadm", "settle", "--timeout=10"], check=True, timeout=15)
-    print(f"Pi Home touch rotation: kernel overlay; Cage mapping disabled on {output}" if output else "Pi Home touch mapping: no unambiguous DSI output")
+    if output:
+        try: recovered = recover_touch(root)
+        except (OSError, subprocess.SubprocessError) as error:
+            recovered = False
+            print(f"Pi Home Goodix recovery unavailable: {error}", flush=True)
+        print(f"Pi Home touch calibration: {rotation}, matrix={MATRICES[rotation]}, detected={recovered}", flush=True)
+    else: print("Pi Home touch mapping: no unambiguous DSI output", flush=True)
 
 
 if __name__ == "__main__": main()

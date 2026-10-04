@@ -52,6 +52,11 @@ LAYOUT_GTK = SimpleNamespace(Box=LayoutWidget, Picture=LayoutWidget, ScrolledWin
 
 
 class NativeBrowserControlsTests(unittest.TestCase):
+    def test_empty_activity_event_does_not_raise_or_change_state(self):
+        owner = SimpleNamespace(last_interaction=123)
+        self.assertFalse(native_method("note_activity")(owner, None, None))
+        self.assertEqual(owner.last_interaction, 123)
+
     def test_secondary_navigation_is_section_specific_and_actions_preserve_context(self):
         navigation = native_method("discovery_secondary_navigation")
         owner = SimpleNamespace(discovery_section="recent", discovery_recent_mode="added", discovery_picks=False, open_recent=Mock(), open_discover=Mock())

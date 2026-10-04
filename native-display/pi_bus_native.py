@@ -333,12 +333,7 @@ class Display(Gtk.Application):
             initial_config = tomllib.loads(Path("/etc/pi-home/config.toml").read_text())
             if initial_config.get("display_theme") == "roon": self.window.add_css_class("theme-roon")
         except (OSError, ValueError): pass
-        transparent = Gdk.MemoryTexture.new(
-            1, 1, Gdk.MemoryFormat.R8G8B8A8_PREMULTIPLIED,
-            GLib.Bytes.new(b"\x00\x00\x00\x00"), 4,
-        )
-        self.hidden_cursor = Gdk.Cursor.new_from_texture(transparent, 0, 0, None)
-        self.window.set_cursor(self.hidden_cursor)
+        self.window.set_cursor_from_name("none")
         activity = Gtk.EventControllerLegacy(); activity.set_propagation_phase(Gtk.PropagationPhase.CAPTURE); activity.connect("event", self.note_activity); self.window.add_controller(activity)
         self.stack = Gtk.Stack(transition_type=Gtk.StackTransitionType.NONE, transition_duration=0)
         self.stack.set_hhomogeneous(False); self.stack.set_vhomogeneous(False)
@@ -1714,6 +1709,7 @@ class Display(Gtk.Application):
     def open_settings(self, *_): self.settings_open = True; self.last_system_fetch = 0; self.stack.set_visible_child_name("settings"); self.start_poll()
     def close_settings(self, *_): self.settings_open = False; self.stack.set_visible_child_name(self.last_mode)
     def note_activity(self, _controller, event):
+        if event is None: return False
         # Legacy controllers also receive pointer motion, enter/leave and window
         # events. A powered-down panel can consume the beginning of the first
         # contact, so accept its release as a wake gesture as well.

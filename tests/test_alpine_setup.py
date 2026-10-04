@@ -36,7 +36,7 @@ class AlpineSetupTests(unittest.TestCase):
         config = (self.root / "etc/pi-home/config.toml").read_text()
         self.assertIn('roon_zone_name = "Lounge"', config); self.assertIn('timezone = "Europe/London"', config)
         boot = (self.root / "boot/config.txt").read_text()
-        self.assertIn("ili79600-10-1inch,swapxy,invx", boot); self.assertIn("kernel=vmlinuz-rpi", boot)
+        self.assertIn("ili79600-10-1inch\n", boot); self.assertNotIn("swapxy", boot); self.assertIn("kernel=vmlinuz-rpi", boot)
         self.assertNotIn("password", self.setup.progress.read_text())
         env = self.root / "etc/pi-home/secrets.env"
         self.assertIn("ADMIN_PASSWORD=my-private-password", env.read_text()); self.assertEqual(env.stat().st_mode & 0o777, 0o600)
@@ -76,7 +76,7 @@ class AlpineSetupTests(unittest.TestCase):
         for rotation in ("90", "270"):
             self.setup.handle({"action": "display", "profile": "touch2-7", "rotation": rotation})
         text = (self.root / "boot/config.txt").read_text()
-        self.assertEqual(text.count("# BEGIN PI HOME SETUP"), 1); self.assertIn("swapxy,invy", text)
+        self.assertEqual(text.count("# BEGIN PI HOME SETUP"), 1); self.assertNotIn("swapxy", text)
         self.assertIn("kernel=vmlinuz-rpi", text)
 
     def test_invalid_zone_rotation_and_timezone_are_rejected(self):
@@ -145,9 +145,34 @@ class AlpineSetupTests(unittest.TestCase):
             connector = drm / name; connector.mkdir(); (connector / "status").write_text(status)
         self.assertEqual(mapping.connected_output(self.root), "DSI-1")
         rule = mapping.mapping_rule("DSI-1")
-        self.assertIn('ATTRS{name}=="Goodix Capacitive TouchScreen"', rule)
+        self.assertIn('ATTRS{name}=="*Goodix Capacitive TouchScreen"', rule)
         self.assertIn('ENV{WL_OUTPUT}=""', rule)
         self.assertIn('LIBINPUT_CALIBRATION_MATRIX}="1 0 0 0 1 0"', rule)
+        self.assertIn('LIBINPUT_CALIBRATION_MATRIX}="0 1 0 -1 0 1"', mapping.mapping_rule("DSI-1", "90"))
+        for rotation in mapping.MATRICES:
+            values = [float(v) for v in mapping.MATRICES[rotation].split()]
+            for x, y in ((0, 0), (0, 1), (1, 0), (1, 1)):
+                result = (values[0]*x + values[1]*y + values[2], values[3]*x + values[4]*y + values[5])
+                expected = {"normal": (x, y), "90": (y, 1-x), "180": (1-x, 1-y), "270": (1-y, x)}[rotation]
+                self.assertEqual(result, expected)
+        runner = Mock(return_value=Mock(returncode=0))
+        self.assertFalse(mapping.recover_touch(self.root, runner, lambda _: None))
+        runner.assert_not_called()
+        node = self.root / "sys/bus/i2c/devices/10-005d/of_node"; node.mkdir(parents=True)
+        (node / "compatible").write_bytes(b"goodix,gt911\0")
+        name = self.root / "sys/class/input/event4/device/name"
+        def recovered(args, **kwargs):
+            if args == ["modprobe", "goodix_ts"]:
+                name.parent.mkdir(parents=True); name.write_text("10-005d Goodix Capacitive TouchScreen\n")
+            return Mock(returncode=0)
+        runner.side_effect = recovered
+        self.assertTrue(mapping.recover_touch(self.root, runner, lambda _: None))
+        runner.reset_mock()
+        self.assertTrue(mapping.recover_touch(self.root, runner, lambda _: None))
+        runner.assert_not_called()
+        name.unlink(); runner.side_effect = None
+        self.assertFalse(mapping.recover_touch(self.root, runner, lambda _: None))
+        self.assertEqual(sum(c.args[0] == ["modprobe", "goodix_ts"] for c in runner.call_args_list), 2)
         (drm / "card2-DSI-2/status").write_text("connected")
         self.assertIsNone(mapping.connected_output(self.root))
         with self.assertRaises(ValueError): mapping.mapping_rule('DSI-1", RUN+="bad')
@@ -158,16 +183,17 @@ class AlpineSetupTests(unittest.TestCase):
         self.assertTrue(state["orientation"])
         self.assertNotIn("display", state)
         self.assertNotIn("timezone", state)
-        self.assertIn("ili9881-7inch,swapxy,invx", (self.root / "boot/config.txt").read_text())
+        self.assertIn("ili9881-7inch\n", (self.root / "boot/config.txt").read_text())
         with patch.object(module.threading, "Timer") as timer:
             self.assertTrue(self.setup.handle({"action": "reboot"})["ok"])
             timer.assert_called_once()
 
-    def test_all_touch_rotations_have_one_kernel_owner(self):
-        for rotation, flags in (("normal", ""), ("90", ",swapxy,invx"), ("180", ",invx,invy"), ("270", ",swapxy,invy")):
+    def test_kernel_never_double_rotates_calibrated_touch(self):
+        for rotation in ("normal", "90", "180", "270"):
             self.setup.handle({"action": "orientation", "profile": "touch2-7", "rotation": rotation})
             boot = (self.root / "boot/config.txt").read_text()
-            self.assertIn(f"dtoverlay=vc4-kms-dsi-ili9881-7inch{flags}\n", boot)
+            self.assertIn("dtoverlay=vc4-kms-dsi-ili9881-7inch\n", boot)
+            for flag in ("swapxy", "invx", "invy"): self.assertNotIn(flag, boot)
 
 
 if __name__ == "__main__": unittest.main()

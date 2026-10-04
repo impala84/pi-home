@@ -6,6 +6,7 @@ app = Wizard()
 app.register(None)
 app.refresh = lambda: None
 app.activate()
+assert app.window.get_cursor().get_name() == "none"
 app.progress = {"orientation": True, "hostname": "pi-home-lounge", "network": True, "roon": True, "zone": "Lounge", "display": True, "profile": "auto", "rotation": "normal"}
 app.snapshot = {"connected": True, "roon": {"zones": [{"name": "Lounge"}]}}
 context = GLib.MainContext.default()
