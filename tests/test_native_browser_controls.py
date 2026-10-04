@@ -138,10 +138,11 @@ class NativeBrowserControlsTests(unittest.TestCase):
         gdk=SimpleNamespace(Display=SimpleNamespace(get_default=lambda:SimpleNamespace(get_monitors=lambda:monitors)))
         columns,size=native_method("browser_grid_metrics",{"Gdk":gdk})(SimpleNamespace())
         self.assertEqual(columns,4)
-        discovery=native_method("discovery_grid_metrics",{"Gdk":gdk})(SimpleNamespace(),True)
-        self.assertEqual(discovery,(4,253))
+        metrics=native_method("discovery_grid_metrics",{"Gdk":gdk})
+        self.assertEqual(metrics(SimpleNamespace(),"recent"),(4,220))
+        self.assertEqual(metrics(SimpleNamespace(),"releases"),(4,250))
         source=SOURCE.read_text(encoding="utf-8")
-        self.assertIn('columns, size = self.discovery_grid_metrics(self.discovery_section == "recent")',source)
+        self.assertIn('columns, size = self.discovery_grid_metrics(self.discovery_section)',source)
         self.assertIn('size = min(212, size)',source)
         self.assertNotIn('MORE RECOMMENDATIONS',source)
 
@@ -252,6 +253,23 @@ class NativeBrowserControlsTests(unittest.TestCase):
         self.assertNotIn('title_label.set_size_request(-1, 48)',code)
         self.assertIn('back.set_halign(Gtk.Align.START)',code)
         self.assertIn('group(None, data.get("items", []), "mixes")',code)
+
+    def test_daily_context_uses_seed_artwork_with_fixed_ellipsized_copy(self):
+        code=SOURCE.read_text(encoding='utf-8')
+        self.assertIn('context_picture = MixPicture(duotone=True)',code)
+        self.assertIn('seed.get("artwork_key")',code)
+        self.assertIn('reason_label = self.label(reason, "recommendation-cover-label"',code)
+        self.assertIn('seed_label.set_lines(2)',code)
+        self.assertIn('artist_label.set_lines(2)',code)
+        self.assertIn('context.set_size_request(size + 12, size + 105)',code)
+
+    def test_now_playing_uses_local_placeholder_before_artwork_arrives(self):
+        code=SOURCE.read_text(encoding='utf-8')
+        build=code[code.index('    def build_roon'):code.index('    def build_home')]
+        apply=code[code.index('    def apply(self,'):code.index('    def apply_artwork',code.index('    def apply(self,'))]
+        self.assertIn('self.set_browser_placeholder(self.artwork)',build)
+        self.assertIn('if image_key != self.image_key:',apply)
+        self.assertIn('self.set_browser_placeholder(self.artwork)',apply)
 
     def test_mix_action_is_explicit_single_request_and_stale_result_does_not_update_ui(self):
         controls = Mock(); controls.get_first_child.return_value = None

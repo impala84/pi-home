@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.1.0-beta.18 Alpine Beta — 5 October 2026
+
+- Rebalanced the touchscreen discovery canvas against Browse: Recent now uses
+  smaller four-column covers with more breathing room, while New Releases is
+  reduced slightly so neither grid crowds the clock or right edge.
+- Replaced the variable Daily recommendation banner with a fixed-size seed
+  album card. Its real cover receives the same purple duotone treatment as
+  mixes, “Inspired by” is overlaid on the art, and the album and artist remain
+  in fixed two-line ellipsized slots below it.
+- Added the bundled record-cover placeholder to Now Playing immediately at
+  startup and whenever the track artwork changes, preserving the square layout
+  while the real cover downloads instead of briefly widening the transport.
+
 ## 1.1.0-beta.17 Alpine Beta — 5 October 2026
 
 - Turned first-run credentials into an appliance-owned flow: the owner chooses

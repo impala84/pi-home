@@ -226,8 +226,10 @@ CSS += b"""
 .recommendation-heading { margin: 12px 7px 0 7px; }
 .recommendation-reason { color: #817aeb; font-size: 17px; font-weight: 700; }
 .recommendation-seed { color: #fff; font-size: 17px; font-weight: 700; }
-.recommendation-card { background: linear-gradient(145deg, #302b55, #171720); border: 1px solid #4a456f; border-radius: 8px; padding: 18px; }
-.recommendation-card .recommendation-reason { color: #aaa2ff; font-size: 17px; }.recommendation-card .recommendation-seed { font-size: 21px; }
+.recommendation-card, .recommendation-card:hover, .recommendation-card:active { padding: 4px; background: transparent; background-image: none; box-shadow: none; }
+.recommendation-cover-label { min-width: 104px; padding: 7px 12px; border-radius: 7px; background: rgba(18,16,31,.78); color: #fff; font-size: 17px; font-weight: 750; }
+.recommendation-card .recommendation-seed, .recommendation-card .recommendation-artist { color: #aaa2ff; }
+.recommendation-card .recommendation-seed { font-size: 20px; font-weight: 700; }.recommendation-card .recommendation-artist { font-size: 16px; }
 .confirm-shade { background: rgba(5,5,7,.82); }
 .confirm-card { min-width: 390px; padding: 28px; border-radius: 14px; background: #242329; border: 1px solid #4a4752; }
 .confirm-title { font-size: 28px; font-weight: 760; color: #fff; }
@@ -451,7 +453,7 @@ class Display(Gtk.Application):
         self.discovery_body.append(self.discovery_sidebar); self.discovery_body.append(self.discovery_scroll)
         self.roon_views.add_named(self.discovery_body, "discover")
         content = Gtk.Box(spacing=26); content.set_vexpand(True); content.set_margin_start(8); content.set_margin_end(8); content.set_margin_top(8); content.set_margin_bottom(8)
-        self.artwork = Gtk.Picture(); self.artwork.add_css_class("artwork"); self.artwork.set_size_request(280, 280); self.artwork.set_valign(Gtk.Align.CENTER); self.artwork.set_content_fit(Gtk.ContentFit.COVER)
+        self.artwork = Gtk.Picture(); self.artwork.add_css_class("artwork"); self.artwork.set_size_request(280, 280); self.artwork.set_valign(Gtk.Align.CENTER); self.artwork.set_content_fit(Gtk.ContentFit.COVER); self.set_browser_placeholder(self.artwork)
         artwork_button = Gtk.Button(); artwork_button.add_css_class("artwork-button"); artwork_button.set_halign(Gtk.Align.CENTER); artwork_button.set_valign(Gtk.Align.CENTER); artwork_button.set_child(self.artwork); artwork_button.connect("clicked", lambda *_: self.set_roon_view("details")); content.append(artwork_button); self.artwork_button = artwork_button
         centre = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=7); centre.set_valign(Gtk.Align.CENTER); centre.set_hexpand(True)
         self.title = self.label("Waiting for Roon…", "roon-title", .5); self.title.set_wrap(True); self.title.set_lines(2); self.title.set_justify(Gtk.Justification.CENTER)
@@ -770,6 +772,12 @@ class Display(Gtk.Application):
         bus_signature = json.dumps(status, sort_keys=True, separators=(",", ":"), default=str)
         if bus_signature != self.bus_signature:
             self.render_bus(status); self.bus_signature = bus_signature
+        # Keep the Now Playing geometry stable while a new cover is fetched.
+        # Clearing to the bundled record-cover asset also prevents the previous
+        # album from lingering during the network/decode interval.
+        if image_key != self.image_key:
+            self.set_browser_placeholder(self.artwork)
+            self.image_key = None
         self.render_roon(roon)
         if not self.views_prewarmed:
             self.views_prewarmed = True; GLib.idle_add(self.prewarm_views)
@@ -1083,7 +1091,7 @@ class Display(Gtk.Application):
         if self.discovery_section == "daily":
             columns, size = self.browser_grid_metrics(); size = min(212, size)
         else:
-            columns, size = self.discovery_grid_metrics(self.discovery_section == "recent")
+            columns, size = self.discovery_grid_metrics(self.discovery_section)
         content = self.discovery_list
         self.discovery_daily_sections = {}
         def group(title, items, section_key=""):
@@ -1094,26 +1102,34 @@ class Display(Gtk.Application):
                 return
             daily = self.discovery_section == "daily"
             visible_items = items
-            grid = Gtk.Grid(column_spacing=18 if daily else (16 if self.discovery_section == "recent" else 20), row_spacing=18 if daily else 20); grid.set_column_homogeneous(False); grid.set_halign(Gtk.Align.START); grid.set_hexpand(True)
+            grid = Gtk.Grid(column_spacing=18 if daily else 24, row_spacing=18 if daily else 20); grid.set_column_homogeneous(False); grid.set_halign(Gtk.Align.START); grid.set_hexpand(True)
             track = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=18) if daily else None
             section_cards = []
             if track: track.add_css_class("daily-track")
             if daily and isinstance(title, tuple):
-                context = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8); context.add_css_class("recommendation-card")
-                context.set_size_request(size, size); context.set_halign(Gtk.Align.CENTER); context.set_valign(Gtk.Align.START)
-                context.append(Gtk.Box(vexpand=True))
-                reason_label = self.label(title[0], "recommendation-reason", .5); reason_label.set_justify(Gtk.Justification.CENTER); context.append(reason_label)
-                seed_label = self.label(title[1], "recommendation-seed", .5); seed_label.set_wrap(True); seed_label.set_lines(4); seed_label.set_ellipsize(Pango.EllipsizeMode.END); seed_label.set_justify(Gtk.Justification.CENTER); context.append(seed_label)
-                context.append(Gtk.Box(vexpand=True)); track.append(context)
+                reason, seed = title
+                context = Gtk.Button(); context.add_css_class("recommendation-card"); context.set_hexpand(False); context.set_halign(Gtk.Align.CENTER); context.set_valign(Gtk.Align.START)
+                context_body = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5); context_body.set_halign(Gtk.Align.CENTER); context_body.set_valign(Gtk.Align.START)
+                context_picture = MixPicture(duotone=True); context_picture.add_css_class("queue-art"); context_picture.set_can_shrink(True); context_picture.set_content_fit(Gtk.ContentFit.COVER); self.set_browser_placeholder(context_picture)
+                context_overlay = Gtk.Overlay(); context_overlay.set_child(context_picture)
+                reason_label = self.label(reason, "recommendation-cover-label", .5); reason_label.set_halign(Gtk.Align.CENTER); reason_label.set_valign(Gtk.Align.CENTER); context_overlay.add_overlay(reason_label)
+                context_art = Gtk.ScrolledWindow(); context_art.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.NEVER); context_art.set_propagate_natural_width(False); context_art.set_propagate_natural_height(False); context_art.set_min_content_width(size); context_art.set_max_content_width(size); context_art.set_min_content_height(size); context_art.set_max_content_height(size); context_art.set_size_request(size, size); context_art.set_halign(Gtk.Align.CENTER); context_art.set_child(context_overlay); context_body.append(context_art)
+                seed_label = self.label(seed.get("title") or "For you", "recommendation-seed", .5); seed_label.set_wrap(True); seed_label.set_lines(2); seed_label.set_max_width_chars(20); seed_label.set_ellipsize(Pango.EllipsizeMode.END); seed_label.set_justify(Gtk.Justification.CENTER); seed_label.set_size_request(size, 54); seed_label.set_valign(Gtk.Align.START); context_body.append(seed_label)
+                artist_label = self.label(seed.get("artist") or "Roon", "recommendation-artist", .5); artist_label.set_wrap(True); artist_label.set_lines(2); artist_label.set_max_width_chars(22); artist_label.set_ellipsize(Pango.EllipsizeMode.END); artist_label.set_justify(Gtk.Justification.CENTER); artist_label.set_size_request(size, 36); artist_label.set_valign(Gtk.Align.START); context_body.append(artist_label)
+                context.set_child(context_body); context.set_size_request(size + 12, size + 105); track.append(context); section_cards.append(context)
+                if key := seed.get("artwork_key"):
+                    key = "discover:" + key; self.discovery_pictures.setdefault(key, []).append(context_picture)
+                    self.discovery_cards.append((context, key))
+                    if cached := self.queue_thumbnail_cache.get(key): context_picture.set_paintable(cached)
             for index, item in enumerate(visible_items):
                 card = Gtk.Button(); card.add_css_class("discovery-card"); card.set_hexpand(False); card.set_halign(Gtk.Align.CENTER); card.set_valign(Gtk.Align.START)
                 if daily: card.add_css_class("daily-card")
                 body = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5); body.set_halign(Gtk.Align.CENTER); body.set_valign(Gtk.Align.START)
                 picture = MixPicture(duotone=item.get("kind") == "mix"); picture.add_css_class("queue-art"); picture.set_can_shrink(True); picture.set_content_fit(Gtk.ContentFit.COVER); self.set_browser_placeholder(picture)
                 art = Gtk.ScrolledWindow(); art.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.NEVER); art.set_propagate_natural_width(False); art.set_propagate_natural_height(False); art.set_min_content_width(size); art.set_max_content_width(size); art.set_min_content_height(size); art.set_max_content_height(size); art.set_size_request(size, size); art.set_halign(Gtk.Align.CENTER); art.set_child(picture); body.append(art)
-                title_height = 72 if daily else 58
-                credit_height = 42 if daily else 36
-                title_label = self.label(item.get("title", ""), "queue-title", .5); title_label.set_wrap(True); title_label.set_max_width_chars(23); title_label.set_lines(3 if daily else 2); title_label.set_ellipsize(Pango.EllipsizeMode.END); title_label.set_size_request(size, title_height); title_label.set_valign(Gtk.Align.START); body.append(title_label)
+                title_height = 54 if daily else 58
+                credit_height = 36
+                title_label = self.label(item.get("title", ""), "queue-title", .5); title_label.set_wrap(True); title_label.set_max_width_chars(20 if daily else 23); title_label.set_lines(2); title_label.set_ellipsize(Pango.EllipsizeMode.END); title_label.set_size_request(size, title_height); title_label.set_valign(Gtk.Align.START); body.append(title_label)
                 title_label.set_justify(Gtk.Justification.CENTER)
                 credit = self.label(item.get("artist") or " · ".join(item.get("context") or []), "queue-subtitle", .5); credit.set_wrap(True); credit.set_max_width_chars(25); credit.set_lines(2); credit.set_ellipsize(Pango.EllipsizeMode.END); credit.set_size_request(size, credit_height); credit.set_valign(Gtk.Align.START); body.append(credit)
                 credit.set_justify(Gtk.Justification.CENTER)
@@ -1136,9 +1152,9 @@ class Display(Gtk.Application):
             else: content.append(grid)
         group(None, data.get("items", []), "mixes")
         for recommendation in data.get("groups", []):
-            reason = {"recent": "Because you listened to", "added": "Because you added"}.get(recommendation.get("reason"), "Inspired by")
-            seed = (recommendation.get("seed") or {}).get("title")
-            group((reason, seed) if seed else ("Picked for you", ""), recommendation.get("items", []), "recommendations")
+            reason = "Inspired by"
+            seed = recommendation.get("seed") or {}
+            group((reason, seed) if seed.get("title") else ("Picked for you", {}), recommendation.get("items", []), "recommendations")
         if not data.get("items") and not data.get("groups"): self.discovery_list.append(self.label("Nothing available here yet.", "browser-message"))
         if self.discovery_mix and data.get("total", 0) > len(data.get("items", [])):
             content.append(self.label("Track preview · the mix buttons request the whole mix.", "browser-message"))
@@ -1345,17 +1361,18 @@ class Display(Gtk.Application):
         size = max(64, min(212, (available - 16 * (columns - 1)) // columns - 12))
         return columns, size
 
-    def discovery_grid_metrics(self, sidebar=False):
+    def discovery_grid_metrics(self, section="releases"):
         monitors = Gdk.Display.get_default().get_monitors()
         monitor = monitors.get_item(0) if monitors.get_n_items() else None
         width = monitor.get_geometry().width if monitor else 800
+        sidebar = section == "recent"
         available = max(300, width - (170 if sidebar else 30))
         columns = 4 if width >= 1000 else 2
-        gap = 16 if sidebar else 20
-        # Each card adds 12 px around the artwork; reserve that for every
-        # column so four fixed cards fit without creating an accidental
-        # horizontal overflow on Recent or New Releases.
-        size = max(140, min(280, (available - gap * (columns - 1)) // columns - 12))
+        gap = 24
+        # Browse is the visual benchmark. Recent needs substantially more air
+        # around its sidebar, while New Releases can remain a little larger.
+        cap = 220 if sidebar else 250
+        size = max(140, min(cap, (available - gap * (columns - 1)) // columns - 12))
         return columns, size
 
     def browser_scrub_changed(self, scale):
