@@ -2,6 +2,10 @@
 
 ## Alpine prototype — unreleased experiment
 
+- Rebuild with all accepted Alpine fixes. Keep private updater command logs,
+  separate dependency preparation progress stages and explain TLS clock failures.
+  Hide epoch-era clock values while network time arrives; log the GTK renderer
+  so graphics performance can be diagnosed without guessing.
 - Fix diagnostics to read OpenRC service names on Alpine. Add an explicit system
   tools installer for existing images, a confirmed native touchscreen reboot
   action and a transparent Cage cursor theme alongside child-widget cursor hiding.

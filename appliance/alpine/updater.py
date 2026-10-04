@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 import re
 import shutil
+import ssl
 import subprocess
 import tarfile
 import tempfile
@@ -29,9 +30,20 @@ def status(message):
 
 
 def run(args, timeout=300):
-    # Command logs can include remote/package details: do not expose raw errors.
-    result = subprocess.run(args, capture_output=True, text=True, timeout=timeout)
-    if result.returncode: raise RuntimeError("Application preparation or service restart failed")
+    # Keep dependency output in a private local log, never in HTTP responses.
+    # Streaming to disk also shows progress while pip/npm are still running.
+    log = STATE / "update.log"
+    descriptor = os.open(log, os.O_WRONLY | os.O_CREAT | os.O_APPEND | os.O_NOFOLLOW, 0o600)
+    with os.fdopen(descriptor, "a") as file:
+        os.fchmod(file.fileno(), 0o600)
+        file.write(f"\n{time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())} Starting {Path(args[0]).name}\n"); file.flush()
+        try:
+            result = subprocess.run(args, stdout=file, stderr=subprocess.STDOUT, text=True, timeout=timeout)
+        except subprocess.TimeoutExpired:
+            file.write("Step timed out\n"); file.flush()
+            raise RuntimeError("Application preparation timed out; see the private update log")
+        file.write(f"Step finished with exit status {result.returncode}\n")
+    if result.returncode: raise RuntimeError("Application preparation or service restart failed; see the private update log")
 
 
 def fetch_json(url):
@@ -112,10 +124,13 @@ def update():
         source = extract_source(archive, temporary / "unpacked")
         source.rename(target)
     (target / ".source-commit").write_text(sha + "\n")
-    status("Update · Preparing Python and Roon components…")
+    status("Update · Creating Python environment…")
     run(["python3", "-m", "venv", "--system-site-packages", str(target / ".venv")])
+    status("Update · Installing Pi Home Python package…")
     run([str(target / ".venv/bin/pip"), "install", "--no-build-isolation", "--no-deps", str(target)])
+    status("Update · Downloading Roon dependencies…")
     run(["npm", "--prefix", str(target / "roon-controller"), "ci", "--omit=dev", "--no-audit", "--no-fund"])
+    status("Update · Checking prepared application…")
     run([str(target / ".venv/bin/python"), "-c", "import gi; gi.require_version('Gtk', '4.0'); gi.require_foreign('cairo'); from pi_bus_time_display import __version__"])
     for path in ("native-display/pi_bus_native.py", "scripts/pi-bus-cage-launch", "appliance/alpine/display-session"):
         (target / path).chmod(0o755)
@@ -148,7 +163,11 @@ def main():
         except BlockingIOError: return
         try: update()
         except Exception as error:
-            message = str(error) if isinstance(error, RuntimeError) else "Download or application preparation failed; existing installation retained"
+            reason = getattr(error, "reason", error)
+            if isinstance(reason, ssl.SSLCertVerificationError):
+                message = "HTTPS certificate check failed. Check the Pi clock and network time sync; existing installation retained"
+            else:
+                message = str(error) if isinstance(error, RuntimeError) else "Download or application preparation failed; existing installation retained"
             status("Failed: " + message)
             raise SystemExit(1)
 

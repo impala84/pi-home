@@ -12,6 +12,16 @@ updater = importlib.util.module_from_spec(spec); spec.loader.exec_module(updater
 
 
 class AlpineUpdaterTests(unittest.TestCase):
+    def test_command_logs_are_private_and_timeout_is_explicit(self):
+        import subprocess
+        with tempfile.TemporaryDirectory() as folder, patch.object(updater, "STATE", Path(folder)):
+            updater.run(["printf", "test-dependency-output"])
+            log = Path(folder) / "update.log"
+            self.assertEqual(log.stat().st_mode & 0o777, 0o600)
+            self.assertIn("test-dependency-output", log.read_text())
+            with patch.object(updater.subprocess, "run", side_effect=subprocess.TimeoutExpired("pip", 300)), self.assertRaisesRegex(RuntimeError, "timed out"):
+                updater.run(["pip", "install"])
+
     def test_only_successful_fixed_branch_builds_are_accepted(self):
         sha = "a" * 40
         valid = {"workflow_runs": [{"head_sha": sha, "head_branch": updater.BRANCH, "conclusion": "success", "event": "push", "head_repository": {"full_name": "impala84/pi-home"}}]}

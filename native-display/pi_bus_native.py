@@ -339,6 +339,7 @@ class Display(Gtk.Application):
         self.stack.set_hhomogeneous(False); self.stack.set_vhomogeneous(False)
         self.stack.add_named(self.build_boot_splash(), "boot"); self.stack.add_named(self.build_bus(), "bus"); self.stack.add_named(self.build_roon(), "roon"); self.stack.add_named(self.build_home(), "home"); self.stack.add_named(self.build_settings(), "settings"); self.stack.add_named(self.build_sleep(), "sleep")
         self.window.set_child(self.stack); self.window.present()
+        GLib.timeout_add_seconds(1, self.log_renderer)
         GLib.timeout_add_seconds(1, self.hide_touch_cursor)
         for _ in range(3): threading.Thread(target=self.thumbnail_worker, daemon=True).start()
         threading.Thread(target=self.touchscreen_wake_worker, daemon=True).start()
@@ -634,7 +635,14 @@ class Display(Gtk.Application):
         return False
 
     def tick(self):
-        now = datetime.now(TZ).strftime("%H:%M"); self.bus_clock.set_text(now); self.roon_clock.set_text(now); self.home_clock.set_text(now); self.sleep_clock.set_text(now); return True
+        current = datetime.now(TZ)
+        now = current.strftime("%H:%M") if current.year >= 2024 else "--:--"
+        self.bus_clock.set_text(now); self.roon_clock.set_text(now); self.home_clock.set_text(now); self.sleep_clock.set_text(now); return True
+
+    def log_renderer(self):
+        renderer = self.window.get_renderer()
+        print(f"Pi Home GTK {Gtk.get_major_version()}.{Gtk.get_minor_version()}.{Gtk.get_micro_version()} renderer={type(renderer).__name__}", flush=True)
+        return False
 
     def start_poll(self):
         if not self.polling:
