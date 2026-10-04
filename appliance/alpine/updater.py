@@ -136,8 +136,14 @@ def restart():
     # Hold the display stopped until every backend has restarted so Cage/seatd
     # cannot race a second display start for the service/DRM locks.
     run(["rc-service", "--nodeps", "pi-home-display", "stop"], timeout=45)
+    # Cage can leave seatd's DRM session connected briefly after OpenRC reports
+    # the supervised display stopped. A new Cage then receives a broken pipe
+    # and respawns forever without ever publishing its source revision.
+    run(["rc-service", "--nodeps", "seatd", "restart"], timeout=45)
     for service in ("pi-home-setup", "pi-home-api", "pi-home-roon"):
         run(["rc-service", "--nodeps", service, "restart"], timeout=45)
+    try: DISPLAY_REVISION.unlink()
+    except FileNotFoundError: pass
     run(["rc-service", "--nodeps", "pi-home-display", "start"], timeout=45)
 
 

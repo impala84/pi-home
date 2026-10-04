@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.0-beta.14 Alpine — 5 October 2026
+
+- Resets seatd between stopping and starting Cage during an application update, clearing the broken DRM-session pipe observed on the physical touchscreen.
+- Removes the old display revision marker immediately before launch so health checks accept only a marker published by the newly started GTK process.
+
 ## 1.1.0-beta.13 Alpine — 4 October 2026
 
 - Repairs touchscreen updates on the small Alpine filesystem: remove inactive managed releases before staging, remove failed staging trees, and prevent repeated taps from launching overlapping updater processes.

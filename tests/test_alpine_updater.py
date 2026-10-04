@@ -52,6 +52,7 @@ class AlpineUpdaterTests(unittest.TestCase):
             updater.restart()
         self.assertEqual([call.args[0] for call in run.call_args_list], [
             ["rc-service", "--nodeps", "pi-home-display", "stop"],
+            ["rc-service", "--nodeps", "seatd", "restart"],
             ["rc-service", "--nodeps", "pi-home-setup", "restart"],
             ["rc-service", "--nodeps", "pi-home-api", "restart"],
             ["rc-service", "--nodeps", "pi-home-roon", "restart"],
@@ -59,10 +60,17 @@ class AlpineUpdaterTests(unittest.TestCase):
         ])
 
     def test_restart_failure_does_not_start_display_over_a_failing_backend(self):
-        with patch.object(updater, "run", side_effect=[None, None, RuntimeError("backend failed")]) as run:
+        with patch.object(updater, "run", side_effect=[None, None, None, RuntimeError("backend failed")]) as run:
             with self.assertRaisesRegex(RuntimeError, "backend failed"):
                 updater.restart()
-        self.assertEqual(run.call_count,3)
+        self.assertEqual(run.call_count,4)
+
+    def test_restart_clears_stale_display_revision_before_start(self):
+        with tempfile.TemporaryDirectory() as folder, patch.object(updater, "run"):
+            marker = Path(folder) / "display-source-commit"; marker.write_text("old")
+            with patch.object(updater, "DISPLAY_REVISION", marker):
+                updater.restart()
+            self.assertFalse(marker.exists())
 
     def test_command_logs_are_private_and_timeout_is_explicit(self):
         import subprocess
