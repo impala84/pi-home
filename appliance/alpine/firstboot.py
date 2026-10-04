@@ -18,7 +18,7 @@ def initialize(config_dir: Path, state_dir: Path) -> None:
         owner = env.stat()
         os.chown(temp, owner.st_uid, owner.st_gid)
         temp.replace(env)
-    # Credentials are visible only locally in the native settings; no logs.
+    # Credentials remain in the private local file; never print them to logs.
     marker.touch(mode=0o600)
 
 

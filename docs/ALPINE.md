@@ -49,6 +49,10 @@ Authorise Pi Home Roon Controller from Roon Settings → Extensions, then select
 an existing Roon output. Local GTK settings are the initial configuration path.
 Web settings require a per-device random admin password generated at first
 boot; it is not printed to build logs or included in published artifacts.
+There is not yet an on-screen credential handoff: native settings work locally,
+but web sign-in requires retrieving the password from the private config file
+on the spare card through a Linux host. The setup wizard must remove this
+prototype limitation before public release.
 
 Display auto-detection is enabled. The build must include the Pi 5 device tree
 and 10-inch Touch Display 2 overlay, but package presence does not prove hardware
