@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.0-beta.19 Alpine Beta — 5 October 2026
+
+- Extended the native Discover viewport through the touchscreen page's 28 px
+  right inset, so Daily's horizontal rows now clip at the physical display
+  edge while the header clock and bottom navigation retain their alignment.
+- Added a real Alpine GTK allocation assertion for that edge-to-edge behaviour.
+
 ## 1.1.0-beta.18 Alpine Beta — 5 October 2026
 
 - Rebalanced the touchscreen discovery canvas against Browse: Recent now uses

@@ -72,6 +72,7 @@ class NativeBrowserControlsTests(unittest.TestCase):
         self.assertNotIn('"go-previous-symbolic"', code)
         self.assertNotIn('"go-next-symbolic"', code)
         self.assertNotIn('carousel-arrow', code)
+        self.assertIn('.touch-landscape .discovery-scroll { margin-right: -28px; }', code)
 
     def test_genre_icons_are_bundled_svgs_not_font_glyphs(self):
         import xml.etree.ElementTree as ET

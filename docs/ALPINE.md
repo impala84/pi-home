@@ -1,11 +1,11 @@
 # Alpine Beta appliance
 
-Current version: **1.1.0-beta.18 Alpine Beta**. First-run setup creates an
+Current version: **1.1.0-beta.19 Alpine Beta**. First-run setup creates an
 owner-chosen device/SSH account, and Settings can manage the installed Netdata
 Agent and its Cloud connection without an Alpine shell. This update is available
 on the Alpine branch.
 
-Software version labels include “Alpine” (for example, “1.1.0-beta.18 Alpine”)
+Software version labels include “Alpine” (for example, “1.1.0-beta.19 Alpine”)
 to distinguish these builds from Raspberry Pi OS. Setup and web password changes
 require at least eight characters; setup still requires confirmation.
 Sleep and brightness are applied by the local root-owned helper: sleep writes zero

@@ -12,8 +12,15 @@ native = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(native)
 
 Gtk.init()
+window = Gtk.Window(default_width=1280, default_height=720); window.add_css_class("touch-landscape")
+provider = Gtk.CssProvider(); provider.load_from_data(native.CSS)
+Gtk.StyleContext.add_provider_for_display(window.get_display(), provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 display = native.Display()
-display.build_roon()
+page = display.build_roon()
+window.set_child(page); window.present()
+context = native.GLib.MainContext.default()
+for _ in range(20):
+    while context.pending(): context.iteration(False)
 
 assert display.discover_tabs["daily"].get_label() == "DAILY"
 horizontal, vertical = display.discovery_scroll.get_policy()
@@ -68,6 +75,8 @@ assert art.get_min_content_width() == first.get_child().get_first_child().get_mi
 assert display.discovery_pictures["discover:seed-art"]
 assert display.discovery_daily_sections.keys() == {"mixes", "recommendations"}
 assert display.discovery_daily_sections["mixes"] is scroller
+valid, bounds = display.discovery_scroll.compute_bounds(window)
+assert valid and bounds.get_x() + bounds.get_width() >= 1279, bounds
 display.browser_sidebar.set_visible(True)
 display.browser_list.append(display.label("Stale Browse content"))
 requests = []
