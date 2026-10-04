@@ -26,7 +26,7 @@ jobs:
           docker run --rm pi-home-alpine:prototype sh -ec 'python3 -c "from appliance.alpine.setup_service import set_login_password; set_login_password(\"disposable-test-only\"); from pathlib import Path; entry=next(x for x in Path(\"/etc/shadow\").read_text().splitlines() if x.startswith(\"admin:\")); assert entry.split(\":\")[1].startswith(\"\u0024\")"; ssh-keygen -A; sshd -t; sshd -T | grep -q "permitrootlogin no"; sshd -T | grep -q "allowusers admin"; visudo -c'
       - name: Exercise Alpine application staging and rollback
         run: |
-          git archive HEAD | gzip > /tmp/pi-home-update-source.tar.gz
+          git archive --prefix=pi-home/ HEAD | gzip > /tmp/pi-home-update-source.tar.gz
           docker run --rm -v /tmp/pi-home-update-source.tar.gz:/tmp/pi-home-update-source.tar.gz:ro pi-home-alpine:prototype python3 appliance/alpine/updater_smoke.py
       - name: Verify the real update button privilege boundary
         run: docker run --rm pi-home-alpine:prototype python3 appliance/alpine/update_button_smoke.py
