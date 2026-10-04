@@ -59,9 +59,14 @@ for service in hwclock modules sysctl bootmisc hostname localmount hwdrivers; do
 for service in killprocs savecache mount-ro; do rc-update add "$service" shutdown; done
 for service in networking dbus networkmanager avahi-daemon seatd pi-home-firstboot pi-home-api pi-home-roon pi-home-setup pi-home-input pi-home-display; do rc-update add "$service" default; done
 # Pi 4 has no battery-backed RTC. An epoch clock breaks HTTPS (LTA/updates).
-# Allow an initial step, then use normal chrony discipline; keep package servers.
+# Restore at least the last known/build time before networking, then let chrony
+# burst and step to exact network time as soon as connectivity appears.
+date +%s > /var/lib/pi-home/clock-seed
+rc-update del hwclock boot 2>/dev/null || true
+rc-update add pi-home-clock boot
 sed -i '/^[[:space:]]*makestep[[:space:]]/d' /etc/chrony/chrony.conf
-printf '%s\n' 'makestep 1.0 3' >> /etc/chrony/chrony.conf
+sed -i -E '/^[[:space:]]*(pool|server)[[:space:]]/ { /[[:space:]]iburst([[:space:]]|$)/! s/$/ iburst/; }' /etc/chrony/chrony.conf
+printf '%s\n' 'makestep 0.1 -1' >> /etc/chrony/chrony.conf
 rc-update add chronyd default
 # SSH is enabled, but admin stays locked until setup supplies a unique password.
 awk -F: '$1 == "root" && $2 ~ /^[!*]/ {locked=1} END {exit !locked}' /etc/shadow

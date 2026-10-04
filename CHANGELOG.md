@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.0-beta.13 Alpine — 4 October 2026
+
+- Repairs touchscreen updates on the small Alpine filesystem: remove inactive managed releases before staging, remove failed staging trees, and prevent repeated taps from launching overlapping updater processes.
+- Waits visibly for a trustworthy Pi clock before HTTPS update checks instead of failing against certificates while the clock is still at the Unix epoch.
+- Seeds a usable clock before networking on Pi hardware without an RTC, saves it at shutdown, enables Chrony burst requests and permits an immediate step whenever network time becomes available.
+
 ## 1.1.0-beta.12 Alpine — 4 October 2026
 
 - Replaces Daily's arrow overlays and paging with roomy, kinetic horizontal swipe tracks.

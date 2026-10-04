@@ -1,5 +1,6 @@
 """Local-only, bounded first-boot actions. Never expose this helper over HTTP."""
 import json
+import fcntl
 import os
 from pathlib import Path
 import pwd
@@ -76,11 +77,60 @@ def display_power(root, powered, brightness_percent=100):
             power.write_text("4", encoding="ascii")
 
 
+def install_clock_support(root=Path("/"), run=command, now=None):
+    """Migrate existing appliances as well as newly built images."""
+    root = Path(root)
+    source = Path(__file__).with_name("init.d") / "pi-home-clock"
+    service = root / "etc/init.d/pi-home-clock"
+    service.parent.mkdir(parents=True, exist_ok=True)
+    if not service.exists() or service.read_bytes() != source.read_bytes():
+        shutil.copyfile(source, service)
+        service.chmod(0o755)
+    hwclock = root / "etc/runlevels/boot/hwclock"
+    if hwclock.is_symlink():
+        hwclock.unlink()
+    run(["rc-update", "add", "pi-home-clock", "boot"])
+
+    chrony = root / "etc/chrony/chrony.conf"
+    if chrony.is_file():
+        lines = []
+        for line in chrony.read_text().splitlines():
+            if re.match(r"^\s*makestep\s", line):
+                continue
+            if re.match(r"^\s*(?:pool|server)\s", line) and not re.search(r"(?:^|\s)iburst(?:\s|$)", line):
+                line += " iburst"
+            lines.append(line)
+        lines.append("makestep 0.1 -1")
+        updated = "\n".join(lines) + "\n"
+        if chrony.read_text() != updated:
+            atomic(chrony, updated)
+
+    epoch = int(now if now is not None else __import__("time").time())
+    if epoch >= 1704067200:
+        seed = root / "var/lib/pi-home/clock-seed"
+        seed.parent.mkdir(parents=True, exist_ok=True)
+        atomic(seed, str(epoch) + "\n")
+
+
+def update_locked(root=Path("/")):
+    """Observe the updater's process lock, including across helper restarts."""
+    path = Path(root) / "run/pi-home-update.lock"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a") as lock:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            return True
+        fcntl.flock(lock, fcntl.LOCK_UN)
+    return False
+
+
 class Setup:
     def __init__(self, root=Path("/"), run=command, roon=None, login_password=set_login_password):
         self.root = Path(root); self.run = run; self.roon = roon or self.roon_state
         self.login_password = login_password
         self.tools_lock = threading.Lock()
+        self.update_process = None
         self.progress = self.root / "var/lib/pi-home-setup/progress.json"
         self.progress.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
 
@@ -117,8 +167,10 @@ class Setup:
             return {"ok": True, "progress": state, "connected": connected, "roon": self.roon()}
         if action == "update":
             if not state.get("complete"): raise ValueError("Finish setup before updating.")
+            if (self.update_process is not None and self.update_process.poll() is None) or update_locked(self.root):
+                return {"ok": True, "queued": False}
             atomic(self.root / "var/lib/pi-home/update-status", "Update · Queued…\n")
-            subprocess.Popen(["/usr/bin/python3", "/opt/pi-home/appliance/alpine/updater.py"], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+            self.update_process = subprocess.Popen(["/usr/bin/python3", "/opt/pi-home/appliance/alpine/updater.py"], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
             return {"ok": True, "queued": True}
         if action == "install_tools":
             if not state.get("complete"): raise ValueError("Finish setup before installing tools.")
@@ -244,6 +296,7 @@ class Setup:
 
 
 def serve():
+    install_clock_support()
     app = Setup(); uid = pwd.getpwnam("morningbus").pw_uid
     path = Path(SOCKET)
     if path.exists():

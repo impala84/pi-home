@@ -21,6 +21,7 @@ STATE = Path("/var/lib/pi-home")
 REPO = "https://api.github.com/repos/impala84/pi-home"
 BRANCH = "alpine-appliance-prototype"
 DISPLAY_REVISION = Path("/run/pi-home/display-source-commit")
+MANAGED_RELEASE = re.compile(r"[0-9a-f]{40}-[0-9]+")
 
 
 def status(message):
@@ -50,6 +51,36 @@ def run(args, timeout=300):
 def fetch_json(url):
     request = urllib.request.Request(url, headers={"User-Agent": "Pi-Home-Alpine-Updater", "Accept": "application/vnd.github+json"})
     with urllib.request.urlopen(request, timeout=30) as response: return json.load(response)
+
+
+def wait_for_clock(timeout=45):
+    """Do not start TLS while a Pi without an RTC still thinks it is 1970."""
+    if time.gmtime().tm_year >= 2024:
+        return
+    status("Update · Waiting for network time…")
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if time.gmtime().tm_year >= 2024:
+            return
+        time.sleep(1)
+    raise RuntimeError("The Pi clock is not ready. Check network time and try again; current application unchanged")
+
+
+def managed_release(path, releases):
+    return (
+        path.parent == releases
+        and not path.is_symlink()
+        and path.is_dir()
+        and (path.name == "initial-image" or MANAGED_RELEASE.fullmatch(path.name))
+    )
+
+
+def prune_releases(releases, preserve=()):
+    """Remove only updater-owned, inactive releases from the exact release root."""
+    preserved = {Path(path).resolve() for path in preserve}
+    for path in releases.iterdir():
+        if managed_release(path, releases) and path.resolve() not in preserved:
+            shutil.rmtree(path)
 
 
 def verified_revision():
@@ -111,6 +142,7 @@ def restart():
 
 
 def update():
+    wait_for_clock()
     status("Update · Checking verified Alpine prototype builds…")
     sha = verified_revision()
     if (APP / ".source-commit").exists() and (APP / ".source-commit").read_text().strip() == sha:
@@ -121,33 +153,43 @@ def update():
         if not healthy(sha): raise RuntimeError("Current files are installed but the touchscreen could not be restarted on that revision")
         status("Touchscreen repaired. Alpine prototype " + sha[:7] + " is now running."); return
     releases = Path("/opt/pi-home-releases"); releases.mkdir(exist_ok=True, mode=0o755)
+    # A 1.7 GB appliance cannot retain a full Python/npm tree for every update.
+    # The live release is the rollback copy while the next one is staged.
+    current = APP.resolve()
+    status("Update · Reclaiming old update space…")
+    prune_releases(releases, {current})
     if shutil.disk_usage(releases).free < 400_000_000:
         raise RuntimeError("Not enough free space to stage an update; current application unchanged")
     target = releases / (sha + "-" + str(time.time_ns()))
-    # Stage dependencies while the existing app remains running.
-    with tempfile.TemporaryDirectory(prefix="pi-home-source-") as folder:
-        temporary = Path(folder); archive = temporary / "source.tar.gz"
-        status("Update · Downloading verified application files…")
-        url = "https://codeload.github.com/impala84/pi-home/tar.gz/" + sha
-        with urllib.request.urlopen(url, timeout=60) as response, archive.open("wb") as file:
-            total = 0
-            while chunk := response.read(65536):
-                total += len(chunk)
-                if total > 30_000_000: raise RuntimeError("Source download is too large")
-                file.write(chunk)
-        source = extract_source(archive, temporary / "unpacked")
-        source.rename(target)
-    (target / ".source-commit").write_text(sha + "\n")
-    status("Update · Creating Python environment…")
-    run(["python3", "-m", "venv", "--system-site-packages", str(target / ".venv")])
-    status("Update · Installing Pi Home Python package…")
-    run([str(target / ".venv/bin/pip"), "install", "--no-build-isolation", "--no-deps", str(target)])
-    status("Update · Downloading Roon dependencies…")
-    run(["npm", "--prefix", str(target / "roon-controller"), "ci", "--omit=dev", "--no-audit", "--no-fund"])
-    status("Update · Checking prepared application…")
-    run([str(target / ".venv/bin/python"), "-c", "import gi; gi.require_version('Gtk', '4.0'); gi.require_foreign('cairo'); from pi_bus_time_display import __version__"])
-    for path in ("native-display/pi_bus_native.py", "scripts/pi-bus-cage-launch", "appliance/alpine/display-session"):
-        (target / path).chmod(0o755)
+    try:
+        # Stage dependencies while the existing app remains running.
+        with tempfile.TemporaryDirectory(prefix="pi-home-source-") as folder:
+            temporary = Path(folder); archive = temporary / "source.tar.gz"
+            status("Update · Downloading verified application files…")
+            url = "https://codeload.github.com/impala84/pi-home/tar.gz/" + sha
+            with urllib.request.urlopen(url, timeout=60) as response, archive.open("wb") as file:
+                total = 0
+                while chunk := response.read(65536):
+                    total += len(chunk)
+                    if total > 30_000_000: raise RuntimeError("Source download is too large")
+                    file.write(chunk)
+            source = extract_source(archive, temporary / "unpacked")
+            source.rename(target)
+        (target / ".source-commit").write_text(sha + "\n")
+        status("Update · Creating Python environment…")
+        run(["python3", "-m", "venv", "--system-site-packages", str(target / ".venv")])
+        status("Update · Installing Pi Home Python package…")
+        run([str(target / ".venv/bin/pip"), "install", "--no-build-isolation", "--no-deps", str(target)])
+        status("Update · Downloading Roon dependencies…")
+        run(["npm", "--prefix", str(target / "roon-controller"), "ci", "--omit=dev", "--no-audit", "--no-fund"])
+        status("Update · Checking prepared application…")
+        run([str(target / ".venv/bin/python"), "-c", "import gi; gi.require_version('Gtk', '4.0'); gi.require_foreign('cairo'); from pi_bus_time_display import __version__"])
+        for path in ("native-display/pi_bus_native.py", "scripts/pi-bus-cage-launch", "appliance/alpine/display-session"):
+            (target / path).chmod(0o755)
+    except Exception:
+        if target.exists() and managed_release(target, releases):
+            shutil.rmtree(target)
+        raise
     previous = APP.resolve()
     if not APP.is_symlink():
         previous = releases / "initial-image"
@@ -160,7 +202,6 @@ def update():
         status("Update · Restarting and checking Pi Home…")
         restart()
         if not healthy(sha): raise RuntimeError("New application did not become healthy or the touchscreen kept running old files")
-        status("Update installed. Alpine prototype " + sha[:7] + "; settings and pairing preserved.")
     except Exception as failure:
         activate(previous)
         shutil.copyfile(previous / "appliance/alpine/display-launch", "/usr/local/bin/pi-home-display-launch")
@@ -168,7 +209,14 @@ def update():
         restart()
         previous_sha = (previous / ".source-commit").read_text().strip() if (previous / ".source-commit").exists() else None
         if not healthy(previous_sha): raise RuntimeError("Update failed; previous files restored but services need attention")
+        if target.exists() and managed_release(target, releases):
+            shutil.rmtree(target)
         raise RuntimeError("Update failed; previous working application restored: " + str(failure)) from failure
+    # Cleanup is deliberately outside activation/rollback. Failure to reclaim an
+    # old inactive tree must never roll back an already healthy new release.
+    try: prune_releases(releases, {target})
+    except OSError: pass
+    status("Update installed. Alpine prototype " + sha[:7] + "; settings and pairing preserved.")
 
 
 def main():

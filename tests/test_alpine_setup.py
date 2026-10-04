@@ -1,4 +1,5 @@
 import importlib.util
+import fcntl
 import json
 from pathlib import Path
 import tempfile
@@ -170,6 +171,39 @@ class AlpineSetupTests(unittest.TestCase):
             self.setup.save({"complete": True})
             self.assertTrue(self.setup.handle({"action": "update"})["queued"])
             self.assertEqual(spawn.call_args.args[0], ["/usr/bin/python3", "/opt/pi-home/appliance/alpine/updater.py"])
+
+    def test_repeated_update_tap_does_not_spawn_overlapping_updater(self):
+        (self.root / "var/lib/pi-home").mkdir()
+        self.setup.save({"complete": True})
+        process = Mock(); process.poll.return_value = None
+        with patch.object(module.subprocess, "Popen", return_value=process) as spawn:
+            self.assertTrue(self.setup.handle({"action": "update"})["queued"])
+            self.assertFalse(self.setup.handle({"action": "update"})["queued"])
+            spawn.assert_called_once()
+
+    def test_update_lock_survives_setup_helper_restart(self):
+        (self.root / "var/lib/pi-home").mkdir()
+        self.setup.save({"complete": True})
+        path = self.root / "run/pi-home-update.lock"; path.parent.mkdir()
+        with path.open("a") as lock, patch.object(module.subprocess, "Popen") as spawn:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            self.assertFalse(self.setup.handle({"action": "update"})["queued"])
+            spawn.assert_not_called()
+
+    def test_clock_support_migrates_existing_image_and_seeds_valid_time(self):
+        source = ROOT / "appliance/alpine/init.d/pi-home-clock"
+        chrony = self.root / "etc/chrony/chrony.conf"; chrony.parent.mkdir(parents=True)
+        chrony.write_text("pool pool.ntp.org\nmakestep 1.0 3\n")
+        hwclock = self.root / "etc/runlevels/boot/hwclock"; hwclock.parent.mkdir(parents=True)
+        hwclock.symlink_to("/etc/init.d/hwclock")
+        module.install_clock_support(self.root, self.run, now=1800000000)
+        service = self.root / "etc/init.d/pi-home-clock"
+        self.assertEqual(service.read_bytes(), source.read_bytes())
+        self.assertEqual(service.stat().st_mode & 0o777, 0o755)
+        self.assertFalse(hwclock.exists())
+        self.assertEqual(self.run.call_args.args[0], ["rc-update", "add", "pi-home-clock", "boot"])
+        self.assertEqual(chrony.read_text(), "pool pool.ntp.org iburst\nmakestep 0.1 -1\n")
+        self.assertEqual((self.root / "var/lib/pi-home/clock-seed").read_text(), "1800000000\n")
 
     def test_netdata_controls_require_setup_and_use_only_fixed_openrc_commands(self):
         with self.assertRaises(ValueError): self.setup.handle({"action": "netdata_enable"})

@@ -12,6 +12,25 @@ updater = importlib.util.module_from_spec(spec); spec.loader.exec_module(updater
 
 
 class AlpineUpdaterTests(unittest.TestCase):
+    def test_wait_for_clock_is_bounded_and_visible(self):
+        with patch.object(updater.time, "gmtime", return_value=type("Clock", (), {"tm_year": 1970})()), patch.object(updater.time, "monotonic", side_effect=[0, 0, 2]), patch.object(updater.time, "sleep"), patch.object(updater, "status") as status:
+            with self.assertRaisesRegex(RuntimeError, "clock is not ready"):
+                updater.wait_for_clock(timeout=1)
+        status.assert_called_once_with("Update · Waiting for network time…")
+
+    def test_old_and_failed_managed_releases_are_pruned_safely(self):
+        with tempfile.TemporaryDirectory() as folder:
+            releases = Path(folder)
+            current = releases / ("a" * 40 + "-1"); current.mkdir()
+            old = releases / ("b" * 40 + "-2"); old.mkdir(); (old / "large").write_text("old")
+            initial = releases / "initial-image"; initial.mkdir()
+            unrelated = releases / "keep-me"; unrelated.mkdir()
+            linked = releases / ("c" * 40 + "-3"); linked.symlink_to(unrelated, target_is_directory=True)
+            updater.prune_releases(releases, {current})
+            self.assertTrue(current.is_dir())
+            self.assertFalse(old.exists()); self.assertFalse(initial.exists())
+            self.assertTrue(unrelated.is_dir()); self.assertTrue(linked.is_symlink())
+
     def test_health_requires_display_process_revision_marker(self):
         with tempfile.TemporaryDirectory() as folder, patch("urllib.request.urlopen") as urlopen, patch.object(updater, "run"), patch.object(updater.time, "sleep"):
             marker = Path(folder) / "display-source-commit"
