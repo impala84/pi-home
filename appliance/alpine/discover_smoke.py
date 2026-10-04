@@ -31,7 +31,9 @@ assert display.render_discover(1, {"status": "ready", "items": items, "groups": 
 overlay = display.discovery_list.get_first_child()
 assert isinstance(overlay, Gtk.Overlay)
 scroller = overlay.get_child(); track = scroller.get_child()
-assert isinstance(scroller, Gtk.ScrolledWindow) and isinstance(track, Gtk.Box)
+assert isinstance(scroller, Gtk.ScrolledWindow)
+if not isinstance(track, Gtk.Box): track = track.get_child()
+assert isinstance(track, Gtk.Box)
 cards=[]; child=track.get_first_child()
 while child: cards.append(child); child=child.get_next_sibling()
 assert len(cards) == 5
