@@ -1,4 +1,5 @@
 import tempfile
+import os
 import unittest
 from datetime import datetime
 from pathlib import Path
@@ -138,6 +139,13 @@ class DisplayModeTests(unittest.TestCase):
         with patch("pi_bus_time_display.server.command_output", side_effect=["loaded", "active"]):
             self.assertEqual(service_state("netdata.service"), "running")
         with patch("pi_bus_time_display.server.command_output", side_effect=["not-found"]):
+            self.assertEqual(service_state("netdata.service"), "not_installed")
+
+    def test_netdata_state_uses_openrc_on_alpine(self):
+        with patch.dict(os.environ, {"PI_HOME_APPLIANCE_PLATFORM": "alpine-prototype"}), patch("pi_bus_time_display.server.Path.is_file", return_value=True), patch("pi_bus_time_display.server.command_output", return_value=" * status: started") as command:
+            self.assertEqual(service_state("netdata.service"), "running")
+            command.assert_called_once_with(["rc-service", "netdata", "status"])
+        with patch.dict(os.environ, {"PI_HOME_APPLIANCE_PLATFORM": "alpine-prototype"}), patch("pi_bus_time_display.server.Path.is_file", return_value=False):
             self.assertEqual(service_state("netdata.service"), "not_installed")
 
     def test_unknown_mode_defaults_to_auto(self):

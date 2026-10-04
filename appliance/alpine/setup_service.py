@@ -94,8 +94,19 @@ class Setup:
         if action == "update":
             if not state.get("complete"): raise ValueError("Finish setup before updating.")
             atomic(self.root / "var/lib/pi-home/update-status", "Update · Queued…\n")
-            subprocess.Popen(["/usr/local/sbin/pi-home-alpine-update"], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+            subprocess.Popen(["/usr/bin/python3", "/opt/pi-home/appliance/alpine/updater.py"], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
             return {"ok": True, "queued": True}
+        if action in {"netdata_enable", "netdata_disable"}:
+            if not state.get("complete"): raise ValueError("Finish setup before changing services.")
+            if not (self.root / "etc/init.d/netdata").is_file():
+                raise ValueError("Netdata is not installed. Install the Alpine netdata and netdata-openrc packages.")
+            if action == "netdata_enable":
+                self.run(["rc-update", "add", "netdata", "default"])
+                self.run(["rc-service", "netdata", "start"])
+            else:
+                self.run(["rc-service", "netdata", "stop"])
+                self.run(["rc-update", "del", "netdata", "default"])
+            return {"ok": True}
         if action == "reboot" and (state.get("complete") or state.get("orientation")):
             threading.Timer(2, lambda: self.run(["/sbin/reboot"])).start()
             return {"ok": True}

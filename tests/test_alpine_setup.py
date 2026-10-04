@@ -124,7 +124,17 @@ class AlpineSetupTests(unittest.TestCase):
             (self.root / "var/lib/pi-home").mkdir()
             self.setup.save({"complete": True})
             self.assertTrue(self.setup.handle({"action": "update"})["queued"])
-            self.assertEqual(spawn.call_args.args[0], ["/usr/local/sbin/pi-home-alpine-update"])
+            self.assertEqual(spawn.call_args.args[0], ["/usr/bin/python3", "/opt/pi-home/appliance/alpine/updater.py"])
+
+    def test_netdata_controls_require_setup_and_use_only_fixed_openrc_commands(self):
+        with self.assertRaises(ValueError): self.setup.handle({"action": "netdata_enable"})
+        self.setup.save({"complete": True})
+        with self.assertRaisesRegex(ValueError, "not installed"): self.setup.handle({"action": "netdata_enable"})
+        service = self.root / "etc/init.d/netdata"; service.parent.mkdir(parents=True); service.touch()
+        self.setup.handle({"action": "netdata_enable"})
+        self.assertEqual(self.run.call_args.args[0], ["rc-service", "netdata", "start"])
+        self.setup.handle({"action": "netdata_disable"})
+        self.assertEqual(self.run.call_args.args[0], ["rc-update", "del", "netdata", "default"])
 
     def test_dsi_orientation_only_selects_current_dsi_mode(self):
         spec = importlib.util.spec_from_file_location("orientation", ROOT / "appliance/alpine/setup_orientation.py")

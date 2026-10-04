@@ -17,7 +17,7 @@ root = Path("/opt/pi-home")
 progress = Path("/var/lib/pi-home-setup/progress.json")
 progress.parent.mkdir(mode=0o700, exist_ok=True)
 progress.write_text('{"complete":true}'); progress.chmod(0o600)
-worker = Path("/usr/local/sbin/pi-home-alpine-update")
+worker = root / "appliance/alpine/updater.py"
 worker.write_text('#!/usr/bin/env python3\nimport os\nfrom pathlib import Path\nPath("/tmp/update-button-uid").write_text(str(os.geteuid()))\n')
 worker.chmod(0o755)
 account = pwd.getpwnam("morningbus")

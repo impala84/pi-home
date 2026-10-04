@@ -5,6 +5,7 @@ import base64
 import hmac
 import json
 import os
+import re
 import secrets
 import socket
 import subprocess
@@ -540,6 +541,12 @@ def active_wifi_ssid() -> str:
 
 def service_state(name: str) -> str:
     """Return a small, truthful systemd state without keeping a preference."""
+    if os.getenv("PI_HOME_APPLIANCE_PLATFORM") == "alpine-prototype":
+        service = name.removesuffix(".service")
+        if not re.fullmatch(r"[a-zA-Z0-9_-]+", service) or not Path("/etc/init.d", service).is_file():
+            return "not_installed"
+        result = command_output(["rc-service", service, "status"])
+        return "running" if "started" in result.lower() else "stopped"
     if command_output(["systemctl", "show", name, "--property=LoadState", "--value"]) != "loaded":
         return "not_installed"
     return "running" if command_output(["systemctl", "is-active", name]) == "active" else "stopped"
@@ -625,15 +632,15 @@ def write_control_request(state_dir: Path, request: dict) -> bool:
     as display-off immediately followed by display-on.
     """
     if os.getenv("PI_HOME_APPLIANCE_PLATFORM") == "alpine-prototype":
-        if request.get("action") == "update":
+        if request.get("action") in {"update", "reboot", "netdata_enable", "netdata_disable"}:
             try:
                 with socket.socket(socket.AF_UNIX) as client:
                     client.settimeout(5); client.connect("/run/pi-home-setup.sock")
-                    client.sendall(b'{"action":"update"}\n')
+                    client.sendall((json.dumps({"action": request["action"]}) + "\n").encode())
                     result = json.loads(client.makefile("rb").readline(4096))
             except OSError as error: raise ValueError("Alpine update helper is not ready. Please retry.") from error
             if not result.get("ok"): raise ValueError(result.get("error", "Could not start Alpine update"))
-            return bool(result.get("queued"))
+            return bool(result.get("queued", result.get("ok")))
         raise ValueError("OS controls are unavailable in the Alpine prototype")
     with CONTROL_REQUEST_LOCK:
         state_dir.mkdir(parents=True, exist_ok=True)

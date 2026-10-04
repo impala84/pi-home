@@ -6,6 +6,16 @@ Do not install it over the working Pi. Use a separate SD card.
 
 ## Physical touch recovery — 4 October 2026
 
+Feature parity follow-up: new images include grim for screenshot capture and
+Netdata/OpenRC packages (monitoring remains opt-in, not boot-enabled by the
+factory). Netdata status and enable/disable actions now use OpenRC rather than
+systemd. Existing images need `apk add --no-cache grim netdata netdata-openrc`
+once; application updates deliberately do not install OS packages. Updates
+now run the root-owned updater from the active application and restart the
+private helper as well, avoiding stale service-control code. The first update
+from an older image still uses its old standalone updater: restart pi-home-setup
+once after that update. Branch selection remains intentionally Alpine-only.
+
 The user confirmed direct libinput calibration `0 1 0 -1 0 1` aligns touch
 with the 90° clockwise saved setting / Cage transform 270. Live device evidence
 showed two separate faults: initial Goodix probe failed with I2C error -5 but

@@ -85,7 +85,7 @@ def healthy():
 
 
 def restart():
-    for service in ("pi-home-api", "pi-home-roon", "pi-home-display"):
+    for service in ("pi-home-setup", "pi-home-api", "pi-home-roon", "pi-home-display"):
         run(["rc-service", service, "restart"], timeout=45)
 
 
