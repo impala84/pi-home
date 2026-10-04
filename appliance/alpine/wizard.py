@@ -170,7 +170,7 @@ class Wizard(Gtk.Application):
             region.connect("notify::selected", lambda *_: timezone.set_text(regions[region.get_selected()]) if region.get_selected() else None)
             self.footer.append(self.button("Save and continue", lambda: self.advance({"action": "display", "profile": self.progress["profile"], "rotation": self.progress["rotation"], "theme": ("roon", "fresh-mint")[theme.get_selected()], "timezone": timezone.get_text()})))
         elif self.stage == 5:
-            self.content.append(self.label(f"Web settings: http://{self.progress.get('hostname')}.local:8765/admin\nUsername: admin · Choose at least 10 characters.\nWhen SSH is enabled, admin uses this same initial password. Keep it somewhere safe."))
+            self.content.append(self.label(f"Web settings: http://{self.progress.get('hostname')}.local:8765/admin\nUsername: admin · Choose at least 8 characters.\nWhen SSH is enabled, admin uses this same initial password. Keep it somewhere safe."))
             password = self.secret_field("Choose password")
             confirmation = self.secret_field("Enter password again")
             ssh = Gtk.CheckButton(label="Enable SSH (recommended for recovery)"); ssh.set_active(True); self.content.append(ssh)

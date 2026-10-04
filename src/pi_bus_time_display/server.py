@@ -31,6 +31,11 @@ from .releases import ReleaseChecker
 CONTROL_REQUEST_LOCK = threading.Lock()
 
 
+def display_version():
+    suffix = " Alpine" if os.getenv("PI_HOME_APPLIANCE_PLATFORM") == "alpine-prototype" else ""
+    return __version__ + suffix
+
+
 class State:
     def __init__(self, config: Config, state_dir: Path | None = None):
         self.config = config
@@ -616,7 +621,7 @@ def system_snapshot(state_dir: Path, include_diagnostics: bool = False) -> dict:
         "display_rotation": display_rotation,
         "display_profile": display_profile,
         "reboot_required": reboot_required,
-        "app_version": __version__,
+        "app_version": display_version(),
     }
     if include_diagnostics:
         snapshot["diagnostics"] = diagnostics_snapshot()
@@ -770,7 +775,7 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
                     "openobserve_stream": config.openobserve_stream,
                     "openobserve_username": config.openobserve_username,
                     "has_openobserve_password": bool(os.getenv("OPENOBSERVE_PASSWORD")),
-                    "app_version": __version__,
+                    "app_version": display_version(),
                     "release_channel": config.release_channel,
                     "admin_username": os.getenv("ADMIN_USERNAME", "admin"),
                     "admin_auth_enabled": os.getenv("ADMIN_AUTH_ENABLED", "true").lower() != "false",
@@ -783,7 +788,7 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
                 if not self.authorised():
                     return
                 if os.getenv("PI_HOME_APPLIANCE_PLATFORM") == "alpine-prototype":
-                    result = {"installed_version": __version__, "release_channel": "alpine", "latest_version": None, "update_available": False, "status": "prototype", "message": "Update follows verified alpine-appliance-prototype builds; Stable/Beta OS channels are not used."}
+                    result = {"installed_version": display_version(), "release_channel": "alpine", "latest_version": None, "update_available": False, "status": "prototype", "message": "Update follows verified alpine-appliance-prototype builds; Stable/Beta OS channels are not used."}
                     self.send_json(200, json.dumps(result).encode()); return
                 result = releases.check(state.config.release_channel, __version__, refresh=self.path.endswith("refresh=1"))
                 self.send_json(200, json.dumps(result).encode())
@@ -1006,8 +1011,8 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
                     enabled = bool(data.get("enabled", True))
                     if not (3 <= len(username) <= 32) or not all(character.isalnum() or character in "-_" for character in username):
                         raise ValueError("Username must be 3–32 letters, numbers, hyphens or underscores")
-                    if password and len(password) < 10:
-                        raise ValueError("Password must contain at least 10 characters")
+                    if password and len(password) < 8:
+                        raise ValueError("Password must contain at least 8 characters")
                     if enabled and not password and not os.getenv("ADMIN_PASSWORD", ""):
                         raise ValueError("Set a password before enabling web sign-in")
                     update_secret(env_path, "ADMIN_USERNAME", username)

@@ -1,5 +1,9 @@
 # Alpine appliance experiment
 
+Software version labels include “Alpine” (for example, “1.1.0-beta.7 Alpine”)
+to distinguish these builds from Raspberry Pi OS. Setup and web password changes
+require at least eight characters; setup still requires confirmation.
+
 Isolated branch: `alpine-appliance-prototype`, based on Discover beta.7.
 This is an experimental image factory, not a Stable/Beta application update.
 Do not install it over the working Pi. Use a separate SD card.

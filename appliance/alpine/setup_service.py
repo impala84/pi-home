@@ -47,8 +47,8 @@ def set_login_password(password):
 
 
 def validate_password(password):
-    if not 10 <= len(password) <= 128 or any(c in password for c in "\r\n\x00"):
-        raise ValueError("Choose a password of 10–128 characters.")
+    if not 8 <= len(password) <= 128 or any(c in password for c in "\r\n\x00"):
+        raise ValueError("Choose a password of 8–128 characters.")
     if password != password.strip().strip("'\""):
         raise ValueError("Do not start or end the password with spaces or quotation marks.")
 

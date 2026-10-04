@@ -48,6 +48,18 @@ class AlpineSetupTests(unittest.TestCase):
             with self.assertRaises(ValueError): self.setup.handle({"action": "name", "hostname": name})
         self.run.assert_not_called()
 
+    def test_password_minimum_is_eight_characters(self):
+        module.validate_password("abcdefgh")
+        with self.assertRaisesRegex(ValueError, "8–128"):
+            module.validate_password("abcdefg")
+
+    def test_version_label_identifies_alpine_only(self):
+        from pi_bus_time_display import server, __version__
+        with patch.dict("os.environ", {"PI_HOME_APPLIANCE_PLATFORM": "alpine-prototype"}):
+            self.assertEqual(server.display_version(), __version__ + " Alpine")
+        with patch.dict("os.environ", {"PI_HOME_APPLIANCE_PLATFORM": ""}):
+            self.assertEqual(server.display_version(), __version__)
+
     def test_incomplete_and_invalid_finishes_are_rejected(self):
         with self.assertRaises(ValueError): self.setup.handle({"action": "finish", "password": "valid-password"})
         self.assertFalse(self.setup.progress.exists())

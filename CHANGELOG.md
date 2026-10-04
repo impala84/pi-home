@@ -2,6 +2,10 @@
 
 ## Alpine prototype — unreleased experiment
 
+- Identify Alpine builds explicitly in Software version labels. Setup and web
+  password changes accept eight characters minimum; confirmation remains required.
+- Include automatic network time, screenshot capture tooling and optional OpenRC
+  Netdata controls. Recover late Goodix startup and persist tested touch mapping.
 - Fix bare-metal exports retaining Docker identity: remove container markers and
   reset injected hostname/DNS files before creating the disk image. Verify OpenRC
   detects a physical system, not Docker. Enable boot/service logs and include
