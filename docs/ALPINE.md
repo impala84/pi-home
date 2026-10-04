@@ -4,6 +4,18 @@ Isolated branch: `alpine-appliance-prototype`, based on Discover beta.7.
 This is an experimental image factory, not a Stable/Beta application update.
 Do not install it over the working Pi. Use a separate SD card.
 
+## Verified factory build — 4 October 2026
+
+Source revision `888d8cd`; [ARM64 image build and runtime checks](https://github.com/impala84/pi-home/actions/runs/37183838137)
+passed. Artifact `pi-home-alpine-prototype` contains the compressed image,
+SHA-256, source revision and resolved package manifest (about 319 MB total).
+The persistent root filesystem passed e2fsck. GTK/Graphene/Cairo imports and
+both HTTP services passed inside Alpine as the unprivileged application user;
+unsupported update requests returned HTTP 501 without creating an action queue.
+Baseline CI passed 132 Python and 91 Node tests. These results do not prove Pi
+boot, DSI/touch operation, LAN Roon discovery or memory headroom on a 1GB board.
+GitHub artifacts expire after 14 days; the factory can rebuild the experiment.
+
 ## First milestone
 
 Alpine 3.24.2 ARM64, Raspberry Pi-patched kernel and firmware, persistent
