@@ -16,6 +16,8 @@ display = native.Display()
 display.build_roon()
 
 assert display.discover_tabs["daily"].get_label() == "DAILY"
+horizontal, vertical = display.discovery_scroll.get_policy()
+assert horizontal == Gtk.PolicyType.NEVER and vertical == Gtk.PolicyType.AUTOMATIC
 display.discovery_section = "daily"
 display.discovery_picks = True
 navigation, selected = display.discovery_secondary_navigation()
@@ -38,12 +40,27 @@ while child: cards.append(child); child=child.get_next_sibling()
 assert len(cards) == 5
 first = cards[0]
 assert first.has_css_class("daily-card")
+assert first.get_width_request() > 0 and first.get_height_request() > 0
+art = first.get_child().get_first_child()
+assert isinstance(art, Gtk.ScrolledWindow)
+assert art.get_min_content_width() == art.get_max_content_width()
+assert art.get_min_content_height() == art.get_max_content_height()
+horizontal, vertical = scroller.get_policy()
+assert horizontal == Gtk.PolicyType.AUTOMATIC and vertical == Gtk.PolicyType.NEVER
 heading = scroller.get_next_sibling()
 assert isinstance(heading, Gtk.Box) and heading.has_css_class("recommendation-heading")
 assert heading.get_first_child().get_text() == "Because you listened to"
 assert heading.get_last_child().get_text() == "Altered State"
 assert display.discovery_daily_sections.keys() == {"mixes", "recommendations"}
 assert display.discovery_daily_sections["mixes"] is scroller
+display.browser_sidebar.set_visible(True)
+display.browser_list.append(display.label("Stale Browse content"))
+requests = []
+display.request_browser = lambda action, **_payload: requests.append(action)
+display.open_discover("surprise")
+assert requests == ["surprise"]
+assert not display.browser_sidebar.get_visible()
+assert display.browser_list.get_first_child().get_text() == "Loading…"
 display.root_overlay = Gtk.Overlay(); display.root_overlay.set_child(Gtk.Box())
 display.device_status = display.label("")
 display.confirm_reboot()
@@ -51,4 +68,4 @@ shade = display.reboot_confirmation
 assert isinstance(shade, Gtk.Overlay)
 card = shade.get_last_child()
 assert card.get_halign() == Gtk.Align.CENTER and card.get_valign() == Gtk.Align.CENTER
-print("Native Alpine GTK Discover shows roomy arrow-free swipe tracks and a centred restart panel.")
+print("Native Alpine GTK Discover has working touch scrollers, fixed cards, a clean Surprise transition and a centred restart panel.")

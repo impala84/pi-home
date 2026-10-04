@@ -218,6 +218,8 @@ CSS += b"""
 .discovery-card, .discovery-card:hover, .discovery-card:active { padding: 4px; background: transparent; background-image: none; box-shadow: none; }
 .discovery-card .queue-title { font-size: 18px; }.discovery-card .queue-subtitle { font-size: 14px; color: #aaa; }
 .daily-card .queue-title { font-size: 20px; }.daily-card .queue-subtitle { font-size: 16px; }
+.discovery-scroll scrollbar, .daily-scroll scrollbar { opacity: 0; min-width: 0; min-height: 0; }
+.discovery-scroll overshoot.top, .discovery-scroll overshoot.bottom, .daily-scroll overshoot.left, .daily-scroll overshoot.right { background: transparent; box-shadow: none; }
 .daily-track { padding: 0 18px 4px 10px; }
 .daily-track .queue-title { margin-top: 5px; }
 .daily-heading { margin: 2px 7px 0 7px; }
@@ -439,7 +441,7 @@ class Display(Gtk.Application):
         self.roon_views = Gtk.Stack(transition_type=Gtk.StackTransitionType.NONE, transition_duration=0); self.roon_views.set_vexpand(True)
         self.roon_views.set_hhomogeneous(False); self.roon_views.set_vhomogeneous(False)
         self.discovery_list = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18)
-        self.discovery_scroll = Gtk.ScrolledWindow(); self.discovery_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.NEVER); self.discovery_scroll.set_kinetic_scrolling(True); self.discovery_scroll.set_propagate_natural_height(False); self.discovery_scroll.set_min_content_height(1); self.discovery_scroll.set_size_request(-1, 1); self.discovery_scroll.set_vexpand(True); self.discovery_scroll.set_hexpand(True); self.discovery_scroll.set_child(self.discovery_list)
+        self.discovery_scroll = Gtk.ScrolledWindow(); self.discovery_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC); self.discovery_scroll.set_kinetic_scrolling(True); self.discovery_scroll.set_overlay_scrolling(True); self.discovery_scroll.set_propagate_natural_height(False); self.discovery_scroll.set_min_content_height(1); self.discovery_scroll.set_size_request(-1, 1); self.discovery_scroll.set_vexpand(True); self.discovery_scroll.set_hexpand(True); self.discovery_scroll.set_child(self.discovery_list)
         self.discovery_scroll.add_css_class("discovery-scroll")
         self.discovery_scroll.get_vadjustment().connect("value-changed", self.discovery_scrolled)
         self.discovery_body = Gtk.Box(spacing=0); self.discovery_body.set_vexpand(True); self.discovery_body.set_hexpand(True)
@@ -1019,6 +1021,14 @@ class Display(Gtk.Application):
         if section == "browse":
             self.request_browser("section", section="albums")
         elif section == "surprise":
+            # Do not expose the previous Browse rail/grid while the asynchronous
+            # Surprise preview is being prepared.
+            self.browser_sidebar.set_visible(False); self.browser_discovery_sidebar.set_visible(False)
+            self.browser_artist_scroll.set_visible(False); self.browser_search_columns.set_visible(False)
+            self.browser_scroll.set_visible(True); self.browser_message.set_visible(False)
+            while child := self.browser_list.get_first_child(): self.browser_list.remove(child)
+            self.browser_list.set_orientation(Gtk.Orientation.VERTICAL)
+            self.browser_list.append(self.label("Loading…", "loading-notice"))
             self.request_browser("surprise")
         else:
             self.sync_discovery_sidebar()
@@ -1090,29 +1100,32 @@ class Display(Gtk.Application):
                 return
             daily = self.discovery_section == "daily"
             visible_items = items
-            grid = Gtk.Grid(column_spacing=18 if daily else (16 if self.discovery_section == "recent" else 20), row_spacing=18 if daily else 20); grid.set_column_homogeneous(not daily); grid.set_hexpand(True)
+            grid = Gtk.Grid(column_spacing=18 if daily else (16 if self.discovery_section == "recent" else 20), row_spacing=18 if daily else 20); grid.set_column_homogeneous(False); grid.set_halign(Gtk.Align.START); grid.set_hexpand(True)
             track = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=18) if daily else None
             if track: track.add_css_class("daily-track")
             for index, item in enumerate(visible_items):
-                card = Gtk.Button(); card.add_css_class("discovery-card"); card.set_hexpand(not daily)
+                card = Gtk.Button(); card.add_css_class("discovery-card"); card.set_hexpand(False); card.set_halign(Gtk.Align.CENTER); card.set_valign(Gtk.Align.START)
                 if daily: card.add_css_class("daily-card")
-                body = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
-                picture = MixPicture(duotone=item.get("kind") == "mix"); picture.set_can_shrink(True); picture.set_content_fit(Gtk.ContentFit.COVER); self.set_browser_placeholder(picture)
-                art = Gtk.AspectFrame(xalign=.5, yalign=.5, ratio=1, obey_child=False); art.set_size_request(size, size); art.set_halign(Gtk.Align.CENTER); art.set_child(picture); body.append(art)
-                title_label = self.label(item.get("title", ""), "queue-title", .5); title_label.set_wrap(True); title_label.set_max_width_chars(23); title_label.set_lines(2); title_label.set_ellipsize(Pango.EllipsizeMode.END); body.append(title_label)
+                body = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5); body.set_halign(Gtk.Align.CENTER); body.set_valign(Gtk.Align.START)
+                picture = MixPicture(duotone=item.get("kind") == "mix"); picture.add_css_class("queue-art"); picture.set_can_shrink(True); picture.set_content_fit(Gtk.ContentFit.COVER); self.set_browser_placeholder(picture)
+                art = Gtk.ScrolledWindow(); art.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.NEVER); art.set_propagate_natural_width(False); art.set_propagate_natural_height(False); art.set_min_content_width(size); art.set_max_content_width(size); art.set_min_content_height(size); art.set_max_content_height(size); art.set_size_request(size, size); art.set_halign(Gtk.Align.CENTER); art.set_child(picture); body.append(art)
+                title_height = 54 if daily else 48
+                credit_height = 42 if daily else 36
+                title_label = self.label(item.get("title", ""), "queue-title", .5); title_label.set_wrap(True); title_label.set_max_width_chars(23); title_label.set_lines(2); title_label.set_ellipsize(Pango.EllipsizeMode.END); title_label.set_size_request(size, title_height); title_label.set_valign(Gtk.Align.START); body.append(title_label)
                 title_label.set_justify(Gtk.Justification.CENTER)
-                credit = self.label(item.get("artist") or " · ".join(item.get("context") or []), "queue-subtitle", .5); credit.set_wrap(True); credit.set_max_width_chars(25); credit.set_lines(2); credit.set_ellipsize(Pango.EllipsizeMode.END); body.append(credit)
+                credit = self.label(item.get("artist") or " · ".join(item.get("context") or []), "queue-subtitle", .5); credit.set_wrap(True); credit.set_max_width_chars(25); credit.set_lines(2); credit.set_ellipsize(Pango.EllipsizeMode.END); credit.set_size_request(size, credit_height); credit.set_valign(Gtk.Align.START); body.append(credit)
                 credit.set_justify(Gtk.Justification.CENTER)
                 card.set_child(body); card.connect("clicked", lambda _button, value=item: self.open_discover("daily", value.get("id", "")) if value.get("kind") == "mix" else self.open_discovery_item(value.get("key")))
+                card.set_size_request(size + 12, size + title_height + credit_height + 15)
                 if daily:
-                    card.set_size_request(size + 12, -1); track.append(card)
+                    track.append(card)
                 else: grid.attach(card, index % columns, index // columns, 1, 1)
                 if key := item.get("artwork_key"):
                     key = "discover:" + key; self.discovery_pictures.setdefault(key, []).append(picture)
                     self.discovery_cards.append((card, key))
                     if cached := self.queue_thumbnail_cache.get(key): picture.set_paintable(cached)
             if daily:
-                scroller = Gtk.ScrolledWindow(); scroller.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.NEVER); scroller.set_kinetic_scrolling(True); scroller.set_overlay_scrolling(True); scroller.set_propagate_natural_width(False); scroller.set_hexpand(True); scroller.set_child(track)
+                scroller = Gtk.ScrolledWindow(); scroller.add_css_class("daily-scroll"); scroller.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.NEVER); scroller.set_kinetic_scrolling(True); scroller.set_overlay_scrolling(True); scroller.set_propagate_natural_width(False); scroller.set_hexpand(True); scroller.set_child(track)
                 content.append(scroller)
                 if section_key: self.discovery_daily_sections.setdefault(section_key, scroller)
             else: content.append(grid)
@@ -1276,7 +1289,7 @@ class Display(Gtk.Application):
             self.browser_search_button.add_css_class("active")
             for button in self.browser_section_buttons.values(): button.remove_css_class("active")
         if self.browser_loading:
-            if action in {"jump", "section", "search"}: self.browser_pending_request = (action, payload)
+            if action in {"jump", "section", "search", "surprise"}: self.browser_pending_request = (action, payload)
             return
         if action == "surprise" and not (self.browser_state or {}).get("surprise_preview"):
             self.browser_section_scrolls[(self.browser_state or {}).get("section", "albums")] = self.browser_scroll.get_vadjustment().get_value()

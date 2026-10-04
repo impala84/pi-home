@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.0-beta.16 Alpine Beta — 5 October 2026
+
+- Enables actual kinetic touch scrolling for Recent, Daily and New Releases while keeping their scrollbars visually hidden.
+- Gives discovery artwork, titles and credits fixed slots so sparse results do not expand and one-line/two-line titles do not shift cover positions.
+- Clears the previous Browse rail and grid immediately when opening Surprise Me, showing one discreet loading state until its preview arrives.
+
 ## 1.1.0-beta.15 Alpine Beta — 5 October 2026
 
 - Standardises the appliance, updater, workflow and image names on **Alpine Beta**.
