@@ -203,6 +203,7 @@ CSS += b"""
 .theme-roon .detail-takeover { background: rgba(21,21,21,.96); }
 .discovery-card, .discovery-card:hover, .discovery-card:active { padding: 8px; background: transparent; background-image: none; box-shadow: none; }
 .discovery-card .queue-title { font-size: 18px; }.discovery-card .queue-subtitle { font-size: 14px; color: #aaa; }
+.daily-card .queue-title { font-size: 20px; }.daily-card .queue-subtitle { font-size: 16px; }
 .discovery-scroll scrollbar { background: transparent; min-width: 6px; }.discovery-scroll scrollbar slider { background: #a7a5ac; min-width: 6px; border-radius: 4px; }
 .theme-roon .discovery-scroll scrollbar slider { background: #aaa3ed; }
 .loading-notice { font-size: 14px; font-weight: normal; color: #aaa; background: transparent; padding: 4px 0; }
@@ -406,7 +407,7 @@ class Display(Gtk.Application):
         header_overlay.add_overlay(subnav); page.append(header_overlay)
         self.discover_subnav = Gtk.Box(spacing=8); self.discover_subnav.add_css_class("roon-subnav"); self.discover_subnav.set_halign(Gtk.Align.CENTER); self.discover_subnav.set_valign(Gtk.Align.START)
         self.discover_tabs = {}
-        for section, title in (("recent", "RECENT"), ("browse", "BROWSE"), ("daily", "DAILIES"), ("releases", "NEW RELEASES"), ("surprise", "SURPRISE ME")):
+        for section, title in (("recent", "RECENT"), ("browse", "BROWSE"), ("daily", "DAILY"), ("releases", "NEW RELEASES"), ("surprise", "SURPRISE ME")):
             button = self.button(title, lambda _button, value=section: self.open_discover(value), "")
             self.discover_tabs[section] = button; self.discover_subnav.append(button)
         header_overlay.add_overlay(self.discover_subnav); self.discover_subnav.set_visible(False); self.browser_tab.set_visible(False)
@@ -986,6 +987,7 @@ class Display(Gtk.Application):
         if self.browser_state is None: self.request_browser("section", section="albums")
 
     def open_discover(self, section="recent", mix="", picks=False):
+        self.discovery_pages = {}
         self.discovery_browser_origin = False
         self.discovery_active = True; self.discovery_section = section; self.discovery_mix = mix
         self.discovery_picks = picks
@@ -1032,7 +1034,7 @@ class Display(Gtk.Application):
         monitor = monitors.get_item(0) if monitors.get_n_items() else None
         if self.discovery_section in {"recent", "daily"}:
             columns, size = self.browser_grid_metrics()
-            size = min(172, size)
+            size = min(192 if self.discovery_section == "daily" else 172, size)
         else:
             columns = 4 if monitor and monitor.get_geometry().width >= 1200 else 2
             size = 220 if columns == 4 else 180
@@ -1043,9 +1045,14 @@ class Display(Gtk.Application):
             if self.discovery_mix:
                 for item in items: content.append(self.discovery_track_row(item))
                 return
+            daily = self.discovery_section == "daily"
+            page_key = title or "mixes"
+            page = min(getattr(self, "discovery_pages", {}).get(page_key, 0), max(0, (len(items) - 1) // 4)) if daily else 0
+            visible_items = items[page * 4:page * 4 + 4] if daily else items
             grid = Gtk.Grid(column_spacing=16 if self.discovery_section in {"recent", "daily"} else 20, row_spacing=20); grid.set_column_homogeneous(True); grid.set_hexpand(True)
-            for index, item in enumerate(items):
+            for index, item in enumerate(visible_items):
                 card = Gtk.Button(); card.add_css_class("discovery-card"); card.set_hexpand(True)
+                if daily: card.add_css_class("daily-card")
                 body = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
                 picture = MixPicture(duotone=item.get("kind") == "mix"); picture.set_can_shrink(True); picture.set_content_fit(Gtk.ContentFit.COVER); self.set_browser_placeholder(picture)
                 art = Gtk.AspectFrame(xalign=.5, yalign=.5, ratio=1, obey_child=False); art.set_size_request(size, size); art.set_halign(Gtk.Align.CENTER); art.set_child(picture); body.append(art)
@@ -1060,6 +1067,18 @@ class Display(Gtk.Application):
                     self.discovery_cards.append((card, key))
                     if cached := self.queue_thumbnail_cache.get(key): picture.set_paintable(cached)
             content.append(grid)
+            if daily and len(items) > 4:
+                pager = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+                def turn_page(_button, value):
+                    self.discovery_pages[page_key] = value
+                    self.discovery_signature = None
+                    self.render_discover(request, data)
+                for label, destination in (("PREVIOUS", page - 1), ("NEXT", page + 1)):
+                    control = self.button(label, lambda button, value=destination: turn_page(button, value), "browser-back")
+                    control.set_sensitive(0 <= destination <= (len(items) - 1) // 4)
+                    pager.append(control)
+                pager.append(self.label(f"{page + 1} / {(len(items) + 3) // 4}", "queue-subtitle"))
+                content.append(pager)
         group(None, data.get("items", []))
         for recommendation in data.get("groups", []):
             reason = {"recent": "Because you listened to", "added": "Because you added"}.get(recommendation.get("reason"), "Inspired by")
@@ -1079,7 +1098,7 @@ class Display(Gtk.Application):
         if self.discovery_section == "recent":
             return (("added", "ADDED"), ("listened", "LISTENED")), self.discovery_recent_mode
         if self.discovery_section == "daily":
-            return (("mixes", "MIXES"), ("recommendations", "RECOMMENDATIONS")), "recommendations" if self.discovery_picks else "mixes"
+            return (("mixes", "MIXES"), ("recommendations", "FOR YOU")), "recommendations" if self.discovery_picks else "mixes"
         return (), ""
 
     def select_discovery_secondary(self, value):
@@ -1341,23 +1360,23 @@ class Display(Gtk.Application):
 
     def browser_tile_symbol(self, title, kind):
         value = (title or "").lower()
-        if kind == "playlists": return "≡"
-        if "jazz" in value: return "♪"
-        if "classical" in value: return "♬"
-        if "electronic" in value: return "⌁"
-        if "pop" in value or "rock" in value: return "⚡"
-        if "stage" in value or "screen" in value or "soundtrack" in value: return "★"
-        if "folk" in value or "country" in value: return "♧"
-        if "blues" in value: return "♭"
-        if "rap" in value or "hip-hop" in value or "r&b" in value: return "♫"
-        if "reggae" in value: return "≋"
-        if "latin" in value or "world" in value or "international" in value: return "◈"
-        if "vocal" in value or "easy listening" in value: return "♩"
-        if "new age" in value or "ambient" in value: return "✦"
-        if "holiday" in value: return "❄"
-        if "children" in value: return "☺"
-        if "religious" in value or "gospel" in value: return "✦"
-        return (title or "?").strip()[:1].upper() or "?"
+        if kind == "playlists": return "playlist"
+        if "jazz" in value: return "jazz"
+        if "classical" in value: return "classical"
+        if "electronic" in value: return "electronic"
+        if "pop" in value or "rock" in value: return "rock"
+        if "stage" in value or "screen" in value or "soundtrack" in value: return "stage"
+        if "folk" in value or "country" in value: return "folk"
+        if "blues" in value: return "blues"
+        if "rap" in value or "hip-hop" in value or "r&b" in value: return "music"
+        if "reggae" in value: return "reggae"
+        if "latin" in value or "world" in value or "international" in value: return "world"
+        if "vocal" in value or "easy listening" in value: return "vocal"
+        if "new age" in value or "ambient" in value: return "ambient"
+        if "holiday" in value: return "holiday"
+        if "children" in value: return "children"
+        if "religious" in value or "gospel" in value: return "ambient"
+        return "music"
 
     def browser_action_icon(self, title):
         value = (title or "").lower()
@@ -1366,6 +1385,12 @@ class Display(Gtk.Application):
         if "shuffle" in value: return "media-playlist-shuffle-symbolic"
         if "from here" in value: return "go-jump-symbolic"
         return "media-playback-start-symbolic"
+
+    def browser_svg_icon(self, name, size=54):
+        path = Path(__file__).resolve().parents[1] / "roon-controller/static/icons" / (name + "-symbolic.svg")
+        icon = Gtk.Image.new_from_gicon(Gio.FileIcon.new(Gio.File.new_for_path(str(path))))
+        icon.set_pixel_size(size); icon.add_css_class("browser-tile-icon")
+        return icon
 
     def browser_menu_card(self, item, compact=False):
         content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12); content.set_halign(Gtk.Align.CENTER); content.set_valign(Gtk.Align.CENTER)
@@ -1392,7 +1417,7 @@ class Display(Gtk.Application):
             texture = self.queue_thumbnail_cache.get(key)
             if texture: picture.set_paintable(texture)
         elif tile_kind:
-            icon = self.label(self.browser_tile_symbol(item.get("title"), tile_kind), "browser-tile-icon", .5); icon.set_halign(Gtk.Align.CENTER); icon.set_valign(Gtk.Align.CENTER); icon.set_margin_bottom(20); artwork.add_overlay(icon)
+            icon = self.browser_svg_icon(self.browser_tile_symbol(item.get("title"), tile_kind)); icon.set_halign(Gtk.Align.CENTER); icon.set_valign(Gtk.Align.CENTER); icon.set_margin_bottom(20); artwork.add_overlay(icon)
         if show_labels:
             title = self.label(item.get("title") or "Untitled", "browser-cover-title", .5); title.set_max_width_chars(22); title.set_ellipsize(Pango.EllipsizeMode.END); content.append(title)
             if tile_kind == "genres":
@@ -1459,7 +1484,7 @@ class Display(Gtk.Application):
                 self.browser_pictures.setdefault(key, []).append(picture)
                 if texture := self.queue_thumbnail_cache.get(key): picture.set_paintable(texture)
                 self.retry_visible_thumbnail(key)
-            else: square.set_child(self.label("♫", "browser-tile-icon", .5))
+            else: square.set_child(self.browser_svg_icon("music"))
             title = self.label(album.get("title") or "Untitled", "surprise-title", .5); title.set_wrap(True); title.set_lines(2); title.set_max_width_chars(40); title.set_ellipsize(Pango.EllipsizeMode.END); title.set_justify(Gtk.Justification.CENTER); preview.append(title)
             artist = self.label(album.get("subtitle") or "", "surprise-artist", .5); artist.set_ellipsize(Pango.EllipsizeMode.END); artist.set_max_width_chars(40); preview.append(artist)
             self.browser_list.append(preview)

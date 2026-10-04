@@ -296,7 +296,10 @@ function body(request) {
 
 function serveStatic(request, response) {
   const names = {'/': 'index.html', '/app.js': 'app.js', '/discovery.js': 'discovery.js', '/discovery.css': 'discovery.css', '/style.css': 'style.css', '/refinements.css': 'refinements.css', '/favicon.svg': 'favicon.svg'};
-  const name = names[new URL(request.url, 'http://localhost').pathname];
+  const pathname = new URL(request.url, 'http://localhost').pathname;
+  const allowedIcons = new Set(['music','jazz','classical','electronic','rock','stage','folk','blues','reggae','world','vocal','ambient','holiday','children','playlist','artist','album','folder']);
+  const icon = /^\/icons\/([a-z]+)-symbolic\.svg$/.exec(pathname);
+  const name = names[pathname] || (icon && allowedIcons.has(icon[1]) ? pathname.slice(1) : null);
   if (!name) return false;
   const types = {'.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml'};
   const data = fs.readFileSync(path.join(staticDir, name));

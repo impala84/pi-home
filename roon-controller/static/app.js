@@ -284,23 +284,23 @@ function browserActionIcon(title) {
 
 function browserTileSymbol(title, section) {
   const value = String(title || '').toLowerCase();
-  if (section === 'playlists') return '≡';
-  if (value.includes('jazz')) return '♪';
-  if (value.includes('classical')) return '♬';
-  if (value.includes('electronic')) return '⌁';
-  if (value.includes('pop') || value.includes('rock')) return 'ϟ';
-  if (value.includes('stage') || value.includes('screen') || value.includes('soundtrack')) return '★';
-  if (value.includes('folk') || value.includes('country')) return '♧';
-  if (value.includes('blues')) return '♭';
-  if (value.includes('rap') || value.includes('hip-hop') || value.includes('r&b')) return '♫';
-  if (value.includes('reggae')) return '≋';
-  if (value.includes('latin') || value.includes('world') || value.includes('international')) return '◈';
-  if (value.includes('vocal') || value.includes('easy listening')) return '♩';
-  if (value.includes('new age') || value.includes('ambient')) return '✦';
-  if (value.includes('holiday')) return '❄';
-  if (value.includes('children')) return '☺';
-  if (value.includes('religious') || value.includes('gospel')) return '✦';
-  return String(title || '?').trim().charAt(0).toUpperCase() || '?';
+  if (section === 'playlists') return 'playlist';
+  if (value.includes('jazz')) return 'jazz';
+  if (value.includes('classical')) return 'classical';
+  if (value.includes('electronic')) return 'electronic';
+  if (value.includes('pop') || value.includes('rock')) return 'rock';
+  if (value.includes('stage') || value.includes('screen') || value.includes('soundtrack')) return 'stage';
+  if (value.includes('folk') || value.includes('country')) return 'folk';
+  if (value.includes('blues')) return 'blues';
+  if (value.includes('rap') || value.includes('hip-hop') || value.includes('r&b')) return 'music';
+  if (value.includes('reggae')) return 'reggae';
+  if (value.includes('latin') || value.includes('world') || value.includes('international')) return 'world';
+  if (value.includes('vocal') || value.includes('easy listening')) return 'vocal';
+  if (value.includes('new age') || value.includes('ambient')) return 'ambient';
+  if (value.includes('holiday')) return 'holiday';
+  if (value.includes('children')) return 'children';
+  if (value.includes('religious') || value.includes('gospel')) return 'ambient';
+  return 'music';
 }
 
 function missingArtwork(artist = false) {
@@ -309,6 +309,19 @@ function missingArtwork(artist = false) {
   icon.innerHTML = artist
     ? '<circle cx="50" cy="30" r="14"/><path d="M22 88v-8a28 28 0 0 1 56 0v8"/>'
     : '<circle cx="50" cy="50" r="31"/><circle cx="50" cy="50" r="8"/>';
+  return icon;
+}
+
+function browserSvgIcon(name, className = 'browser-tile-icon') {
+  const icon = document.createElement('span'); icon.className = className;
+  icon.setAttribute('aria-hidden', 'true');
+  const mask = `url(${api(`/icons/${name}-symbolic.svg`)})`;
+  icon.style.maskImage = mask; icon.style.webkitMaskImage = mask;
+  icon.style.maskSize = 'contain'; icon.style.webkitMaskSize = 'contain';
+  icon.style.maskRepeat = 'no-repeat'; icon.style.webkitMaskRepeat = 'no-repeat';
+  icon.style.maskPosition = 'center'; icon.style.webkitMaskPosition = 'center';
+  icon.style.backgroundColor = 'currentColor'; icon.style.display = 'inline-block';
+  icon.style.width = '1em'; icon.style.height = '1em';
   return icon;
 }
 
@@ -325,10 +338,10 @@ function browserCard(item, layout, showLabels, section, showSubtitles = true) {
   if (layout === 'covers' || layout === 'tiles') {
     const artwork = document.createElement('span'); artwork.className = 'browser-card-art';
     if (layout === 'covers' || item.image_key) browseArtwork(artwork, item.image_key, 320, section === 'artists');
-    else if (layout === 'tiles') { const icon = document.createElement('span'); icon.className = 'browser-tile-icon'; icon.textContent = browserTileSymbol(item.title, section); artwork.append(icon); }
+    else if (layout === 'tiles') artwork.append(browserSvgIcon(browserTileSymbol(item.title, section)));
     button.append(artwork);
   } else {
-    const icon = document.createElement('span'); icon.className = 'browser-card-icon'; icon.setAttribute('aria-hidden', 'true'); icon.textContent = /playlist/i.test(item.title) ? '≡' : /genre/i.test(item.title) ? '◉' : /artist/i.test(item.title) ? '●' : /album|library/i.test(item.title) ? '▦' : '›'; button.append(icon);
+    button.append(browserSvgIcon(/playlist/i.test(item.title) ? 'playlist' : /genre/i.test(item.title) ? 'music' : /artist/i.test(item.title) ? 'artist' : /album|library/i.test(item.title) ? 'album' : 'folder', 'browser-card-icon'));
   }
   if (layout !== 'covers' || showLabels) {
     const copy = document.createElement('span'); copy.className = 'browser-card-copy'; const title = document.createElement('strong'); title.textContent = item.title || 'Untitled'; copy.append(title);

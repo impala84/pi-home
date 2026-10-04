@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1.0-beta.8 Alpine — 4 October 2026
+
+- Rename Dailies to Daily, with Mixes and For You. Show four larger cards per
+  page in mixes and recommendations; keep remaining selections accessible via
+  Previous/Next and leave the full mix track list unchanged.
+- Replace font-dependent genre, playlist and discovery fallback symbols with
+  bundled SVG icons shared by native GTK and web views. Keep Roon purple and
+  Fresh Mint colouring, including unknown genres, without extra fonts.
+
 ## Alpine prototype — unreleased experiment
 
 - Rebuild with all accepted Alpine fixes. Keep private updater command logs,

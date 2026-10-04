@@ -52,6 +52,39 @@ LAYOUT_GTK = SimpleNamespace(Box=LayoutWidget, Picture=LayoutWidget, ScrolledWin
 
 
 class NativeBrowserControlsTests(unittest.TestCase):
+    def test_daily_pages_keep_four_cards_and_allow_returning_to_first_page(self):
+        class Grid(LayoutWidget):
+            def attach(self, child, *_): self.append(child)
+        gtk = SimpleNamespace(**vars(LAYOUT_GTK))
+        gtk.Grid = Grid; gtk.AspectFrame = LayoutWidget
+        gtk.Orientation = SimpleNamespace(VERTICAL="vertical", HORIZONTAL="horizontal")
+        gtk.Justification = SimpleNamespace(CENTER="center")
+        monitors = SimpleNamespace(get_n_items=lambda:0)
+        gdk = SimpleNamespace(Display=SimpleNamespace(get_default=lambda:SimpleNamespace(get_monitors=lambda:monitors)))
+        method = native_method("render_discover", {"json":__import__("json"), "Gtk":gtk, "Gdk":gdk, "MixPicture":LayoutWidget, "Pango":SimpleNamespace(EllipsizeMode=SimpleNamespace(END="end")), "GLib":SimpleNamespace(timeout_add=lambda *_:None)})
+        owner = SimpleNamespace(discovery_request=1, discovery_active=True, roon_views=SimpleNamespace(get_visible_child_name=lambda:"discover"), discovery_signature=None, discovery_list=LayoutWidget(), sync_discovery_sidebar=Mock(), discovery_mix="", discovery_section="daily", discovery_pages={}, browser_grid_metrics=lambda:(4,192), label=lambda text,*_:LayoutWidget(text=text), set_browser_placeholder=Mock(), queue_thumbnail_cache={}, load_visible_discovery_artwork=Mock(), button=lambda label,callback,*_:LayoutWidget(label=label,callback=callback))
+        owner.render_discover = lambda request,data:method(owner,request,data)
+        data = {"status":"ready", "items":[{"title":str(i)} for i in range(5)]}
+        method(owner,1,data)
+        grid,pager = owner.discovery_list.children
+        self.assertEqual(len(grid.children),4)
+        self.assertIn("daily-card",grid.children[0].classes)
+        pager.children[1].properties["callback"](None)
+        self.assertEqual(len(owner.discovery_list.children[0].children),1)
+        owner.discovery_list.children[1].children[0].properties["callback"](None)
+        self.assertEqual(len(owner.discovery_list.children[0].children),4)
+
+    def test_genre_icons_are_bundled_svgs_not_font_glyphs(self):
+        import xml.etree.ElementTree as ET
+        method = native_method('browser_tile_symbol')
+        for title in ('Pop/Rock', 'Classical', 'Electronic', 'Jazz', 'Stage & Screen', 'International', 'Vocal', 'Blues', 'Easy Listening', 'R&B', 'Folk', 'Reggae', 'Ambient', 'Holiday', 'Children', 'Gospel', 'Unknown genre'):
+            name = method(SimpleNamespace(), title, 'genres')
+            path = SOURCE.parents[1] / 'roon-controller/static/icons' / (name + '-symbolic.svg')
+            tree = ET.parse(path)
+            self.assertEqual(tree.getroot().tag, '{http://www.w3.org/2000/svg}svg')
+            self.assertNotIn('<text', path.read_text())
+        self.assertEqual(method(SimpleNamespace(), 'Any playlist', 'playlists'), 'playlist')
+
     def test_empty_activity_event_does_not_raise_or_change_state(self):
         owner = SimpleNamespace(last_interaction=123)
         self.assertFalse(native_method("note_activity")(owner, None, None))
@@ -108,7 +141,7 @@ class NativeBrowserControlsTests(unittest.TestCase):
         self.assertEqual(min(172,size),172)
         source=SOURCE.read_text(encoding="utf-8")
         self.assertIn('columns, size = self.browser_grid_metrics()',source)
-        self.assertIn('size = min(172, size)',source)
+        self.assertIn('size = min(192 if self.discovery_section == "daily" else 172, size)',source)
         self.assertNotIn('MORE RECOMMENDATIONS',source)
 
     def test_mix_tracks_use_playlist_rows_and_register_lazy_thumbnail_without_playback(self):
@@ -140,7 +173,7 @@ class NativeBrowserControlsTests(unittest.TestCase):
         code = SOURCE.read_text(encoding="utf-8")
         self.assertIn('section = "added"',code)
         self.assertIn('client=touch',code)
-        self.assertIn('("recommendations", "RECOMMENDATIONS")',code)
+        self.assertIn('("recommendations", "FOR YOU")',code)
 
     def test_mix_duotone_preserves_alpha_and_maps_black_white_and_coloured_pixels(self):
         tree = ast.parse(SOURCE.read_text(encoding="utf-8"))
@@ -162,7 +195,7 @@ class NativeBrowserControlsTests(unittest.TestCase):
         self.assertIn('("releases", "NEW RELEASES")', code)
         self.assertIn('self.browser_tab.set_visible(False)', code)
         self.assertIn('self.roon_views.add_named(self.discovery_body, "discover")', code)
-        self.assertIn('("daily", "DAILIES")', code)
+        self.assertIn('("daily", "DAILY")', code)
         self.assertIn('background: transparent; background-image: none; box-shadow: none;', code)
 
     def test_discovery_thumbnail_has_its_own_proxy_not_official_image_keys(self):
