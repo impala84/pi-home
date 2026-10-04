@@ -24,7 +24,20 @@ seatd/Cage/Wayland and the existing Python GTK4 native display. Node runs the
 existing Roon controller. No desktop, Chromium, SSH or shared root password.
 Ethernet DHCP and mDNS are included. Pi Home configuration and Roon pairing
 persist on the root filesystem. Bus Times is off; the initial theme is Roon.
-The current native settings are retained; a new first-boot wizard is not built yet.
+The native first-boot wizard now covers device naming, Ethernet/Wi-Fi,
+Roon authorisation/zone selection (or explicit setup-later), display profile,
+orientation, theme/timezone and a user-chosen web admin password. An on-screen
+keyboard avoids requiring SSH or a physical keyboard. Settings are saved per
+step and interrupted setup resumes at the first incomplete step. Finish marks
+setup complete; subsequent boots go straight into the main native display.
+
+A root-owned Unix socket helper accepts bounded setup actions only from the
+local `morningbus` account; it is not an HTTP endpoint. Names, zones, display
+profiles and password lengths are validated. Wi-Fi secrets are passed to
+NetworkManager without shell interpretation or command-output logging and are
+not recorded in the progress file. Privileged setup mutations are locked after
+completion (status and an explicit completion reboot remain available).
+Existing general-purpose OS/update controls remain disabled in this prototype.
 
 The image is approximately 2 GiB before compression. It does not expand its
 partition automatically yet; extra card capacity is unused. Build dependencies
@@ -57,19 +70,21 @@ image in Raspberry Pi Imager and flash a **spare** card (flashing erases that
 selected card). Start with Pi 5, wired Ethernet and HDMI if necessary to
 separate boot bring-up from DSI compatibility. The intended boot path starts
 Pi Home automatically; actual boot, DRM/seat ownership and touch are unproven.
-Authorise Pi Home Roon Controller from Roon Settings → Extensions, then select
-an existing Roon output. Local GTK settings are the initial configuration path.
-Web settings require a per-device random admin password generated at first
-boot; it is not printed to build logs or included in published artifacts.
-There is not yet an on-screen credential handoff: native settings work locally,
-but web sign-in requires retrieving the password from the private config file
-on the spare card through a Linux host. The setup wizard must remove this
-prototype limitation before public release.
+Follow the native wizard. It explains Roon Settings → Extensions, lists available
+zones and lets you choose a password for web settings (username `admin`).
+Use at least ten characters. The password is stored privately, not printed in
+logs or embedded in the build artifact. The Finish screen shows the named
+device's `.local:8765/admin` address. Use the assigned IP if mDNS is unavailable.
+NetworkManager handles Ethernet DHCP and saved Wi-Fi connections. Wi-Fi/DSI,
+touch keyboard behaviour and Roon LAN pairing still require physical acceptance.
 
-Display auto-detection is enabled. The build must include the Pi 5 device tree
+Display auto-detection is initially enabled. The build must include the Pi 5 device tree
 and 10-inch Touch Display 2 overlay, but package presence does not prove hardware
-operation. Start in the panel's native orientation; software rotation/profile
-configuration needs an Alpine-aware implementation before acceptance.
+operation. The wizard writes a backed-up, managed display overlay and touch
+rotation parameters; Touch Display 2 output rotation uses the existing Cage
+launcher on the next boot. Automatic/HDMI and original display profiles support
+Normal only in this prototype. The wizard rejects other rotations for those
+profiles rather than claiming they work. Display changes require restarting.
 
 ## Deliberate limitations
 
@@ -78,12 +93,17 @@ configuration needs an Alpine-aware implementation before acceptance.
 - OS controls (updates, Wi-Fi changes, reboot, profile/rotation, brightness and
   LED actions) reject requests explicitly in prototype mode. Their systemd-based
   privileged worker is not installed. UI settings may still show those controls.
-- No Wi-Fi onboarding, recovery console, setup wizard, rootfs expansion, OS
+- No recovery console, rootfs expansion, OS
   rollback, update-channel integration or power-loss qualification yet.
 - No claim of 1GB viability until measured on real Pi hardware. Record available
   RAM and peaks across Now Playing, Browse, Discover and 24–48-hour operation.
 - Container imports and filesystem checks are not an emulated Pi boot, physical
   display validation or a successful one-click public release.
+
+Setup verification includes isolated command-mocked tests for persistence,
+validation, interrupted setup, secret handling, rotation and completion locks,
+plus real GTK page/keyboard construction under a disposable Xvfb display.
+Neither test substitutes for Wi-Fi hardware, Wayland/DSI or actual finger input.
 
 Hardware acceptance: cold boot, DSI/touch, rotation mapping, brightness/sleep/wake,
 Roon LAN discovery and pairing persistence, crash recovery, memory peaks,

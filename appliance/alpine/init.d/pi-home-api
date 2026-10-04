@@ -8,4 +8,4 @@ directory=/opt/pi-bus-time-display
 respawn_delay=3
 export PYTHONUNBUFFERED=1
 export PI_HOME_APPLIANCE_PLATFORM=alpine-prototype
-depend() { need net pi-home-firstboot; }
+depend() { need pi-home-firstboot; after NetworkManager; }

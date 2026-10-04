@@ -7,4 +7,4 @@ command_user=morningbus:morningbus
 directory=/var/lib/pi-bus-time-display/roon
 respawn_delay=5
 export NODE_ENV=production
-depend() { need net pi-home-firstboot; }
+depend() { need pi-home-firstboot; after NetworkManager; }

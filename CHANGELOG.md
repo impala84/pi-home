@@ -2,6 +2,12 @@
 
 ## Alpine prototype — unreleased experiment
 
+- Add a native first-boot setup wizard with device naming, Ethernet/Wi-Fi,
+  Roon authorisation and zone selection, display/theme/timezone, a web settings
+  password and completion restart. Include a touch keyboard and resumable setup.
+- Restrict privileged onboarding to a local account-checked Unix socket helper;
+  validate input, preserve boot settings and lock setup mutations after Finish.
+
 - Add an isolated ARM64 Alpine image factory, OpenRC service definitions,
   Ethernet-first native Cage/GTK boot path and unique first-boot credentials.
 - Reject unsupported privileged OS actions rather than queue them to a missing

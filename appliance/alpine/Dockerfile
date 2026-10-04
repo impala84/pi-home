@@ -3,7 +3,8 @@ FROM alpine:3.24.2
 RUN apk add --no-cache alpine-base linux-rpi raspberrypi-bootloader \
     mkinitfs eudev seatd cage wlr-randr mesa-dri-gallium mesa-egl \
     python3 py3-pip py3-setuptools py3-gobject3 py3-cairo gtk4.0 \
-    nodejs npm git ca-certificates tzdata font-inter dbus avahi avahi-tools bash
+    nodejs npm git ca-certificates tzdata font-inter dbus avahi avahi-tools bash \
+    networkmanager networkmanager-cli networkmanager-wifi networkmanager-openrc wpa_supplicant
 WORKDIR /opt/pi-bus-time-display
 COPY pyproject.toml ./
 COPY src ./src

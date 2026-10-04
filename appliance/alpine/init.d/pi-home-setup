@@ -1,0 +1,7 @@
+#!/sbin/openrc-run
+description="Local-only Pi Home first-boot setup helper"
+supervisor=supervise-daemon
+command=/usr/bin/python3
+command_args=/opt/pi-bus-time-display/appliance/alpine/setup_service.py
+respawn_delay=3
+depend() { need localmount dbus NetworkManager pi-home-firstboot; }
