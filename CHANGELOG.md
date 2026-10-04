@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.1.0-beta.20 Alpine Beta — 5 October 2026
+
+- Moved Daily recommendation context out of the cover artwork and into a clear
+  all-caps section heading. The source album is now the first ordinary card in
+  that section, retaining the purple duotone treatment without an overlay.
+- Enforced a hard viewport around every complete discovery card, preventing an
+  unusually long album title from changing column width or breaking the grid.
+- Retuned Recent and New Releases independently after device review: Recent is
+  larger again without returning to its crowded size, while New Releases uses
+  more of the available canvas.
+- Removed the final Browse-view right inset from the touchscreen discovery
+  canvas and now test both inner Daily swipe rows against the display edge.
+
 ## 1.1.0-beta.19 Alpine Beta — 5 October 2026
 
 - Extended the native Discover viewport through the touchscreen page's 28 px

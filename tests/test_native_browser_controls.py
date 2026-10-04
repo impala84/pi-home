@@ -141,8 +141,8 @@ class NativeBrowserControlsTests(unittest.TestCase):
         columns,size=native_method("browser_grid_metrics",{"Gdk":gdk})(SimpleNamespace())
         self.assertEqual(columns,4)
         metrics=native_method("discovery_grid_metrics",{"Gdk":gdk})
-        self.assertEqual(metrics(SimpleNamespace(),"recent"),(4,220))
-        self.assertEqual(metrics(SimpleNamespace(),"releases"),(4,250))
+        self.assertEqual(metrics(SimpleNamespace(),"recent"),(4,236))
+        self.assertEqual(metrics(SimpleNamespace(),"releases"),(4,266))
         source=SOURCE.read_text(encoding="utf-8")
         self.assertIn('columns, size = self.discovery_grid_metrics(self.discovery_section)',source)
         self.assertIn('size = min(212, size)',source)
@@ -250,20 +250,22 @@ class NativeBrowserControlsTests(unittest.TestCase):
     def test_discovery_art_and_titles_have_fixed_space_and_rounded_snapshot(self):
         code=SOURCE.read_text(encoding='utf-8')
         self.assertIn('snapshot.push_rounded_clip(clip)',code)
-        self.assertIn('MixPicture(duotone=item.get("kind") == "mix")',code)
+        self.assertIn('MixPicture(duotone=item.get("kind") == "mix" or item.get("_context_seed", False))',code)
         self.assertIn('title_label.set_justify(Gtk.Justification.CENTER)',code)
         self.assertNotIn('title_label.set_size_request(-1, 48)',code)
         self.assertIn('back.set_halign(Gtk.Align.START)',code)
         self.assertIn('group(None, data.get("items", []), "mixes")',code)
 
-    def test_daily_context_uses_seed_artwork_with_fixed_ellipsized_copy(self):
+    def test_daily_context_uses_a_heading_and_seed_as_a_fixed_grid_card(self):
         code=SOURCE.read_text(encoding='utf-8')
-        self.assertIn('context_picture = MixPicture(duotone=True)',code)
-        self.assertIn('seed.get("artwork_key")',code)
-        self.assertIn('reason_label = self.label(reason, "recommendation-cover-label"',code)
-        self.assertIn('seed_label.set_lines(2)',code)
-        self.assertIn('artist_label.set_lines(2)',code)
-        self.assertIn('context.set_size_request(size + 12, size + 105)',code)
+        self.assertIn('"BECAUSE YOU LISTENED TO…"',code)
+        self.assertIn('dict(seed, _context_seed=True)',code)
+        self.assertIn('item.get("_context_seed", False)',code)
+        self.assertIn('card.add_css_class("recommendation-seed-card")',code)
+        self.assertNotIn('recommendation-cover-label',code)
+        self.assertIn('shell.set_min_content_width(size)',code)
+        self.assertIn('shell.set_max_content_width(size)',code)
+        self.assertIn('.touch-landscape .roon-page .browser-view { padding-right: 0; }',code)
 
     def test_now_playing_uses_local_placeholder_before_artwork_arrives(self):
         code=SOURCE.read_text(encoding='utf-8')
