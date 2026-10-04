@@ -297,7 +297,7 @@ function body(request) {
 function serveStatic(request, response) {
   const names = {'/': 'index.html', '/app.js': 'app.js', '/discovery.js': 'discovery.js', '/discovery.css': 'discovery.css', '/style.css': 'style.css', '/refinements.css': 'refinements.css', '/favicon.svg': 'favicon.svg'};
   const pathname = new URL(request.url, 'http://localhost').pathname;
-  const allowedIcons = new Set(['music','jazz','classical','electronic','rock','stage','folk','blues','reggae','world','vocal','ambient','holiday','children','playlist','artist','album','folder']);
+  const allowedIcons = new Set(['music','jazz','classical','electronic','rock','stage','avant','folk','country','blues','rap','rb','reggae','latin','world','easy','vocal','ambient','holiday','children','religious','playlist','artist','album','folder']);
   const icon = /^\/icons\/([a-z]+)-symbolic\.svg$/.exec(pathname);
   const name = names[pathname] || (icon && allowedIcons.has(icon[1]) ? pathname.slice(1) : null);
   if (!name) return false;
@@ -341,7 +341,10 @@ http.createServer(async (request, response) => {
         response.writeHead(200, {'Content-Type': type || 'image/jpeg', 'Cache-Control': 'private, max-age=3600'}); response.end(data);
       });
     }
-    if (request.method === 'GET' && url.pathname === '/api/discovery') return json(response,200,discovery.state(url.searchParams.get('section') || 'recent',url.searchParams.get('id') || '',url.searchParams.get('client') || ''));
+    if (request.method === 'GET' && url.pathname === '/api/discovery') {
+      const section = url.searchParams.get('section') || 'recent', client = url.searchParams.get('client') || '';
+      return json(response,200,section === 'daily-home' ? discovery.home(client) : discovery.state(section,url.searchParams.get('id') || '',client));
+    }
     if (request.method === 'GET' && url.pathname === '/api/discovery/image') {
       const imageUrl = discovery.imageUrl(url.searchParams.get('key'));
       if(!imageUrl) return response.writeHead(404).end();

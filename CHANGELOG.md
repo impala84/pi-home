@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.0-beta.10 Alpine — 4 October 2026
+
+- Replaces Daily pagination with compact swipeable carousels and a continuous Mixes → For You feed.
+- Loads bounded Roon previews progressively instead of waiting for complete private graphs.
+- Replaces unreliable genre glyphs with a coherent bundled SVG icon set.
+- Adds a full-screen dimmed restart confirmation and hides Discover scrollbars.
+- Verifies the exact source revision running on the physical GTK display before an update is accepted.
+
 ## 1.1.0-beta.9 Alpine — 4 October 2026
 
 - Fix updater restart ordering: stop the display once, restart backends with

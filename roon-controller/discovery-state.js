@@ -40,6 +40,19 @@ class DiscoveryManager {
     if (cached) {const {expires, ...data} = cached; return {...data, refreshing: this.pending.has(key)};}
     return {status: 'loading', message: 'Loading…', items: []};
   }
+  home(client = '') {
+    const mixes = this.state('daily', '', client ? `${client}-mixes` : '');
+    const picks = this.state('picks', '', client ? `${client}-picks` : '');
+    const ready = mixes.status === 'ready' || picks.status === 'ready';
+    if (!ready) {
+      const unavailable = mixes.status === 'unavailable' && picks.status === 'unavailable';
+      return {status: unavailable ? 'unavailable' : 'loading', message: unavailable ? 'Daily recommendations are unavailable.' : 'Loading…', items: [], groups: []};
+    }
+    return {
+      status: 'ready', items: mixes.status === 'ready' ? mixes.items || [] : [], groups: picks.status === 'ready' ? picks.groups || [] : [],
+      refreshing: mixes.status !== 'ready' || picks.status !== 'ready' || !!mixes.refreshing || !!picks.refreshing,
+    };
+  }
   decorate(data) {
     const visit = value => {
       if (!value || typeof value !== 'object') return value;

@@ -7,7 +7,7 @@ from gi.repository import Gtk, Gdk, Gio, GdkPixbuf
 Gtk.init()
 theme = Gtk.IconTheme.get_for_display(Gdk.Display.get_default())
 paths = sorted(Path('/opt/pi-home/roon-controller/static/icons').glob('*-symbolic.svg'))
-assert len(paths) == 18
+assert len(paths) >= 25
 for path in paths:
     pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(str(path), 54, 54, True)
     assert pixbuf.get_width() == 54
@@ -17,4 +17,4 @@ for path in paths:
     assert paintable.get_file().get_path() == str(path), path
     image = Gtk.Image.new_from_gicon(icon)
     image.set_pixel_size(54)
-print('All 18 bundled SVG icons load and are symbolic on Alpine; no genre font glyphs required.')
+print(f'All {len(paths)} bundled SVG icons load and are symbolic on Alpine; no genre font glyphs required.')

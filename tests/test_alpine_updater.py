@@ -12,6 +12,16 @@ updater = importlib.util.module_from_spec(spec); spec.loader.exec_module(updater
 
 
 class AlpineUpdaterTests(unittest.TestCase):
+    def test_health_requires_display_process_revision_marker(self):
+        with tempfile.TemporaryDirectory() as folder, patch("urllib.request.urlopen") as urlopen, patch.object(updater, "run"), patch.object(updater.time, "sleep"):
+            marker = Path(folder) / "display-source-commit"
+            marker.write_text("a" * 40)
+            response = urlopen.return_value.__enter__.return_value
+            response.status = 200
+            with patch.object(updater, "DISPLAY_REVISION", marker):
+                self.assertTrue(updater.healthy("a" * 40))
+                self.assertFalse(updater.healthy("b" * 40))
+
     def test_restart_stops_display_once_and_disables_dependency_cascades(self):
         with patch.object(updater, "run") as run:
             updater.restart()

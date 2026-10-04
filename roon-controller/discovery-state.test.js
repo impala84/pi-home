@@ -38,3 +38,10 @@ test('obsolete queued pages are skipped per client, without cancelling another d
   await manager.tail;assert.deepEqual(calls,['daily','added']);assert.equal(manager.pending.size,0);
 });
 test('Discover session interests and caches remain bounded',()=>{const manager=new DiscoveryManager();manager.setTarget({host:'example'});manager.actionBusy=true;for(let i=0;i<100;i++)manager.state('recent','',`client-${i}`);assert.equal(manager.interests.size,64);assert.throws(()=>manager.state('recent','','invalid session'),/Invalid/);});
+test('Daily home progressively combines mixes and recommendations',()=>{
+  const manager=new DiscoveryManager();manager.setTarget({host:'example'});manager.actionBusy=true;
+  manager.cache.set('daily:',{status:'ready',items:[{title:'Mix'}],expires:99});
+  let home=manager.home('touch');assert.equal(home.status,'ready');assert.equal(home.items.length,1);assert.deepEqual(home.groups,[]);assert.equal(home.refreshing,true);
+  manager.cache.set('picks:',{status:'ready',items:[],groups:[{seed:{title:'Seed'},items:[]}],expires:99});
+  home=manager.home('touch');assert.equal(home.groups.length,1);assert.equal(home.refreshing,false);
+});

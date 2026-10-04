@@ -20,9 +20,9 @@ function addedClient(fail=false){
   return {objects,calls,structs,profile:()=>Buffer.alloc(16),serviceOid:()=>2n,structArg:(type,fields)=>{structs.push({type,fields});return Buffer.alloc(0)},graph:{objects,getObject:id=>objects.get(id),decodeReturnValue:()=>({$ref:1n})},remoting:{callMethod:async(_id,method)=>{
     calls.push(method);if(method.includes('RetainPage')){if(fail)return {success:false};for(const [i,title] of [[0,'Newest'],[1,'Older']]){objects.set(BigInt(10+i),{oid:BigInt(10+i),typeName:'Sooloos.Broker.Api.VirtualQueryElement<Sooloos.Broker.Api.AlbumLite>',fields:{'AlbumLite Element::Data':{$ref:BigInt(20+i)}}});objects.set(BigInt(20+i),{oid:BigInt(20+i),fields:{Title:title,PerformedBy:'Artist'}});}}return {success:true,payload:Buffer.alloc(0)};},callMethodNoReply:(_id,method)=>calls.push(method)}};
 }
-test('Added retains only the first 20-album page, sorted by import date, and releases resources',async()=>{
+test('Added retains only a compact first page, sorted by import date, and releases resources',async()=>{
   const c=addedClient();const data=await recentlyAdded(c,sdk);assert.deepEqual(data.items.map(i=>i.title),['Newest','Older']);assert.equal(data.total,2);
   const order=c.structs[0].fields;assert.deepEqual(order.map(f=>f.value),[sdk.buildArgs([sdk.Arg.enum_(1)]),sdk.buildArgs([sdk.Arg.enum_(2)])]);
-  assert.deepEqual(c.structs[2].fields[0].value,new sdk.BinaryWriter().integer(20).toBuffer());assert.match(c.calls.at(-2),/ReleasePage/);assert.match(c.calls.at(-1),/Dispose/);assert.equal(c.calls.filter(s=>s.includes('RetainPage')).length,1);
+  assert.deepEqual(c.structs[2].fields[0].value,new sdk.BinaryWriter().integer(12).toBuffer());assert.match(c.calls.at(-2),/ReleasePage/);assert.match(c.calls.at(-1),/Dispose/);assert.equal(c.calls.filter(s=>s.includes('RetainPage')).length,1);
 });
 test('Added disposes a failed query without presenting an empty success',async()=>{const c=addedClient(true);await assert.rejects(recentlyAdded(c,sdk),/page unavailable/);assert.match(c.calls.at(-1),/Dispose/);assert.equal(c.calls.some(s=>s.includes('ReleasePage')),false);});

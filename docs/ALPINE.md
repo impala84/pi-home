@@ -1,10 +1,10 @@
 # Alpine appliance experiment
 
-Current version: **1.1.0-beta.9 Alpine**. Updates stop the display once and restart
+Current version: **1.1.0-beta.10 Alpine**. Updates stop the display once and restart
 backends without OpenRC dependency cascades. Genre, playlist and fallback tiles use
 bundled SVGs, not font glyphs. This update is available on the Alpine branch.
 
-Software version labels include “Alpine” (for example, “1.1.0-beta.9 Alpine”)
+Software version labels include “Alpine” (for example, “1.1.0-beta.10 Alpine”)
 to distinguish these builds from Raspberry Pi OS. Setup and web password changes
 require at least eight characters; setup still requires confirmation.
 

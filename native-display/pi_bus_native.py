@@ -32,6 +32,20 @@ BUS = "http://127.0.0.1:8765"
 ROON = "http://127.0.0.1:8766"
 TZ = ZoneInfo("Asia/Singapore")
 
+def publish_display_source():
+    """Identify the source tree actually executing on the physical display."""
+    try:
+        source = Path(__file__).resolve().parents[1] / ".source-commit"
+        revision = source.read_text(encoding="utf-8").strip()
+        if re.fullmatch(r"[0-9a-f]{40}", revision):
+            marker = Path("/run/pi-home/display-source-commit")
+            temporary = marker.with_suffix(".tmp")
+            temporary.write_text(revision + "\n", encoding="utf-8")
+            temporary.replace(marker)
+    except OSError:
+        # Diagnostics must never prevent the touchscreen from starting.
+        pass
+
 def mix_duotone_matrix():
     """GTK transposes this row-major matrix: luminance maps black to violet."""
     tint = (150 / 255, 144 / 255, 237 / 255)
@@ -201,11 +215,23 @@ CSS += b"""
 .theme-roon .roon-artist, .theme-roon .detail-artist, .theme-roon .surprise-artist, .theme-roon .surprise-caption, .theme-roon .queue-meta, .theme-roon .queue-duration, .theme-roon .muted, .theme-roon .home-state, .theme-roon .settings-diagnostic, .theme-roon .time, .theme-roon .browser-filter { color: #aaa; }
 .theme-roon .browser-filter.active { color: #817aeb; }
 .theme-roon .detail-takeover { background: rgba(21,21,21,.96); }
-.discovery-card, .discovery-card:hover, .discovery-card:active { padding: 8px; background: transparent; background-image: none; box-shadow: none; }
+.discovery-card, .discovery-card:hover, .discovery-card:active { padding: 4px; background: transparent; background-image: none; box-shadow: none; }
 .discovery-card .queue-title { font-size: 18px; }.discovery-card .queue-subtitle { font-size: 14px; color: #aaa; }
 .daily-card .queue-title { font-size: 20px; }.daily-card .queue-subtitle { font-size: 16px; }
-.discovery-scroll scrollbar { background: transparent; min-width: 6px; }.discovery-scroll scrollbar slider { background: #a7a5ac; min-width: 6px; border-radius: 4px; }
-.theme-roon .discovery-scroll scrollbar slider { background: #aaa3ed; }
+.daily-track { padding: 0 7px; }
+.daily-track .queue-title { margin-top: 2px; }
+.daily-heading { margin: 2px 7px 0 7px; }
+.recommendation-heading { margin: 12px 7px 0 7px; }
+.recommendation-reason { color: #817aeb; font-size: 17px; font-weight: 700; }
+.recommendation-seed { color: #fff; font-size: 17px; font-weight: 700; }
+.carousel-arrow { min-width: 42px; min-height: 58px; padding: 0; border: 0; border-radius: 21px; background: rgba(28,28,31,.82); color: #fff; }
+.carousel-arrow:hover, .carousel-arrow:active { background: rgba(64,60,86,.95); }
+.confirm-shade { background: rgba(5,5,7,.82); }
+.confirm-card { min-width: 390px; padding: 28px; border-radius: 14px; background: #242329; border: 1px solid #4a4752; }
+.confirm-title { font-size: 28px; font-weight: 760; color: #fff; }
+.confirm-copy { font-size: 17px; color: #bbb; }
+.confirm-cancel, .confirm-reboot { min-height: 54px; padding: 8px 22px; border-radius: 8px; font-size: 17px; font-weight: 700; }
+.confirm-cancel { background: #343338; color: #fff; }.confirm-reboot { background: #817aeb; color: #fff; }
 .loading-notice { font-size: 14px; font-weight: normal; color: #aaa; background: transparent; padding: 4px 0; }
 """
 
@@ -339,7 +365,8 @@ class Display(Gtk.Application):
         self.stack = Gtk.Stack(transition_type=Gtk.StackTransitionType.NONE, transition_duration=0)
         self.stack.set_hhomogeneous(False); self.stack.set_vhomogeneous(False)
         self.stack.add_named(self.build_boot_splash(), "boot"); self.stack.add_named(self.build_bus(), "bus"); self.stack.add_named(self.build_roon(), "roon"); self.stack.add_named(self.build_home(), "home"); self.stack.add_named(self.build_settings(), "settings"); self.stack.add_named(self.build_sleep(), "sleep")
-        self.window.set_child(self.stack); self.window.present()
+        self.root_overlay = Gtk.Overlay(); self.root_overlay.set_child(self.stack)
+        self.window.set_child(self.root_overlay); self.window.present()
         GLib.timeout_add_seconds(1, self.log_renderer)
         GLib.timeout_add_seconds(1, self.hide_touch_cursor)
         for _ in range(3): threading.Thread(target=self.thumbnail_worker, daemon=True).start()
@@ -414,9 +441,9 @@ class Display(Gtk.Application):
         self.roon_views = Gtk.Stack(transition_type=Gtk.StackTransitionType.NONE, transition_duration=0); self.roon_views.set_vexpand(True)
         self.roon_views.set_hhomogeneous(False); self.roon_views.set_vhomogeneous(False)
         self.discovery_list = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18)
-        self.discovery_scroll = Gtk.ScrolledWindow(); self.discovery_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC); self.discovery_scroll.set_kinetic_scrolling(True); self.discovery_scroll.set_propagate_natural_height(False); self.discovery_scroll.set_min_content_height(1); self.discovery_scroll.set_size_request(-1, 1); self.discovery_scroll.set_vexpand(True); self.discovery_scroll.set_hexpand(True); self.discovery_scroll.set_child(self.discovery_list)
+        self.discovery_scroll = Gtk.ScrolledWindow(); self.discovery_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.NEVER); self.discovery_scroll.set_kinetic_scrolling(True); self.discovery_scroll.set_propagate_natural_height(False); self.discovery_scroll.set_min_content_height(1); self.discovery_scroll.set_size_request(-1, 1); self.discovery_scroll.set_vexpand(True); self.discovery_scroll.set_hexpand(True); self.discovery_scroll.set_child(self.discovery_list)
         self.discovery_scroll.add_css_class("discovery-scroll")
-        self.discovery_scroll.get_vadjustment().connect("value-changed", lambda *_: self.load_visible_discovery_artwork())
+        self.discovery_scroll.get_vadjustment().connect("value-changed", self.discovery_scrolled)
         self.discovery_body = Gtk.Box(spacing=0); self.discovery_body.set_vexpand(True); self.discovery_body.set_hexpand(True)
         self.discovery_sidebar = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2); self.discovery_sidebar.add_css_class("browser-sidebar"); self.discovery_sidebar.set_vexpand(True)
         self.discovery_body.append(self.discovery_sidebar); self.discovery_body.append(self.discovery_scroll)
@@ -669,9 +696,8 @@ class Display(Gtk.Application):
         self.polling = False
         if self.discovery_active and self.last_mode == "roon" and self.requested_audio_view == "discover" and not self.settings_open and not getattr(self, "discovery_opening", False) and self.discovery_section not in {"browse", "surprise"}:
             request = self.discovery_request
-            section = "mix" if self.discovery_mix else self.discovery_section
+            section = "mix" if self.discovery_mix else ("daily-home" if self.discovery_section == "daily" else self.discovery_section)
             if section == "recent" and self.discovery_recent_mode == "added": section = "added"
-            if section == "daily" and self.discovery_picks: section = "picks"
             discovery = get_json(f"{ROON}/api/discovery?section={section}&client=touch&id={quote(self.discovery_mix, safe='')}", timeout=3.0)
             GLib.idle_add(self.render_discover, request, discovery)
         image = get_bytes(f"{ROON}/api/image?key={quote(key, safe='')}") if key and key != self.image_key else None
@@ -1039,51 +1065,56 @@ class Display(Gtk.Application):
             columns = 4 if monitor and monitor.get_geometry().width >= 1200 else 2
             size = 220 if columns == 4 else 180
         content = self.discovery_list
-        def group(title, items):
+        self.discovery_daily_sections = {}
+        def group(title, items, section_key=""):
             if title:
-                heading = self.label(title, "browser-section"); heading.set_wrap(True); content.append(heading)
+                if isinstance(title, tuple):
+                    heading = Gtk.Box(spacing=5); heading.add_css_class("recommendation-heading")
+                    heading.append(self.label(title[0], "recommendation-reason")); heading.append(self.label(title[1], "recommendation-seed"))
+                else:
+                    heading = self.label(title, "browser-section"); heading.set_wrap(True)
+                content.append(heading)
             if self.discovery_mix:
                 for item in items: content.append(self.discovery_track_row(item))
                 return
             daily = self.discovery_section == "daily"
-            page_key = title or "mixes"
-            page = min(getattr(self, "discovery_pages", {}).get(page_key, 0), max(0, (len(items) - 1) // 4)) if daily else 0
-            visible_items = items[page * 4:page * 4 + 4] if daily else items
-            grid = Gtk.Grid(column_spacing=16 if self.discovery_section in {"recent", "daily"} else 20, row_spacing=20); grid.set_column_homogeneous(True); grid.set_hexpand(True)
+            visible_items = items
+            grid = Gtk.Grid(column_spacing=10 if daily else (16 if self.discovery_section == "recent" else 20), row_spacing=16 if daily else 20); grid.set_column_homogeneous(not daily); grid.set_hexpand(True)
+            track = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10) if daily else None
+            if track: track.add_css_class("daily-track")
             for index, item in enumerate(visible_items):
                 card = Gtk.Button(); card.add_css_class("discovery-card"); card.set_hexpand(True)
                 if daily: card.add_css_class("daily-card")
-                body = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+                body = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)
                 picture = MixPicture(duotone=item.get("kind") == "mix"); picture.set_can_shrink(True); picture.set_content_fit(Gtk.ContentFit.COVER); self.set_browser_placeholder(picture)
                 art = Gtk.AspectFrame(xalign=.5, yalign=.5, ratio=1, obey_child=False); art.set_size_request(size, size); art.set_halign(Gtk.Align.CENTER); art.set_child(picture); body.append(art)
                 title_label = self.label(item.get("title", ""), "queue-title", .5); title_label.set_wrap(True); title_label.set_max_width_chars(23); title_label.set_lines(2); title_label.set_ellipsize(Pango.EllipsizeMode.END); body.append(title_label)
-                title_label.set_justify(Gtk.Justification.CENTER); title_label.set_size_request(-1, 48)
+                title_label.set_justify(Gtk.Justification.CENTER)
                 credit = self.label(item.get("artist") or " · ".join(item.get("context") or []), "queue-subtitle", .5); credit.set_wrap(True); credit.set_max_width_chars(25); credit.set_lines(2); credit.set_ellipsize(Pango.EllipsizeMode.END); body.append(credit)
                 credit.set_justify(Gtk.Justification.CENTER)
                 card.set_child(body); card.connect("clicked", lambda _button, value=item: self.open_discover("daily", value.get("id", "")) if value.get("kind") == "mix" else self.open_discovery_item(value.get("key")))
-                grid.attach(card, index % columns, index // columns, 1, 1)
+                if daily:
+                    card.set_size_request(size + 14, -1); track.append(card)
+                else: grid.attach(card, index % columns, index // columns, 1, 1)
                 if key := item.get("artwork_key"):
                     key = "discover:" + key; self.discovery_pictures.setdefault(key, []).append(picture)
                     self.discovery_cards.append((card, key))
                     if cached := self.queue_thumbnail_cache.get(key): picture.set_paintable(cached)
-            content.append(grid)
-            if daily and len(items) > 4:
-                pager = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
-                def turn_page(_button, value):
-                    self.discovery_pages[page_key] = value
-                    self.discovery_signature = None
-                    self.render_discover(request, data)
-                for label, destination in (("PREVIOUS", page - 1), ("NEXT", page + 1)):
-                    control = self.button(label, lambda button, value=destination: turn_page(button, value), "browser-back")
-                    control.set_sensitive(0 <= destination <= (len(items) - 1) // 4)
-                    pager.append(control)
-                pager.append(self.label(f"{page + 1} / {(len(items) + 3) // 4}", "queue-subtitle"))
-                content.append(pager)
-        group(None, data.get("items", []))
+            if daily:
+                scroller = Gtk.ScrolledWindow(); scroller.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.NEVER); scroller.set_kinetic_scrolling(True); scroller.set_hexpand(True); scroller.set_child(track)
+                overlay = Gtk.Overlay(); overlay.set_child(scroller)
+                if len(items) > 4:
+                    for icon, align, direction in (("go-previous-symbolic", Gtk.Align.START, -1), ("go-next-symbolic", Gtk.Align.END, 1)):
+                        arrow = self.icon_button(icon, lambda _button, view=scroller, step=direction: self.scroll_carousel(view, step), "carousel-arrow")
+                        arrow.set_halign(align); arrow.set_valign(Gtk.Align.CENTER); overlay.add_overlay(arrow)
+                content.append(overlay)
+                if section_key: self.discovery_daily_sections.setdefault(section_key, overlay)
+            else: content.append(grid)
+        group(None, data.get("items", []), "mixes")
         for recommendation in data.get("groups", []):
             reason = {"recent": "Because you listened to", "added": "Because you added"}.get(recommendation.get("reason"), "Inspired by")
             seed = (recommendation.get("seed") or {}).get("title")
-            group(f"{reason} {seed}" if seed else "Picked for you", recommendation.get("items", []))
+            group((reason, seed) if seed else ("Picked for you", ""), recommendation.get("items", []), "recommendations")
         if not data.get("items") and not data.get("groups"): self.discovery_list.append(self.label("Nothing available here yet.", "browser-message"))
         if self.discovery_mix and data.get("total", 0) > len(data.get("items", [])):
             content.append(self.label("Track preview · the mix buttons request the whole mix.", "browser-message"))
@@ -1094,16 +1125,34 @@ class Display(Gtk.Application):
         self.discovery_recent_mode = mode
         self.open_discover("recent")
 
+    def scroll_carousel(self, scroller, direction):
+        adjustment = scroller.get_hadjustment()
+        step = max(1, adjustment.get_page_size() * .92)
+        adjustment.set_value(max(adjustment.get_lower(), min(adjustment.get_upper() - adjustment.get_page_size(), adjustment.get_value() + direction * step)))
+
+    def discovery_scrolled(self, adjustment):
+        self.load_visible_discovery_artwork()
+        if self.discovery_section != "daily" or not getattr(self, "discovery_daily_sections", None): return
+        marker = self.discovery_daily_sections.get("recommendations")
+        active = "recommendations" if marker and adjustment.get_value() >= max(0, marker.get_allocation().y - 30) else "mixes"
+        for value, button in getattr(self, "discovery_sidebar_buttons", {}).items():
+            if value == active: button.add_css_class("active")
+            else: button.remove_css_class("active")
+
     def discovery_secondary_navigation(self):
         if self.discovery_section == "recent":
             return (("added", "ADDED"), ("listened", "LISTENED")), self.discovery_recent_mode
         if self.discovery_section == "daily":
-            return (("mixes", "MIXES"), ("recommendations", "FOR YOU")), "recommendations" if self.discovery_picks else "mixes"
+            return (("mixes", "MIXES"), ("recommendations", "FOR YOU")), "mixes"
         return (), ""
 
     def select_discovery_secondary(self, value):
         if self.discovery_section == "recent": self.open_recent(value)
-        else: self.open_discover("daily", picks=value == "recommendations")
+        else:
+            marker = getattr(self, "discovery_daily_sections", {}).get(value)
+            if marker:
+                adjustment = self.discovery_scroll.get_vadjustment()
+                adjustment.set_value(max(adjustment.get_lower(), min(adjustment.get_upper() - adjustment.get_page_size(), marker.get_allocation().y)))
 
     def sync_discovery_sidebar(self, sidebar=None, from_browser=False):
         sidebar = self.discovery_sidebar if sidebar is None else sidebar
@@ -1113,11 +1162,12 @@ class Display(Gtk.Application):
         if not from_browser:
             if entries: self.discovery_body.add_css_class("browser-view")
             else: self.discovery_body.remove_css_class("browser-view")
+        self.discovery_sidebar_buttons = {}
         for value, label in entries:
             button = self.button(label, lambda _button, choice=value: self.select_discovery_secondary(choice), "browser-filter")
             button.get_child().set_xalign(0)
             if value == active: button.add_css_class("active")
-            sidebar.append(button)
+            sidebar.append(button); self.discovery_sidebar_buttons[value] = button
         spacer = Gtk.Box(); spacer.set_vexpand(True); sidebar.append(spacer)
         if self.discovery_mix or from_browser:
             back = self.button("BACK", lambda *_: self.open_discover(self.discovery_section, self.discovery_mix, self.discovery_picks) if from_browser else self.open_discover("daily"), "browser-back")
@@ -1366,16 +1416,21 @@ class Display(Gtk.Application):
         if "electronic" in value: return "electronic"
         if "pop" in value or "rock" in value: return "rock"
         if "stage" in value or "screen" in value or "soundtrack" in value: return "stage"
-        if "folk" in value or "country" in value: return "folk"
+        if "avant" in value: return "avant"
+        if "folk" in value: return "folk"
+        if "country" in value: return "country"
         if "blues" in value: return "blues"
-        if "rap" in value or "hip-hop" in value or "r&b" in value: return "music"
+        if "rap" in value or "hip-hop" in value: return "rap"
+        if "r&b" in value or "rhythm" in value: return "rb"
         if "reggae" in value: return "reggae"
-        if "latin" in value or "world" in value or "international" in value: return "world"
-        if "vocal" in value or "easy listening" in value: return "vocal"
+        if "latin" in value: return "latin"
+        if "world" in value or "international" in value: return "world"
+        if "easy listening" in value: return "easy"
+        if "vocal" in value: return "vocal"
         if "new age" in value or "ambient" in value: return "ambient"
         if "holiday" in value: return "holiday"
         if "children" in value: return "children"
-        if "religious" in value or "gospel" in value: return "ambient"
+        if "religious" in value or "gospel" in value: return "religious"
         return "music"
 
     def browser_action_icon(self, title):
@@ -1881,15 +1936,18 @@ class Display(Gtk.Application):
         return True
 
     def confirm_reboot(self, *_):
-        dialog = Gtk.MessageDialog(transient_for=self.window, modal=True, text="Restart Pi Home?", secondary_text="The display will be unavailable briefly.", buttons=Gtk.ButtonsType.OK_CANCEL)
-        def respond(window, response):
-            window.destroy()
-            if response == Gtk.ResponseType.OK:
-                self.device_status.set_text("Restarting Pi Home…")
-                threading.Thread(target=post_json, args=(BUS + "/api/device/reboot", {}), daemon=True).start()
-        dialog.connect("response", respond)
-        dialog.set_cursor_from_name("none")
-        dialog.present()
+        if getattr(self, "reboot_confirmation", None): return
+        shade = Gtk.Box(); shade.add_css_class("confirm-shade"); shade.set_hexpand(True); shade.set_vexpand(True)
+        card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16); card.add_css_class("confirm-card"); card.set_halign(Gtk.Align.CENTER); card.set_valign(Gtk.Align.CENTER)
+        card.append(self.label("Restart Pi Home?", "confirm-title", .5)); card.append(self.label("The touchscreen will be unavailable for about a minute.", "confirm-copy", .5))
+        actions = Gtk.Box(spacing=12); actions.set_halign(Gtk.Align.CENTER)
+        def close(*_):
+            self.root_overlay.remove_overlay(shade); self.reboot_confirmation = None
+        def restart(button):
+            button.set_sensitive(False); self.device_status.set_text("Restarting Pi Home…")
+            threading.Thread(target=post_json, args=(BUS + "/api/device/reboot", {}), daemon=True).start()
+        actions.append(self.button("CANCEL", close, "confirm-cancel")); actions.append(self.button("RESTART", restart, "confirm-reboot")); card.append(actions); shade.append(card)
+        self.reboot_confirmation = shade; self.root_overlay.add_overlay(shade); shade.set_cursor_from_name("none")
 
     def _request_update(self):
         result = post_json(BUS + "/api/device/update", {})
@@ -1916,4 +1974,5 @@ class Display(Gtk.Application):
 
 
 if __name__ == "__main__":
+    publish_display_source()
     Display().run(None)

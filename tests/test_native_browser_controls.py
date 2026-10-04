@@ -52,27 +52,24 @@ LAYOUT_GTK = SimpleNamespace(Box=LayoutWidget, Picture=LayoutWidget, ScrolledWin
 
 
 class NativeBrowserControlsTests(unittest.TestCase):
-    def test_daily_pages_keep_four_cards_and_allow_returning_to_first_page(self):
-        class Grid(LayoutWidget):
-            def attach(self, child, *_): self.append(child)
-        gtk = SimpleNamespace(**vars(LAYOUT_GTK))
-        gtk.Grid = Grid; gtk.AspectFrame = LayoutWidget
-        gtk.Orientation = SimpleNamespace(VERTICAL="vertical", HORIZONTAL="horizontal")
-        gtk.Justification = SimpleNamespace(CENTER="center")
-        monitors = SimpleNamespace(get_n_items=lambda:0)
-        gdk = SimpleNamespace(Display=SimpleNamespace(get_default=lambda:SimpleNamespace(get_monitors=lambda:monitors)))
-        method = native_method("render_discover", {"json":__import__("json"), "Gtk":gtk, "Gdk":gdk, "MixPicture":LayoutWidget, "Pango":SimpleNamespace(EllipsizeMode=SimpleNamespace(END="end")), "GLib":SimpleNamespace(timeout_add=lambda *_:None)})
-        owner = SimpleNamespace(discovery_request=1, discovery_active=True, roon_views=SimpleNamespace(get_visible_child_name=lambda:"discover"), discovery_signature=None, discovery_list=LayoutWidget(), sync_discovery_sidebar=Mock(), discovery_mix="", discovery_section="daily", discovery_pages={}, browser_grid_metrics=lambda:(4,192), label=lambda text,*_:LayoutWidget(text=text), set_browser_placeholder=Mock(), queue_thumbnail_cache={}, load_visible_discovery_artwork=Mock(), button=lambda label,callback,*_:LayoutWidget(label=label,callback=callback))
-        owner.render_discover = lambda request,data:method(owner,request,data)
-        data = {"status":"ready", "items":[{"title":str(i)} for i in range(5)]}
-        method(owner,1,data)
-        grid,pager = owner.discovery_list.children
-        self.assertEqual(len(grid.children),4)
-        self.assertIn("daily-card",grid.children[0].classes)
-        pager.children[1].properties["callback"](None)
-        self.assertEqual(len(owner.discovery_list.children[0].children),1)
-        owner.discovery_list.children[1].children[0].properties["callback"](None)
-        self.assertEqual(len(owner.discovery_list.children[0].children),4)
+    def test_display_runtime_publishes_the_resolved_source_revision(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder); source = root / "native-display" / "pi_bus_native.py"
+            source.parent.mkdir(); source.write_text("")
+            (root / ".source-commit").write_text("a" * 40)
+            run = root / "run"; run.mkdir()
+            function = native_method("publish_display_source", {"Path": lambda value: run / "display-source-commit" if value == "/run/pi-home/display-source-commit" else Path(value), "re":__import__("re"), "__file__":str(source)})
+            function()
+            self.assertEqual((run / "display-source-commit").read_text().strip(), "a" * 40)
+
+    def test_daily_uses_swipeable_carousels_without_pagination_controls(self):
+        code = SOURCE.read_text(encoding="utf-8")
+        self.assertIn('scroller.set_kinetic_scrolling(True)', code)
+        self.assertIn('"go-previous-symbolic"', code)
+        self.assertIn('"go-next-symbolic"', code)
+        self.assertIn('self.discovery_daily_sections.setdefault(section_key, overlay)', code)
+        self.assertNotIn('("PREVIOUS", page - 1)', code)
 
     def test_genre_icons_are_bundled_svgs_not_font_glyphs(self):
         import xml.etree.ElementTree as ET
@@ -97,9 +94,10 @@ class NativeBrowserControlsTests(unittest.TestCase):
         select = native_method("select_discovery_secondary")
         select(owner,"listened"); owner.open_recent.assert_called_once_with("listened")
         owner.discovery_section="daily"; owner.discovery_picks=True
-        self.assertEqual(navigation(owner)[1],"recommendations")
-        select(owner,"mixes"); owner.open_discover.assert_called_with("daily",picks=False)
-        select(owner,"recommendations"); owner.open_discover.assert_called_with("daily",picks=True)
+        owner.discovery_daily_sections={}; owner.discovery_scroll=Mock()
+        self.assertEqual(navigation(owner)[1],"mixes")
+        select(owner,"mixes"); select(owner,"recommendations")
+        owner.open_discover.assert_not_called()
         for section in ("releases", "surprise"):
             owner.discovery_section=section
             self.assertEqual(navigation(owner), ((), ""))
@@ -222,9 +220,9 @@ class NativeBrowserControlsTests(unittest.TestCase):
         self.assertIn('snapshot.push_rounded_clip(clip)',code)
         self.assertIn('MixPicture(duotone=item.get("kind") == "mix")',code)
         self.assertIn('title_label.set_justify(Gtk.Justification.CENTER)',code)
-        self.assertIn('title_label.set_size_request(-1, 48)',code)
+        self.assertNotIn('title_label.set_size_request(-1, 48)',code)
         self.assertIn('back.set_halign(Gtk.Align.START)',code)
-        self.assertIn('group(None, data.get("items", []))',code)
+        self.assertIn('group(None, data.get("items", []), "mixes")',code)
 
     def test_mix_action_is_explicit_single_request_and_stale_result_does_not_update_ui(self):
         controls = Mock(); controls.get_first_child.return_value = None

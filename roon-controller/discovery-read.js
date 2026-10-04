@@ -22,12 +22,38 @@ async function waitForGraph(graph, root) {
         seen.add(key); const object = graph.getObject(BigInt(value.$ref));
         return !!object && ready(object.fields);
       }
+      if (value.fields && value.oid !== undefined) return ready(value.fields);
       if (Array.isArray(value)) return value.every(ready);
       if (value.$count !== undefined && (!Array.isArray(value.$items) || value.$items.length < value.$count)) return false;
       return Object.entries(value).filter(([key]) => key === '$items' || /::(Album|SeedAlbum|Albums|Tracks|Image|Avatar|Images|Data|PerformerMixDescription|GenreMixDescription|Touchstones)$/.test(key)).every(([,item])=>ready(item));
     };
     return ready(root) ? true : undefined;
   });
+}
+async function waitForPreview(graph, root, limit) {
+  return waitFor(() => {
+    const object = model.resolve(graph, root);
+    if (!object) return undefined;
+    const count = Number(model.field(object, '$count'));
+    const values = model.list(graph, object, limit);
+    const expected = Number.isSafeInteger(count) && count >= 0 ? Math.min(count, limit) : limit;
+    if (expected === 0) return [];
+    return values.length >= expected && values.every(value => value && waitPreviewObject(graph, value)) ? values : undefined;
+  });
+}
+function waitPreviewObject(graph, value) {
+  const seen = new Set();
+  const ready = current => {
+    if (!current || typeof current !== 'object' || Buffer.isBuffer(current)) return true;
+    if (current.$ref !== undefined) {
+      const key = String(current.$ref); if (seen.has(key)) return true; seen.add(key);
+      const object = graph.getObject(BigInt(current.$ref)); return !!object && ready(object.fields);
+    }
+    if (current.fields && current.oid !== undefined) return ready(current.fields);
+    if (Array.isArray(current)) return current.every(ready);
+    return Object.entries(current).filter(([key]) => key === '$items' || /::(Album|SeedAlbum|Albums|Image|Avatar|Images|Data|PerformerMixDescription|GenreMixDescription|Touchstones)$/.test(key)).every(([,item]) => ready(item));
+  };
+  return ready(value);
 }
 async function recentlyAdded(client, sdk) {
   const {Arg, buildArgs, BinaryWriter} = sdk;
@@ -36,7 +62,8 @@ async function recentlyAdded(client, sdk) {
     {name:'Ordering',propType:9,value:buildArgs([Arg.enum_(1)])},
     {name:'Direction',propType:9,value:buildArgs([Arg.enum_(2)])}]);
   const criteria = client.structArg(`${namespace}.AlbumQueryCriteria`, [{name:'Ordering',propType:23,value:ordering}]);
-  const params = client.structArg(`${namespace}.VirtualQueryParameters`, [{name:'PageSize',propType:0,value:new BinaryWriter().integer(20).toBuffer()}]);
+  const pageSize = 12;
+  const params = client.structArg(`${namespace}.VirtualQueryParameters`, [{name:'PageSize',propType:0,value:new BinaryWriter().integer(pageSize).toBuffer()}]);
   const result = await client.remoting.callMethod(client.serviceOid('Library'),
     `${namespace}.Library::VirtualAlbumQuery(System.Sooid, ${namespace}.AlbumQueryCriteria, ${namespace}.VirtualQueryParameters, Base.ResultCallback<${namespace}.VirtualAlbumLiteQuery>)`,
     Buffer.concat([buildArgs([Arg.sooid(client.profile())]),criteria,params]));
@@ -57,8 +84,8 @@ async function recentlyAdded(client, sdk) {
     // in query order; never collect unrelated AlbumLite objects from the graph.
     const elements = await waitFor(() => {
       const values = [...client.graph.objects.values()].filter(o => !before.has(o.oid) && o.typeName === `${namespace}.VirtualQueryElement<${namespace}.AlbumLite>`);
-      const page = values.slice(0,20);
-      return page.length >= Math.min(count,20) && page.every(o=>model.field(o,'Data') && model.item(client.graph,model.field(o,'Data'))) ? page : undefined;
+      const page = values.slice(0,pageSize);
+      return page.length >= Math.min(count,pageSize) && page.every(o=>model.field(o,'Data') && model.item(client.graph,model.field(o,'Data'))) ? page : undefined;
     });
     await waitForGraph(client.graph,{$items:elements.map(o=>model.field(o,'Data'))});
     const items = elements.map(o=>model.item(client.graph,model.field(o,'Data')));
@@ -90,15 +117,15 @@ async function readDiscovery(client, sdk, section, id) {
   let result;
   if (section === 'added') return recentlyAdded(client,sdk);
   if (section === 'recent') {
-    const history = await exportPlayHistory(client, {limit: 100, pageSize: 50, timeoutMs: 5000});
-    return {items: model.recentAlbums(client.graph, history.events)};
+    const history = await exportPlayHistory(client, {limit: 40, pageSize: 20, timeoutMs: 5000});
+    return {items: model.recentAlbums(client.graph, history.events, 8)};
   }
   if (section === 'picks') {
     result = await dailyPicks(client, sdk, new Date().toISOString());
     if (!result.success) throw new Error('Personalised recommendations are unavailable in this Roon version');
     const root = client.graph.decodeReturnValue(Uint8Array.from(result.payload));
-    await waitForGraph(client.graph, root);
-    const groups = model.picks(client.graph, root);
+    await waitForPreview(client.graph, root, 3);
+    const groups = model.picks(client.graph, root, 3, 6);
     return {items:[],groups};
   }
   if (section === 'daily') {
@@ -107,8 +134,8 @@ async function readDiscovery(client, sdk, section, id) {
       buildArgs([Arg.sooid(client.profile()), Arg.str(new Date().toISOString())]));
     if (!result.success) throw new Error('Daily mixes are unavailable in this Roon version');
     const mixRoot = client.graph.decodeReturnValue(Uint8Array.from(result.payload));
-    await waitForGraph(client.graph, mixRoot);
-    return {items: model.mixes(client.graph, mixRoot)};
+    await waitForPreview(client.graph, mixRoot, 6);
+    return {items: model.mixes(client.graph, mixRoot, 6)};
   }
   if (section === 'mix') {
     if (!/^[a-f0-9]{2,160}$/i.test(id || '') || id.length % 2) throw new Error('Invalid mix reference');
@@ -127,7 +154,7 @@ async function readDiscovery(client, sdk, section, id) {
   result = await call('GetNewReleasesForYou', buildArgs([Arg.sooid(client.profile())]), `Base.ResultCallback<${namespace}.DataList<${namespace}.AlbumWithExtras>>`);
   if (!result.success) throw new Error('New Releases are unavailable in this Roon version');
   const root = client.graph.decodeReturnValue(Uint8Array.from(result.payload));
-  await waitForGraph(client.graph, root);
-  return {items: model.list(client.graph, root, 20).map(wrapper => model.item(client.graph, model.field(wrapper, 'Album'))).filter(Boolean)};
+  await waitForPreview(client.graph, root, 8);
+  return {items: model.list(client.graph, root, 8).map(wrapper => model.item(client.graph, model.field(wrapper, 'Album'))).filter(Boolean)};
 }
-module.exports = {dailyPicks, readDiscovery, waitFor, waitForGraph, recentlyAdded};
+module.exports = {dailyPicks, readDiscovery, waitFor, waitForGraph, waitForPreview, recentlyAdded};

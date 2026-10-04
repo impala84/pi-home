@@ -290,16 +290,21 @@ function browserTileSymbol(title, section) {
   if (value.includes('electronic')) return 'electronic';
   if (value.includes('pop') || value.includes('rock')) return 'rock';
   if (value.includes('stage') || value.includes('screen') || value.includes('soundtrack')) return 'stage';
-  if (value.includes('folk') || value.includes('country')) return 'folk';
+  if (value.includes('avant')) return 'avant';
+  if (value.includes('folk')) return 'folk';
+  if (value.includes('country')) return 'country';
   if (value.includes('blues')) return 'blues';
-  if (value.includes('rap') || value.includes('hip-hop') || value.includes('r&b')) return 'music';
+  if (value.includes('rap') || value.includes('hip-hop')) return 'rap';
+  if (value.includes('r&b') || value.includes('rhythm')) return 'rb';
   if (value.includes('reggae')) return 'reggae';
-  if (value.includes('latin') || value.includes('world') || value.includes('international')) return 'world';
-  if (value.includes('vocal') || value.includes('easy listening')) return 'vocal';
+  if (value.includes('latin')) return 'latin';
+  if (value.includes('world') || value.includes('international')) return 'world';
+  if (value.includes('easy listening')) return 'easy';
+  if (value.includes('vocal')) return 'vocal';
   if (value.includes('new age') || value.includes('ambient')) return 'ambient';
   if (value.includes('holiday')) return 'holiday';
   if (value.includes('children')) return 'children';
-  if (value.includes('religious') || value.includes('gospel')) return 'ambient';
+  if (value.includes('religious') || value.includes('gospel')) return 'religious';
   return 'music';
 }
 

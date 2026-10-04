@@ -20,6 +20,7 @@ APP = Path("/opt/pi-home")
 STATE = Path("/var/lib/pi-home")
 REPO = "https://api.github.com/repos/impala84/pi-home"
 BRANCH = "alpine-appliance-prototype"
+DISPLAY_REVISION = Path("/run/pi-home/display-source-commit")
 
 
 def status(message):
@@ -84,13 +85,16 @@ def activate(target):
     temporary.replace(APP)
 
 
-def healthy():
+def healthy(expected_sha=None):
     for _ in range(30):
         try:
             for url in ("http://127.0.0.1:8765/api/status", "http://127.0.0.1:8766/api/state"):
                 with urllib.request.urlopen(url, timeout=2) as response:
                     if response.status != 200: raise OSError("Not ready")
             run(["rc-service", "pi-home-display", "status"], timeout=10)
+            if expected_sha:
+                if not DISPLAY_REVISION.exists() or DISPLAY_REVISION.read_text().strip() != expected_sha:
+                    raise OSError("Touchscreen is not running the staged revision")
             return True
         except (OSError, RuntimeError, subprocess.TimeoutExpired): time.sleep(1)
     return False
@@ -150,14 +154,15 @@ def update():
         Path("/usr/local/bin/pi-home-display-launch").chmod(0o755)
         status("Update · Restarting and checking Pi Home…")
         restart()
-        if not healthy(): raise RuntimeError("New application did not become healthy")
+        if not healthy(sha): raise RuntimeError("New application did not become healthy or the touchscreen kept running old files")
         status("Update installed. Alpine prototype " + sha[:7] + "; settings and pairing preserved.")
     except Exception as failure:
         activate(previous)
         shutil.copyfile(previous / "appliance/alpine/display-launch", "/usr/local/bin/pi-home-display-launch")
         Path("/usr/local/bin/pi-home-display-launch").chmod(0o755)
         restart()
-        if not healthy(): raise RuntimeError("Update failed; previous files restored but services need attention")
+        previous_sha = (previous / ".source-commit").read_text().strip() if (previous / ".source-commit").exists() else None
+        if not healthy(previous_sha): raise RuntimeError("Update failed; previous files restored but services need attention")
         raise RuntimeError("Update failed; previous working application restored: " + str(failure)) from failure
 
 

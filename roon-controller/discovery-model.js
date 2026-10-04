@@ -54,14 +54,14 @@ function mixes(graph, root, limit = 5) {
       artwork: image(graph, field(description, 'Avatar') || images[0]), object_ref: String(object.oid)};
   }).filter(Boolean);
 }
-function picks(graph, root, limit = 5) {
-  return list(graph, root, limit).map(box => {
+function picks(graph, root, groupLimit = 3, itemLimit = 6) {
+  return list(graph, root, groupLimit).map(box => {
     const seed = item(graph, field(box, 'SeedAlbum'));
     const id = field(box, 'ObjectId');
     return {kind: 'recommendation', id: Buffer.isBuffer(id) ? id.toString('hex') : '',
       reason: text(field(box, 'Reason')), category: text(field(box, 'OneBoxType')),
       generated_for: text(field(box, 'GeneratedForDate')), seed,
-      items: list(graph, field(box, 'Albums'), limit).map(v => item(graph, v)).filter(Boolean)};
+      items: list(graph, field(box, 'Albums'), itemLimit).map(v => item(graph, v)).filter(Boolean)};
   }).filter(box => box.items.length);
 }
 function recentAlbums(graph, events, limit = 20) {
