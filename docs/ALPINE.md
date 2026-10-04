@@ -6,6 +6,16 @@ Do not install it over the working Pi. Use a separate SD card.
 
 ## Verified factory build — 4 October 2026
 
+Installer revision `ce7da54`; [ARM64 installer image and native GTK checks](https://github.com/impala84/pi-home/actions/runs/37185600684)
+passed. All six wizard pages and the touch keyboard were exercised under Xvfb
+at 800×480; both HTTP services passed in Alpine. Local verification passed
+142 Python tests. This supersedes the earlier image for first-boot setup.
+New installations use `/opt/pi-home`, `/etc/pi-home` and `/var/lib/pi-home`;
+legacy paths are compatibility links for existing runtime helpers. The installer
+does not move or overwrite an older installation's saved settings or pairing.
+
+Earlier image-factory baseline:
+
 Source revision `888d8cd`; [ARM64 image build and runtime checks](https://github.com/impala84/pi-home/actions/runs/37183838137)
 passed. Artifact `pi-home-alpine-prototype` contains the compressed image,
 SHA-256, source revision and resolved package manifest (about 319 MB total).
