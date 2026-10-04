@@ -3,16 +3,20 @@
 set -eu
 test "$(uname -m)" = aarch64
 test -f /etc/alpine-release
-adduser -D -h /var/lib/pi-bus-time-display morningbus
+adduser -D -h /var/lib/pi-home morningbus
 addgroup morningbus video
 addgroup morningbus input
-mkdir -p /etc/pi-bus-time-display /var/lib/pi-bus-time-display/roon
-cp config.example.toml /etc/pi-bus-time-display/config.toml
-sed -i 's/display_theme = "fresh-mint"/display_theme = "roon"/' /etc/pi-bus-time-display/config.toml
-cp .env.example /etc/pi-bus-time-display/secrets.env
-printf '%s\n' 'ALPINE PROTOTYPE: OS controls and in-app updates are not available.' > /var/lib/pi-bus-time-display/update-status
-chmod 600 /etc/pi-bus-time-display/secrets.env
-chown -R morningbus:morningbus /etc/pi-bus-time-display /var/lib/pi-bus-time-display
+mkdir -p /etc/pi-home /var/lib/pi-home/roon
+# Internal compatibility paths for existing runtime helpers; new paths use Pi Home.
+ln -s /opt/pi-home /opt/pi-bus-time-display
+ln -s /etc/pi-home /etc/pi-bus-time-display
+ln -s /var/lib/pi-home /var/lib/pi-bus-time-display
+cp config.example.toml /etc/pi-home/config.toml
+sed -i 's/display_theme = "fresh-mint"/display_theme = "roon"/' /etc/pi-home/config.toml
+cp .env.example /etc/pi-home/secrets.env
+printf '%s\n' 'ALPINE PROTOTYPE: OS controls and in-app updates are not available.' > /var/lib/pi-home/update-status
+chmod 600 /etc/pi-home/secrets.env
+chown -R morningbus:morningbus /etc/pi-home /var/lib/pi-home
 python3 -m venv --system-site-packages .venv
 .venv/bin/pip install --no-build-isolation --no-deps .
 npm --prefix roon-controller ci --omit=dev --no-audit --no-fund
@@ -34,7 +38,7 @@ rc-update add udev sysinit
 rc-update add udev-trigger sysinit
 for service in hwclock modules sysctl bootmisc hostname localmount hwdrivers; do rc-update add "$service" boot; done
 for service in killprocs savecache mount-ro; do rc-update add "$service" shutdown; done
-for service in networking dbus NetworkManager avahi-daemon seatd pi-home-firstboot pi-home-api pi-home-roon pi-home-setup pi-home-display; do rc-update add "$service" default; done
+for service in networking dbus networkmanager avahi-daemon seatd pi-home-firstboot pi-home-api pi-home-roon pi-home-setup pi-home-display; do rc-update add "$service" default; done
 # No SSH, shared password or interactive root console in a distributed image.
 passwd -l root
 sed -i '/^[^#].*getty/s/^/#/' /etc/inittab
@@ -46,4 +50,4 @@ test -s /boot/initramfs-rpi
 test -s /boot/bcm2712-rpi-5-b.dtb
 test -s /boot/overlays/vc4-kms-dsi-ili79600-10-1inch.dtbo
 # Record the exact resolved package versions; repositories may receive fixes.
-apk info -vv > /opt/pi-bus-time-display/appliance/alpine/packages-resolved.txt
+apk info -vv > /opt/pi-home/appliance/alpine/packages-resolved.txt

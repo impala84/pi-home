@@ -33,6 +33,6 @@ dd if="$build_dir/boot.fat" of="$build_dir/pi-home-alpine-prototype.img" bs=1M s
 dd if="$build_dir/root.ext4" of="$build_dir/pi-home-alpine-prototype.img" bs=1M seek=257 conv=notrunc status=none
 gzip -c "$build_dir/pi-home-alpine-prototype.img" > "$out/pi-home-alpine-prototype.img.gz"
 (cd "$out" && sha256sum pi-home-alpine-prototype.img.gz > pi-home-alpine-prototype.img.gz.sha256)
-cp "$build_dir/rootfs/opt/pi-bus-time-display/appliance/alpine/packages-resolved.txt" "$out/"
+cp "$build_dir/rootfs/opt/pi-home/appliance/alpine/packages-resolved.txt" "$out/"
 git -C "$repo" rev-parse HEAD > "$out/source-commit.txt"
 echo "Unverified hardware prototype: $out/pi-home-alpine-prototype.img.gz"

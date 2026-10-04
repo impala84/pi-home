@@ -1,11 +1,11 @@
 #!/sbin/openrc-run
 description="Pi Home dashboard API"
 supervisor=supervise-daemon
-command=/opt/pi-bus-time-display/.venv/bin/pi-bus-time-display
-command_args="--config /etc/pi-bus-time-display/config.toml --env /etc/pi-bus-time-display/secrets.env --state-dir /var/lib/pi-bus-time-display --host 0.0.0.0"
+command=/opt/pi-home/.venv/bin/pi-home
+command_args="--config /etc/pi-home/config.toml --env /etc/pi-home/secrets.env --state-dir /var/lib/pi-home --host 0.0.0.0"
 command_user=morningbus:morningbus
-directory=/opt/pi-bus-time-display
+directory=/opt/pi-home
 respawn_delay=3
 export PYTHONUNBUFFERED=1
 export PI_HOME_APPLIANCE_PLATFORM=alpine-prototype
-depend() { need pi-home-firstboot; after NetworkManager; }
+depend() { need pi-home-firstboot; after networkmanager; }

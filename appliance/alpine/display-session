@@ -1,5 +1,5 @@
 #!/bin/sh
 set -eu
 # The helper reports completion; the unprivileged display never reads its state.
-python3 /opt/pi-bus-time-display/appliance/alpine/wizard.py
-exec /opt/pi-bus-time-display/scripts/pi-bus-cage-launch
+python3 /opt/pi-home/appliance/alpine/wizard.py
+exec /opt/pi-home/scripts/pi-bus-cage-launch

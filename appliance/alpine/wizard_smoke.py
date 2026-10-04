@@ -22,5 +22,7 @@ assert entry.get_text() == "ab"
 app.toggle_shift()
 app.type_key("C")
 assert entry.get_text() == "abC"
+app.toggle_symbols(); app.type_key("/London")
+assert entry.get_text() == "abC/London"
 app.window.destroy()
 print("Native setup: all six real GTK pages and on-screen keyboard passed under Xvfb (not physical touch acceptance).")

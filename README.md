@@ -60,7 +60,7 @@ Do not run these production commands on a development Mac.
    sudo ./scripts/install-pi.sh
    ```
 
-3. Configure `/etc/pi-bus-time-display/config.toml` and `/etc/pi-bus-time-display/secrets.env`. The installer prints a generated web-admin password once. Do not commit these files. New configuration is music-first; enable optional modules explicitly. Existing installations retain their saved settings.
+3. Configure `/etc/pi-home/config.toml` and `/etc/pi-home/secrets.env`. The installer prints a generated web-admin password once. Do not commit these files. New configuration is music-first; enable optional modules explicitly. Existing installations retain their saved settings.
 4. If the Pi should also be an audio endpoint, run `sudo ./scripts/install-roon-bridge.sh`. This downloads Roon's official architecture-specific installer; Roon Bridge is separately distributed and not bundled in Pi Home.
 5. Enable appliance mode from the same normal user:
 
@@ -78,14 +78,16 @@ For a frozen v1.0 rebuild, use the `v1.0.0` tag, not an untagged `main` checkout
 
 | Path | Purpose |
 | --- | --- |
-| `/opt/pi-bus-time-display/` | Git checkout, Node modules and `.venv` |
-| `/etc/pi-bus-time-display/config.toml` | Non-secret application configuration |
-| `/etc/pi-bus-time-display/secrets.env` | LTA, Home Assistant, OpenObserve and admin credentials |
-| `/etc/pi-bus-time-display/roon.env` | Optional Node environment overrides |
-| `/etc/pi-bus-time-display/display-user`, `display-profile`, `display-transform` | Saved native-session user, panel and orientation |
-| `/var/lib/pi-bus-time-display/` | Persistent display preferences, action queue, update status and Roon pairing state |
+| `/opt/pi-home/` | Git checkout, Node modules and `.venv` |
+| `/etc/pi-home/config.toml` | Non-secret application configuration |
+| `/etc/pi-home/secrets.env` | LTA, Home Assistant, OpenObserve and admin credentials |
+| `/etc/pi-home/roon.env` | Optional Node environment overrides |
+| `/etc/pi-home/display-user`, `display-profile`, `display-transform` | Saved native-session user, panel and orientation |
+| `/var/lib/pi-home/` | Persistent display preferences, action queue, update status and Roon pairing state |
 
-Use encrypted/off-device backups for `/etc/pi-bus-time-display/` and `/var/lib/pi-bus-time-display/`. These contain secrets and personal state. Do not put them in the public repository.
+Use encrypted/off-device backups for `/etc/pi-home/` and `/var/lib/pi-home/`. These contain secrets and personal state. Do not put them in the public repository.
+
+New installations use Pi Home directory names. Re-running the installer on an older installation adds compatible Pi Home paths without moving settings or Roon pairing. Older internal service names remain supported; these are compatibility identifiers, not the product name.
 
 ## Configuration
 
@@ -109,7 +111,7 @@ Secrets/environment variables belong in `secrets.env`, not TOML:
 | `HOME_ASSISTANT_TOKEN` | Only for Home Assistant |
 | `OPENOBSERVE_PASSWORD` | Only for authenticated OpenObserve logging |
 
-Node overrides in `roon.env`: `ROON_ZONE_NAME`, `CONFIG_PATH`, `PORT`. Keep the production port at 8766 because GTK/proxy routes expect it. Roon pairing is saved in `/var/lib/pi-bus-time-display/roon/`, not an environment variable.
+Node overrides in `roon.env`: `ROON_ZONE_NAME`, `CONFIG_PATH`, `PORT`. Keep the production port at 8766 because GTK/proxy routes expect it. Roon pairing is saved in `/var/lib/pi-home/roon/`, not an environment variable.
 
 ## Updates and release channels
 
@@ -163,7 +165,7 @@ python3 -m venv .venv
 cp config.example.toml config.toml
 cp .env.example .env
 # Set a local admin password; optionally enable simulated bus display.
-.venv/bin/pi-bus-time-display --simulate --config config.toml --env .env
+.venv/bin/pi-home --simulate --config config.toml --env .env
 ```
 
 For the controller, in another terminal:

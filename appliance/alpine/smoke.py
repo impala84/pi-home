@@ -13,7 +13,7 @@ gi.require_version("Graphene", "1.0")
 gi.require_foreign("cairo")
 from gi.repository import Gtk, Graphene  # noqa: F401
 
-ROOT = Path("/opt/pi-bus-time-display")
+ROOT = Path("/opt/pi-home")
 processes = []
 
 
@@ -25,12 +25,12 @@ def get(port, path):
 
 try:
     processes.append(subprocess.Popen([
-        str(ROOT / ".venv/bin/pi-bus-time-display"),
-        "--config", "/etc/pi-bus-time-display/config.toml",
-        "--env", "/etc/pi-bus-time-display/secrets.env",
-        "--state-dir", "/var/lib/pi-bus-time-display", "--host", "127.0.0.1",
+        str(ROOT / ".venv/bin/pi-home"),
+        "--config", "/etc/pi-home/config.toml",
+        "--env", "/etc/pi-home/secrets.env",
+        "--state-dir", "/var/lib/pi-home", "--host", "127.0.0.1",
     ], env={**os.environ, "PI_HOME_APPLIANCE_PLATFORM": "alpine-prototype"}))
-    processes.append(subprocess.Popen(["node", str(ROOT / "roon-controller/server.js")], cwd="/var/lib/pi-bus-time-display/roon"))
+    processes.append(subprocess.Popen(["node", str(ROOT / "roon-controller/server.js")], cwd="/var/lib/pi-home/roon"))
     for port, path in ((8765, "/api/status"), (8766, "/api/state")):
         for attempt in range(30):
             assert all(p.poll() is None for p in processes), "A runtime exited"
@@ -48,7 +48,7 @@ try:
     except urllib.error.HTTPError as error:
         assert error.code == 501
         assert "unavailable" in json.load(error)["error"]
-    assert not Path("/var/lib/pi-bus-time-display/system-action-queue").exists()
+    assert not Path("/var/lib/pi-home/system-action-queue").exists()
     print("Alpine ARM64: GTK/Cairo imports and both HTTP services passed; unsupported updates rejected.")
 finally:
     for process in processes:

@@ -2,6 +2,6 @@
 description="Local-only Pi Home first-boot setup helper"
 supervisor=supervise-daemon
 command=/usr/bin/python3
-command_args=/opt/pi-bus-time-display/appliance/alpine/setup_service.py
+command_args=/opt/pi-home/appliance/alpine/setup_service.py
 respawn_delay=3
-depend() { need localmount dbus NetworkManager pi-home-firstboot; }
+depend() { need localmount dbus networkmanager pi-home-firstboot; }

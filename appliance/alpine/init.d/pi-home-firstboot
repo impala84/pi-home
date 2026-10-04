@@ -3,7 +3,7 @@ description="Generate unique Pi Home credentials on first boot"
 depend() { need localmount; before pi-home-api pi-home-roon; }
 start() {
     # Do not create credentials during the image build.
-    if [ ! -e /var/lib/pi-bus-time-display/alpine-initialized ]; then
-        /usr/bin/python3 /opt/pi-bus-time-display/appliance/alpine/firstboot.py || return 1
+    if [ ! -e /var/lib/pi-home/alpine-initialized ]; then
+        /usr/bin/python3 /opt/pi-home/appliance/alpine/firstboot.py || return 1
     fi
 }

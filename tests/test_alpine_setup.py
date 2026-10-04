@@ -14,7 +14,7 @@ class AlpineSetupTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(); self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
-        config = self.root / "etc/pi-bus-time-display"; config.mkdir(parents=True)
+        config = self.root / "etc/pi-home"; config.mkdir(parents=True)
         (config / "config.toml").write_text((ROOT / "config.example.toml").read_text())
         (config / "secrets.env").write_text("ADMIN_PASSWORD=old\nADMIN_USERNAME=admin\n")
         boot = self.root / "boot"; (boot / "overlays").mkdir(parents=True)
@@ -32,12 +32,12 @@ class AlpineSetupTests(unittest.TestCase):
         self.setup.handle({"action": "finish", "password": "my-private-password"})
         self.assertTrue(self.setup.saved()["complete"])
         self.assertEqual((self.root / "etc/hostname").read_text(), "pi-home-lounge\n")
-        config = (self.root / "etc/pi-bus-time-display/config.toml").read_text()
+        config = (self.root / "etc/pi-home/config.toml").read_text()
         self.assertIn('roon_zone_name = "Lounge"', config); self.assertIn('timezone = "Europe/London"', config)
         boot = (self.root / "boot/config.txt").read_text()
         self.assertIn("ili79600-10-1inch,swapxy,invx", boot); self.assertIn("kernel=vmlinuz-rpi", boot)
         self.assertNotIn("password", self.setup.progress.read_text())
-        env = self.root / "etc/pi-bus-time-display/secrets.env"
+        env = self.root / "etc/pi-home/secrets.env"
         self.assertIn("ADMIN_PASSWORD=my-private-password", env.read_text()); self.assertEqual(env.stat().st_mode & 0o777, 0o600)
         self.assertEqual(self.run.call_args.args[0], ["rc-service", "pi-home-api", "restart"])
 
@@ -54,6 +54,16 @@ class AlpineSetupTests(unittest.TestCase):
         self.run.side_effect = ValueError("Connection failed")
         with self.assertRaises(ValueError): self.setup.handle({"action": "wifi", "ssid": "Home", "password": "secret"})
         self.assertFalse(self.setup.progress.exists())
+
+    def test_failed_api_restart_leaves_finish_retryable(self):
+        self.setup.save({"hostname": "pi-home", "network": True, "roon": True, "display": True})
+        self.run.side_effect = ValueError("Service restart failed")
+        with self.assertRaises(ValueError):
+            self.setup.handle({"action": "finish", "password": "valid-password"})
+        self.assertFalse(self.setup.saved().get("complete", False))
+        self.run.side_effect = None
+        self.setup.handle({"action": "finish", "password": "valid-password"})
+        self.assertTrue(self.setup.saved()["complete"])
 
     def test_wifi_uses_argument_list_not_shell_and_keeps_secrets_out_of_progress(self):
         self.setup.handle({"action": "wifi", "ssid": "Home;not-a-command", "password": "private-secret"})

@@ -61,7 +61,7 @@ class Setup:
         atomic(self.progress, json.dumps(state), 0o600)
 
     def setting(self, key, value):
-        path = self.root / "etc/pi-bus-time-display/config.toml"
+        path = self.root / "etc/pi-home/config.toml"
         text = read(path)
         replacement = f"{key} = {json.dumps(value)}"
         text, count = re.subn(rf"^{key}\s*=.*$", lambda _: replacement, text, flags=re.M)
@@ -129,7 +129,7 @@ class Setup:
                 flags = {"normal": "", "90": ",swapxy,invx", "180": ",invx,invy", "270": ",swapxy,invy"}[rotation]
                 text += f"\n# BEGIN PI HOME SETUP\n[all]\ndtoverlay={overlay}{flags}\n# END PI HOME SETUP\n"
             atomic(boot, text)
-            config = self.root / "etc/pi-bus-time-display"
+            config = self.root / "etc/pi-home"
             atomic(config / "display-profile", profile); atomic(config / "display-transform", rotation)
             self.setting("display_theme", theme); self.setting("timezone", timezone)
             state.update(display=True, profile=profile, rotation=rotation, theme=theme, timezone=timezone)
@@ -139,13 +139,13 @@ class Setup:
             password = str(data.get("password", ""))
             if len(password) < 10 or len(password) > 128 or any(c in password for c in "\r\n\x00"):
                 raise ValueError("Choose a web settings password of 10–128 characters.")
-            env = self.root / "etc/pi-bus-time-display/secrets.env"
+            env = self.root / "etc/pi-home/secrets.env"
             text = re.sub(r"^ADMIN_PASSWORD=.*$", lambda _: "ADMIN_PASSWORD=" + password, read(env), flags=re.M)
             atomic(env, text, 0o600)
+            self.run(["rc-service", "pi-home-api", "restart"])
             state["complete"] = True
         else: raise ValueError("Unknown setup action.")
         self.save(state)
-        if action == "finish": self.run(["rc-service", "pi-home-api", "restart"])
         return {"ok": True, "progress": state}
 
 

@@ -23,4 +23,4 @@ def initialize(config_dir: Path, state_dir: Path) -> None:
 
 
 if __name__ == "__main__":
-    initialize(Path("/etc/pi-bus-time-display"), Path("/var/lib/pi-bus-time-display"))
+    initialize(Path("/etc/pi-home"), Path("/var/lib/pi-home"))

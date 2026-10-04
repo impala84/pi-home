@@ -18,7 +18,7 @@ def request(data):
 class Wizard(Gtk.Application):
     def __init__(self):
         super().__init__(application_id="uk.co.dallabs.PiHome.Setup")
-        self.stage = 0; self.progress = {}; self.entry = None; self.shift = False; self.busy = False; self.initial = True
+        self.stage = 0; self.progress = {}; self.entry = None; self.shift = False; self.symbols = False; self.busy = False; self.initial = True
         self.connect("activate", self.activate)
 
     def label(self, text):
@@ -79,18 +79,20 @@ class Wizard(Gtk.Application):
 
     def draw_keyboard(self):
         self.clear(self.keyboard)
-        for chars in ("1234567890", "qwertyuiop", "asdfghjkl", "zxcvbnm-._@"):
+        rows = ("1234567890", "!@#$%^&*()", "-_=+[]{}:/", "\\|;,.?<>~`") if self.symbols else ("1234567890", "qwertyuiop", "asdfghjkl", "zxcvbnm-._@")
+        for chars in rows:
             row = Gtk.Box(spacing=3); row.set_homogeneous(True)
             for char in chars:
                 value = char.upper() if self.shift else char
                 key = self.button(value, lambda c=value: self.type_key(c)); key.add_css_class("key"); key.set_focusable(False); row.append(key)
             self.keyboard.append(row)
         row = Gtk.Box(spacing=3); row.set_homogeneous(True)
-        for title, callback in (("Shift", self.toggle_shift), ("Space", lambda: self.type_key(" ")), ("⌫", self.backspace), ("Hide keyboard", lambda: self.keyboard.set_visible(False))):
+        for title, callback in (("Shift", self.toggle_shift), ("ABC" if self.symbols else "Symbols", self.toggle_symbols), ("Space", lambda: self.type_key(" ")), ("⌫", self.backspace), ("Hide", lambda: self.keyboard.set_visible(False))):
             key = self.button(title, callback); key.set_focusable(False); row.append(key)
         self.keyboard.append(row)
 
     def toggle_shift(self): self.shift = not self.shift; self.draw_keyboard()
+    def toggle_symbols(self): self.symbols = not self.symbols; self.draw_keyboard()
     def type_key(self, value):
         if self.entry:
             bounds = self.entry.get_selection_bounds()

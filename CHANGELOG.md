@@ -1,5 +1,7 @@
 # Changelog
 
+- Alpine prototype and new installers use Pi Home installation/configuration/state paths, with legacy compatibility links preserving existing settings and pairing.
+
 ## Alpine prototype — unreleased experiment
 
 - Add a native first-boot setup wizard with device naming, Ethernet/Wi-Fi,

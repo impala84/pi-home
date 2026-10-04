@@ -11,6 +11,7 @@ license = {text = "MIT"}
 dependencies = []
 
 [project.scripts]
+pi-home = "pi_bus_time_display.server:main"
 pi-bus-time-display = "pi_bus_time_display.server:main"
 
 [tool.setuptools]
