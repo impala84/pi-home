@@ -801,6 +801,12 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
             super().do_GET()
 
         def do_POST(self):
+            if os.getenv("PI_HOME_APPLIANCE_PLATFORM") == "alpine-prototype" and self.path in {
+                "/api/device/update", "/api/device/screen-power", "/api/device/brightness",
+                "/api/device/roon-bridge", "/api/admin/system-action", "/api/admin/brightness",
+            }:
+                self.send_json(501, b'{"error":"OS controls and in-app updates are unavailable in the Alpine prototype"}')
+                return
             if self.path == "/api/admin/display-capture":
                 if not self.authorised():
                     return

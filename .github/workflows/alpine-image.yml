@@ -17,8 +17,7 @@ jobs:
         run: bash appliance/alpine/build-image.sh
       - name: Validate Alpine runtime without pretending to boot the Pi
         run: |
-          docker run --rm pi-home-alpine:prototype .venv/bin/python -c 'import gi; gi.require_version("Gtk", "4.0"); gi.require_version("Graphene", "1.0"); gi.require_foreign("cairo"); from gi.repository import Gtk, Graphene; import pi_bus_time_display'
-          docker run --rm -w /opt/pi-bus-time-display/roon-controller pi-home-alpine:prototype node -e 'require("node-roon-api"); require("./discovery-model")'
+          docker run --rm --user morningbus pi-home-alpine:prototype .venv/bin/python appliance/alpine/smoke.py
       - uses: actions/upload-artifact@v4
         with:
           name: pi-home-alpine-prototype

@@ -18,11 +18,11 @@ docker build --platform linux/arm64 -t pi-home-alpine:prototype -f "$repo/applia
 container=$(docker create pi-home-alpine:prototype)
 mkdir "$build_dir/rootfs" "$build_dir/boot"
 docker export "$container" | sudo tar --same-owner -x -C "$build_dir/rootfs"
-cp -a "$build_dir/rootfs/boot/." "$build_dir/boot/"
-cp "$repo/appliance/alpine/config.txt" "$repo/appliance/alpine/cmdline.txt" "$build_dir/boot/"
+sudo cp -a "$build_dir/rootfs/boot/." "$build_dir/boot/"
+sudo cp "$repo/appliance/alpine/config.txt" "$repo/appliance/alpine/cmdline.txt" "$build_dir/boot/"
 truncate -s 256M "$build_dir/boot.fat"
 mkfs.vfat -F 32 -n PIBOOT "$build_dir/boot.fat"
-mcopy -i "$build_dir/boot.fat" -s "$build_dir/boot/"* ::/
+sudo mcopy -i "$build_dir/boot.fat" -s "$build_dir/boot/"* ::/
 truncate -s 1792M "$build_dir/root.ext4"
 sudo mkfs.ext4 -F -L PIROOT -d "$build_dir/rootfs" "$build_dir/root.ext4"
 sudo e2fsck -fn "$build_dir/root.ext4"
