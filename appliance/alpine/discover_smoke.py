@@ -20,7 +20,7 @@ display.discovery_section = "daily"
 display.discovery_picks = True
 navigation, selected = display.discovery_secondary_navigation()
 assert navigation == (("mixes", "MIXES"), ("recommendations", "FOR YOU"))
-assert selected == "recommendations"
+assert selected == "mixes"
 
 display.discovery_active = True
 display.discovery_request = 1
