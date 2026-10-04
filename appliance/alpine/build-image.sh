@@ -14,7 +14,7 @@ cleanup() {
   echo "Build working files: $build_dir"
 }
 trap cleanup EXIT
-docker build --platform linux/arm64 -t pi-home-alpine:prototype -f "$repo/appliance/alpine/Dockerfile" "$repo"
+docker build --platform linux/arm64 --build-arg "PI_HOME_SOURCE_SHA=$(git -C "$repo" rev-parse HEAD)" -t pi-home-alpine:prototype -f "$repo/appliance/alpine/Dockerfile" "$repo"
 container=$(docker create pi-home-alpine:prototype)
 mkdir "$build_dir/rootfs" "$build_dir/boot"
 docker export "$container" | sudo tar --same-owner -x -C "$build_dir/rootfs"

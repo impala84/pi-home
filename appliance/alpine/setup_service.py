@@ -91,6 +91,11 @@ class Setup:
             try: connected = self.connected()
             except (ValueError, subprocess.TimeoutExpired): connected = False
             return {"ok": True, "progress": state, "connected": connected, "roon": self.roon()}
+        if action == "update":
+            if not state.get("complete"): raise ValueError("Finish setup before updating.")
+            atomic(self.root / "var/lib/pi-home/update-status", "Update · Queued…\n")
+            subprocess.Popen(["/usr/local/sbin/pi-home-alpine-update"], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+            return {"ok": True, "queued": True}
         if action == "reboot" and state.get("complete"):
             threading.Timer(2, lambda: self.run(["/sbin/reboot"])).start()
             return {"ok": True}

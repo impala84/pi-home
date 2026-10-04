@@ -117,6 +117,15 @@ class AlpineSetupTests(unittest.TestCase):
         self.assertEqual(run.call_args.args[0], ["chpasswd"])
         self.assertEqual(run.call_args.kwargs["input"], "admin:safe-private-password\n")
 
+    def test_update_requires_completed_setup_and_uses_fixed_updater(self):
+        with patch.object(module.subprocess, "Popen") as spawn:
+            with self.assertRaises(ValueError): self.setup.handle({"action": "update"})
+            spawn.assert_not_called()
+            (self.root / "var/lib/pi-home").mkdir()
+            self.setup.save({"complete": True})
+            self.assertTrue(self.setup.handle({"action": "update"})["queued"])
+            self.assertEqual(spawn.call_args.args[0], ["/usr/local/sbin/pi-home-alpine-update"])
+
     def test_dsi_orientation_only_selects_current_dsi_mode(self):
         spec = importlib.util.spec_from_file_location("orientation", ROOT / "appliance/alpine/setup_orientation.py")
         orientation = importlib.util.module_from_spec(spec); spec.loader.exec_module(orientation)

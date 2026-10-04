@@ -105,7 +105,16 @@ profiles and password lengths are validated. Wi-Fi secrets are passed to
 NetworkManager without shell interpretation or command-output logging and are
 not recorded in the progress file. Privileged setup mutations are locked after
 completion (status and an explicit completion reboot remain available).
-Existing general-purpose OS/update controls remain disabled in this prototype.
+General-purpose OS controls remain disabled. The Update button now calls a
+root-owned local helper, allowed only after setup is complete. It follows the
+latest successful Alpine image workflow revision on `alpine-appliance-prototype`,
+not arbitrary URLs or Stable/Beta Pi OS releases. Application source and real
+Python/npm dependencies are prepared separately under `/opt/pi-home-releases`.
+The current path switches atomically after preparation; service health failures
+restore the previous application. Configuration, secrets, Wi-Fi and Roon pairing
+remain outside deployment directories. Kernel, firmware and APK upgrades are not
+performed. Old application deployments are retained for recovery, so repeated
+updates need available disk space; automatic retention cleanup is not implemented.
 
 The image is approximately 2 GiB before compression. It does not expand its
 partition automatically yet; extra card capacity is unused. Build dependencies
@@ -170,11 +179,13 @@ the network. This revision still requires a new image or local shell access.
 
 - Roon **controller**, not Roon Bridge audio endpoint. Roon Bridge's Linux
   compatibility/redistribution is a separate gate; this image does not bundle it.
-- OS controls (updates, Wi-Fi changes, reboot, profile/rotation, brightness and
+- OS controls (Wi-Fi changes, reboot, profile/rotation, brightness and
   LED actions) reject requests explicitly in prototype mode. Their systemd-based
   privileged worker is not installed. UI settings may still show those controls.
-- No recovery console, rootfs expansion, OS
-  rollback, update-channel integration or power-loss qualification yet.
+- No recovery console, rootfs expansion, OS rollback, Stable/Beta OS-channel
+  integration or power-loss qualification yet. Application rollback is present;
+  the new image starts with atomic deployment links, but power-loss safety is
+  not qualified and runtime checks do not prove physical touch correctness.
 - No claim of 1GB viability until measured on real Pi hardware. Record available
   RAM and peaks across Now Playing, Browse, Discover and 24–48-hour operation.
 - Container imports and filesystem checks are not an emulated Pi boot, physical

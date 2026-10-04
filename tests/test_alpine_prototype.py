@@ -41,7 +41,7 @@ class AlpinePrototypeTests(unittest.TestCase):
     def test_unsupported_privileged_actions_fail_without_queuing(self):
         with tempfile.TemporaryDirectory() as folder, patch.dict(os.environ, {"PI_HOME_APPLIANCE_PLATFORM": "alpine-prototype"}):
             state = Path(folder)
-            for action in ("update", "reboot", "set_wifi", "set_display", "roon_start", "set_brightness"):
+            for action in ("reboot", "set_wifi", "set_display", "roon_start", "set_brightness"):
                 with self.assertRaisesRegex(ValueError, "unavailable in the Alpine prototype"):
                     write_control_request(state, {"action": action})
             self.assertEqual(list(state.iterdir()), [])

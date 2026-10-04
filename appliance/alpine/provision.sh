@@ -24,7 +24,7 @@ ln -s /var/lib/pi-home /var/lib/pi-bus-time-display
 cp config.example.toml /etc/pi-home/config.toml
 sed -i 's/display_theme = "fresh-mint"/display_theme = "roon"/' /etc/pi-home/config.toml
 cp .env.example /etc/pi-home/secrets.env
-printf '%s\n' 'ALPINE PROTOTYPE: OS controls and in-app updates are not available.' > /var/lib/pi-home/update-status
+printf '%s\n' 'Ready' > /var/lib/pi-home/update-status
 chmod 600 /etc/pi-home/secrets.env
 chown -R morningbus:morningbus /etc/pi-home /var/lib/pi-home
 python3 -m venv --system-site-packages .venv
@@ -34,6 +34,9 @@ chmod 755 native-display/pi_bus_native.py scripts/pi-bus-cage-launch
 chmod 755 appliance/alpine/display-session
 cp appliance/alpine/reset-password.py /usr/local/bin/pi-home-reset-password
 chmod 755 /usr/local/bin/pi-home-reset-password
+mkdir -p /usr/local/sbin
+cp appliance/alpine/updater.py /usr/local/sbin/pi-home-alpine-update
+chmod 755 /usr/local/sbin/pi-home-alpine-update
 cp appliance/alpine/init.d/* /etc/init.d/
 chmod 755 /etc/init.d/pi-home-*
 cp appliance/alpine/display-launch /usr/local/bin/pi-home-display-launch
@@ -67,3 +70,8 @@ test -s /boot/bcm2712-rpi-5-b.dtb
 test -s /boot/overlays/vc4-kms-dsi-ili79600-10-1inch.dtbo
 # Record the exact resolved package versions; repositories may receive fixes.
 apk info -vv > /opt/pi-home/appliance/alpine/packages-resolved.txt
+# Start with the same atomic deployment layout the updater uses. This avoids
+# converting the live directory into a symlink during the first update.
+mkdir -p /opt/pi-home-releases
+mv /opt/pi-home /opt/pi-home-releases/initial-image
+ln -s pi-home-releases/initial-image /opt/pi-home

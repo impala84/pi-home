@@ -625,7 +625,16 @@ def write_control_request(state_dir: Path, request: dict) -> bool:
     as display-off immediately followed by display-on.
     """
     if os.getenv("PI_HOME_APPLIANCE_PLATFORM") == "alpine-prototype":
-        raise ValueError("OS controls and in-app updates are unavailable in the Alpine prototype")
+        if request.get("action") == "update":
+            try:
+                with socket.socket(socket.AF_UNIX) as client:
+                    client.settimeout(5); client.connect("/run/pi-home-setup.sock")
+                    client.sendall(b'{"action":"update"}\n')
+                    result = json.loads(client.makefile("rb").readline(4096))
+            except OSError as error: raise ValueError("Alpine update helper is not ready. Please retry.") from error
+            if not result.get("ok"): raise ValueError(result.get("error", "Could not start Alpine update"))
+            return bool(result.get("queued"))
+        raise ValueError("OS controls are unavailable in the Alpine prototype")
     with CONTROL_REQUEST_LOCK:
         state_dir.mkdir(parents=True, exist_ok=True)
         queue_dir = state_dir / "system-action-queue"
@@ -766,6 +775,9 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
             if self.path in {"/api/admin/releases", "/api/admin/releases?refresh=1"}:
                 if not self.authorised():
                     return
+                if os.getenv("PI_HOME_APPLIANCE_PLATFORM") == "alpine-prototype":
+                    result = {"installed_version": __version__, "release_channel": "alpine", "latest_version": None, "update_available": False, "status": "prototype", "message": "Update follows verified alpine-appliance-prototype builds; Stable/Beta OS channels are not used."}
+                    self.send_json(200, json.dumps(result).encode()); return
                 result = releases.check(state.config.release_channel, __version__, refresh=self.path.endswith("refresh=1"))
                 self.send_json(200, json.dumps(result).encode())
                 return
@@ -802,10 +814,10 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
 
         def do_POST(self):
             if os.getenv("PI_HOME_APPLIANCE_PLATFORM") == "alpine-prototype" and self.path in {
-                "/api/device/update", "/api/device/screen-power", "/api/device/brightness",
-                "/api/device/roon-bridge", "/api/admin/system-action", "/api/admin/brightness",
+                "/api/device/screen-power", "/api/device/brightness",
+                "/api/device/roon-bridge", "/api/admin/brightness",
             }:
-                self.send_json(501, b'{"error":"OS controls and in-app updates are unavailable in the Alpine prototype"}')
+                self.send_json(501, b'{"error":"OS controls are unavailable in the Alpine prototype"}')
                 return
             if self.path == "/api/admin/display-capture":
                 if not self.authorised():
@@ -861,10 +873,12 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
                     self.end_headers()
                 return
             if self.path == "/api/device/update":
-                if self.client_address[0] not in {"127.0.0.1", "::1"}:
+                if self.client_address[0] not in {"127.0.0.1", "::1"} or any(self.headers.get(name) for name in ("X-Forwarded-For", "Forwarded", "X-Real-IP")):
                     self.send_json(403, b'{"error":"Touchscreen only"}')
                     return
-                queued = write_control_request(mode_path.parent, {"action": "update"})
+                try: queued = write_control_request(mode_path.parent, {"action": "update"})
+                except (OSError, ValueError) as error:
+                    self.send_json(503, json.dumps({"error": str(error)}).encode()); return
                 self.send_json(202, json.dumps({"ok": True, "queued": queued}).encode())
                 return
             if self.path == "/api/device/screen-power":

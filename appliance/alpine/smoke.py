@@ -41,7 +41,7 @@ try:
                 if attempt == 29:
                     raise
                 time.sleep(0.2)
-    request = urllib.request.Request("http://127.0.0.1:8765/api/device/update", data=b"{}", headers={"Content-Type": "application/json"})
+    request = urllib.request.Request("http://127.0.0.1:8765/api/device/brightness", data=b"{}", headers={"Content-Type": "application/json"})
     try:
         urllib.request.urlopen(request, timeout=2)
         raise AssertionError("Unsupported update was accepted")

@@ -1843,6 +1843,7 @@ class Display(Gtk.Application):
         queued = bool(result and result.get("queued", True))
         GLib.idle_add(self.device_status.set_text, "Update · Queued…" if queued else ("Update already running…" if result else "Could not start update"))
         if result:
+            self.update_status_seen = True
             self.last_system_fetch = 0
             GLib.idle_add(self.start_poll)
         else:

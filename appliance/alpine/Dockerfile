@@ -16,3 +16,5 @@ COPY tools/discovery-wire.cjs ./tools/discovery-wire.cjs
 COPY config.example.toml .env.example ./
 COPY appliance/alpine/ ./appliance/alpine/
 RUN sh appliance/alpine/provision.sh
+ARG PI_HOME_SOURCE_SHA
+RUN test -n "$PI_HOME_SOURCE_SHA" && printf '%s\n' "$PI_HOME_SOURCE_SHA" > /opt/pi-home/.source-commit
