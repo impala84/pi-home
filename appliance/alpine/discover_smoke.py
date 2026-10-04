@@ -76,7 +76,7 @@ assert display.discovery_pictures["discover:seed-art"]
 assert display.discovery_daily_sections.keys() == {"mixes", "recommendations"}
 assert display.discovery_daily_sections["mixes"] is scroller
 valid, bounds = display.discovery_scroll.compute_bounds(window)
-assert valid and bounds.get_x() + bounds.get_width() >= 1279, bounds
+assert valid and bounds.get_x() + bounds.get_width() >= window.get_width() - 1, (bounds, window.get_width())
 display.browser_sidebar.set_visible(True)
 display.browser_list.append(display.label("Stale Browse content"))
 requests = []

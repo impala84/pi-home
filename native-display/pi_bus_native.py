@@ -220,7 +220,6 @@ CSS += b"""
 .daily-card .queue-title { font-size: 20px; }.daily-card .queue-subtitle { font-size: 16px; }
 .discovery-scroll scrollbar, .daily-scroll scrollbar { opacity: 0; min-width: 0; min-height: 0; }
 .discovery-scroll overshoot.top, .discovery-scroll overshoot.bottom, .daily-scroll overshoot.left, .daily-scroll overshoot.right { background: transparent; box-shadow: none; }
-.touch-landscape .discovery-scroll { margin-right: -28px; }
 .daily-track { padding: 0 0 4px 10px; }
 .daily-track .queue-title { margin-top: 5px; }
 .daily-heading { margin: 2px 7px 0 7px; }
@@ -238,6 +237,8 @@ CSS += b"""
 .confirm-cancel, .confirm-reboot { min-height: 54px; padding: 8px 22px; border-radius: 8px; font-size: 17px; font-weight: 700; }
 .confirm-cancel { background: #343338; color: #fff; }.confirm-reboot { background: #817aeb; color: #fff; }
 .loading-notice { font-size: 14px; font-weight: normal; color: #aaa; background: transparent; padding: 4px 0; }
+.touch-landscape .roon-page { padding-right: 0; }
+.touch-landscape .roon-header, .touch-landscape .roon-page .nav, .touch-landscape .now-playing-content, .touch-landscape .queue-scroll, .touch-landscape .source-view { margin-right: 28px; }
 """
 
 
@@ -431,7 +432,7 @@ class Display(Gtk.Application):
     def build_roon(self):
         page = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8); page.add_css_class("page"); page.add_css_class("roon-page")
         self.zone = self.label("ROON NOW PLAYING", "eyebrow"); self.roon_clock = self.label("--:--", "clock", 1)
-        header_overlay = Gtk.Overlay(); header_overlay.set_child(self.header(self.zone, self.roon_clock))
+        header_overlay = Gtk.Overlay(); header_overlay.add_css_class("roon-header"); header_overlay.set_child(self.header(self.zone, self.roon_clock))
         subnav = Gtk.Box(spacing=12); subnav.add_css_class("roon-subnav"); subnav.set_halign(Gtk.Align.CENTER); subnav.set_valign(Gtk.Align.START); self.roon_subnav = subnav
         self.now_playing_tab = self.button("NOW PLAYING", self.show_roon_now, ""); self.now_playing_tab.add_css_class("active")
         self.queue_tab = self.button("QUEUE", lambda *_: self.set_roon_view("queue"), "")
@@ -453,7 +454,7 @@ class Display(Gtk.Application):
         self.discovery_sidebar = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2); self.discovery_sidebar.add_css_class("browser-sidebar"); self.discovery_sidebar.set_vexpand(True)
         self.discovery_body.append(self.discovery_sidebar); self.discovery_body.append(self.discovery_scroll)
         self.roon_views.add_named(self.discovery_body, "discover")
-        content = Gtk.Box(spacing=26); content.set_vexpand(True); content.set_margin_start(8); content.set_margin_end(8); content.set_margin_top(8); content.set_margin_bottom(8)
+        content = Gtk.Box(spacing=26); content.add_css_class("now-playing-content"); content.set_vexpand(True); content.set_margin_start(8); content.set_margin_end(8); content.set_margin_top(8); content.set_margin_bottom(8)
         self.artwork = Gtk.Picture(); self.artwork.add_css_class("artwork"); self.artwork.set_size_request(280, 280); self.artwork.set_valign(Gtk.Align.CENTER); self.artwork.set_content_fit(Gtk.ContentFit.COVER); self.set_browser_placeholder(self.artwork)
         artwork_button = Gtk.Button(); artwork_button.add_css_class("artwork-button"); artwork_button.set_halign(Gtk.Align.CENTER); artwork_button.set_valign(Gtk.Align.CENTER); artwork_button.set_child(self.artwork); artwork_button.connect("clicked", lambda *_: self.set_roon_view("details")); content.append(artwork_button); self.artwork_button = artwork_button
         centre = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=7); centre.set_valign(Gtk.Align.CENTER); centre.set_hexpand(True)
