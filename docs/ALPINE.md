@@ -4,6 +4,30 @@ Isolated branch: `alpine-appliance-prototype`, based on Discover beta.7.
 This is an experimental image factory, not a Stable/Beta application update.
 Do not install it over the working Pi. Use a separate SD card.
 
+## Blank-screen investigation — 4 October 2026
+
+The `ce7da54` installer image failed its first physical Pi 4B / 7-inch Touch
+Display 2 test. Direct read-only inspection of that image found `/.dockerenv`
+in the root filesystem. OpenRC uses that marker to classify the machine as
+Docker; hardware services such as udev exclude containers. The kernel has
+VC4, ILI9881 and Goodix support, but suppressing hardware startup prevents the
+normal cold-plug/device-module path. This is a confirmed image packaging bug
+and a strong explanation for the blank display, not a proven hardware diagnosis.
+The image's ext4 filesystem passed a read-only consistency check.
+
+Corrected revision `497b14e`: [image build and exported-root startup checks](https://github.com/impala84/pi-home/actions/runs/37187467742)
+passed, alongside the Alpine runtime and native GTK checks. Baseline checks
+passed 144 Python and 91 Node tests. This replaces `ce7da54` for the next
+physical test; it has not yet been verified to boot on the user's Pi.
+
+The factory now sanitises the exported root before packaging it: remove Docker
+and Podman markers, replace Docker-injected hostname/hosts/DNS configuration,
+then check OpenRC reports a non-container system and regenerates dependencies.
+Boot output is no longer quiet; OpenRC writes `/var/log/rc.log` and supervised
+Pi Home processes write private logs under `/var/log/pi-home/`. Filesystem check
+utilities are included. These checks supplement container tests, not physical
+Pi boot validation. Do not keep using the earlier `ce7da54` installer image.
+
 ## Verified factory build — 4 October 2026
 
 Installer revision `ce7da54`; [ARM64 installer image and native GTK checks](https://github.com/impala84/pi-home/actions/runs/37185600684)
