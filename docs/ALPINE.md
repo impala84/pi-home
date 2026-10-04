@@ -15,6 +15,14 @@ the Goodix rule explicitly clears `WL_OUTPUT` to prevent double input rotation.
 Region/theme remain a later step. This replaces the mapping strategy described
 in the historical notes below; physical acceptance is still required.
 
+Revision `2b48d7b`: [image build and native setup checks](https://github.com/impala84/pi-home/actions/runs/37192855390)
+passed, including the real GTK first-page choice/reboot request and resume into
+device naming, API runtime, SSH policy and updater staging/rollback checks.
+Baseline checks passed 156 Python tests and 91 Node tests. For Pi 4B with the
+7-inch Touch Display 2, select that exact display and 90° clockwise landscape
+on the first screen, then Apply and restart. This is not physical-touch
+acceptance; nothing was flashed or remotely installed.
+
 Revision `764694f`: [combined ARM64 image and update checks](https://github.com/impala84/pi-home/actions/runs/37191573089)
 passed, including both API services, real GTK setup/icons, SSH policy, real
 Python/npm staging, atomic rollback after a simulated failed health check,
