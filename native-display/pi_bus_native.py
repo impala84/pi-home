@@ -11,6 +11,7 @@ import select
 import struct
 import threading
 import time
+import tomllib
 import unicodedata
 import urllib.request
 import uuid
@@ -327,6 +328,11 @@ class Display(Gtk.Application):
         provider = Gtk.CssProvider(); provider.load_from_data(CSS)
         Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
         self.window = Gtk.ApplicationWindow(application=self); self.window.set_decorated(False); self.window.set_default_size(800, 480); self.window.fullscreen()
+        # Apply saved theme before the first frame, not after an API poll.
+        try:
+            initial_config = tomllib.loads(Path("/etc/pi-home/config.toml").read_text())
+            if initial_config.get("display_theme") == "roon": self.window.add_css_class("theme-roon")
+        except (OSError, ValueError): pass
         transparent = Gdk.MemoryTexture.new(
             1, 1, Gdk.MemoryFormat.R8G8B8A8_PREMULTIPLIED,
             GLib.Bytes.new(b"\x00\x00\x00\x00"), 4,

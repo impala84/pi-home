@@ -1,5 +1,5 @@
 """Construct all real GTK pages under Xvfb; no privileged/network actions."""
-from gi.repository import GLib
+from gi.repository import GLib, Gtk, Gdk
 from wizard import Wizard
 
 app = Wizard()
@@ -25,4 +25,7 @@ assert entry.get_text() == "abC"
 app.toggle_symbols(); app.type_key("/London")
 assert entry.get_text() == "abC/London"
 app.window.destroy()
+icons = Gtk.IconTheme.get_for_display(Gdk.Display.get_default())
+assert icons.has_icon("media-skip-forward-symbolic")
+assert icons.has_icon("media-skip-backward-symbolic")
 print("Native setup: all six real GTK pages and on-screen keyboard passed under Xvfb (not physical touch acceptance).")

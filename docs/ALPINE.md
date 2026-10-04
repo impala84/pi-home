@@ -17,8 +17,9 @@ The image's ext4 filesystem passed a read-only consistency check.
 
 Corrected revision `497b14e`: [image build and exported-root startup checks](https://github.com/impala84/pi-home/actions/runs/37187467742)
 passed, alongside the Alpine runtime and native GTK checks. Baseline checks
-passed 144 Python and 91 Node tests. This replaces `ce7da54` for the next
-physical test; it has not yet been verified to boot on the user's Pi.
+passed 144 Python and 91 Node tests. The user subsequently confirmed that
+this image booted on Pi 4B / 7-inch Touch Display 2; touch, onboarding and
+missing icons still needed improvement.
 
 The factory now sanitises the exported root before packaging it: remove Docker
 and Podman markers, replace Docker-injected hostname/hosts/DNS configuration,
@@ -55,12 +56,21 @@ GitHub artifacts expire after 14 days; the factory can rebuild the experiment.
 Alpine 3.24.2 ARM64, Raspberry Pi-patched kernel and firmware, persistent
 ext4 root filesystem (not a whole-system RAM disk), OpenRC supervised services,
 seatd/Cage/Wayland and the existing Python GTK4 native display. Node runs the
-existing Roon controller. No desktop, Chromium, SSH or shared root password.
+existing Roon controller. No desktop, Chromium or shared root password.
+OpenSSH starts by default, with root login forbidden and only `admin` allowed.
+The admin account stays locked until setup saves a confirmed password.
+Setup offers Enable SSH, on by default; turning it off stops the service and
+removes its boot entry. SSH and web settings share the initial password, but
+later password changes are independent. Do not forward SSH to the internet.
+SSH host keys are generated on-device, not distributed with the image.
 Ethernet DHCP and mDNS are included. Pi Home configuration and Roon pairing
 persist on the root filesystem. Bus Times is off; the initial theme is Roon.
 The native first-boot wizard now covers device naming, Ethernet/Wi-Fi,
 Roon authorisation/zone selection (or explicit setup-later), display profile,
-orientation, theme/timezone and a user-chosen web admin password. An on-screen
+orientation, theme/timezone and a confirmed user-chosen admin password. Fields
+offer password visibility, larger touch keys and pressed-state feedback.
+Timezone requires a regional choice rather than silently defaulting to UTC.
+An on-screen
 keyboard avoids requiring SSH or a physical keyboard. Settings are saved per
 step and interrupted setup resumes at the first incomplete step. Finish marks
 setup complete; subsequent boots go straight into the main native display.
@@ -114,11 +124,23 @@ touch keyboard behaviour and Roon LAN pairing still require physical acceptance.
 
 Display auto-detection is initially enabled. The build must include the Pi 5 device tree
 and 10-inch Touch Display 2 overlay, but package presence does not prove hardware
-operation. The wizard writes a backed-up, managed display overlay and touch
-rotation parameters; Touch Display 2 output rotation uses the existing Cage
+operation. The wizard writes a backed-up, managed display overlay. Cage handles
+both output and touch rotation, without duplicate input overlay transforms.
+Setup rotates a native portrait DSI output to landscape before showing GTK;
+saved orientation wins on later boots and HDMI is left unchanged.
+Touch Display 2 output rotation uses the existing Cage
 launcher on the next boot. Automatic/HDMI and original display profiles support
 Normal only in this prototype. The wizard rejects other rotations for those
 profiles rather than claiming they work. Display changes require restarting.
+
+## SSH password recovery
+
+After setup, connect with `ssh admin@DEVICE.local`, using your setup password.
+Run `sudo pi-home-reset-password` to enter and confirm a new web password
+without printing it or changing your SSH password. Settings and Roon pairing
+are retained; restarting the web API invalidates existing web sessions.
+The old image has no SSH server, so this cannot retroactively unlock it over
+the network. This revision still requires a new image or local shell access.
 
 ## Deliberate limitations
 

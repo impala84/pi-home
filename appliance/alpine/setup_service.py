@@ -41,9 +41,22 @@ def command(args):
     return result.stdout.strip()
 
 
+def set_login_password(password):
+    result = subprocess.run(["chpasswd"], input="admin:" + password + "\n", capture_output=True, text=True, timeout=15)
+    if result.returncode: raise ValueError("Could not set the SSH password. Please retry.")
+
+
+def validate_password(password):
+    if not 10 <= len(password) <= 128 or any(c in password for c in "\r\n\x00"):
+        raise ValueError("Choose a password of 10–128 characters.")
+    if password != password.strip().strip("'\""):
+        raise ValueError("Do not start or end the password with spaces or quotation marks.")
+
+
 class Setup:
-    def __init__(self, root=Path("/"), run=command, roon=None):
+    def __init__(self, root=Path("/"), run=command, roon=None, login_password=set_login_password):
         self.root = Path(root); self.run = run; self.roon = roon or self.roon_state
+        self.login_password = login_password
         self.progress = self.root / "var/lib/pi-home-setup/progress.json"
         self.progress.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
 
@@ -126,8 +139,9 @@ class Setup:
             overlay = PROFILES[profile]
             if overlay:
                 if not (self.root / f"boot/overlays/{overlay}.dtbo").is_file(): raise ValueError("Display driver is missing from this image.")
-                flags = {"normal": "", "90": ",swapxy,invx", "180": ",invx,invy", "270": ",swapxy,invy"}[rotation]
-                text += f"\n# BEGIN PI HOME SETUP\n[all]\ndtoverlay={overlay}{flags}\n# END PI HOME SETUP\n"
+                # Cage transforms both output and touch coordinates. Rotating
+                # the input again in the overlay can map taps twice.
+                text += f"\n# BEGIN PI HOME SETUP\n[all]\ndtoverlay={overlay}\n# END PI HOME SETUP\n"
             atomic(boot, text)
             config = self.root / "etc/pi-home"
             atomic(config / "display-profile", profile); atomic(config / "display-transform", rotation)
@@ -137,11 +151,20 @@ class Setup:
             if not all(state.get(key) for key in ("hostname", "network", "roon", "display")):
                 raise ValueError("Complete the setup steps first.")
             password = str(data.get("password", ""))
-            if len(password) < 10 or len(password) > 128 or any(c in password for c in "\r\n\x00"):
-                raise ValueError("Choose a web settings password of 10–128 characters.")
+            validate_password(password)
+            if password != data.get("confirmation"):
+                raise ValueError("The two passwords do not match. Please enter them again.")
             env = self.root / "etc/pi-home/secrets.env"
             text = re.sub(r"^ADMIN_PASSWORD=.*$", lambda _: "ADMIN_PASSWORD=" + password, read(env), flags=re.M)
             atomic(env, text, 0o600)
+            self.login_password(password)
+            if data.get("ssh", True):
+                self.run(["rc-update", "add", "sshd", "default"])
+                self.run(["rc-service", "sshd", "start"])
+            else:
+                self.run(["rc-update", "del", "sshd", "default"])
+                self.run(["rc-service", "sshd", "stop"])
+            state["ssh"] = bool(data.get("ssh", True))
             self.run(["rc-service", "pi-home-api", "restart"])
             state["complete"] = True
         else: raise ValueError("Unknown setup action.")

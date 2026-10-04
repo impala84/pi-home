@@ -6,6 +6,16 @@ test -f /etc/alpine-release
 adduser -D -h /var/lib/pi-home morningbus
 addgroup morningbus video
 addgroup morningbus input
+adduser -D -h /home/admin admin
+addgroup admin wheel
+passwd -l admin
+mkdir -p /etc/sudoers.d /etc/ssh/sshd_config.d
+printf '%s\n' '%wheel ALL=(ALL:ALL) ALL' > /etc/sudoers.d/pi-home
+chmod 440 /etc/sudoers.d/pi-home
+printf '%s\n' 'PermitRootLogin no' 'PasswordAuthentication yes' 'PermitEmptyPasswords no' 'AllowUsers admin' > /etc/ssh/sshd_config.d/pi-home.conf
+sed -i '1i Include /etc/ssh/sshd_config.d/*.conf' /etc/ssh/sshd_config
+# Host keys are generated uniquely on the device by the OpenRC sshd service.
+rc-update add sshd default
 mkdir -p /etc/pi-home /var/lib/pi-home/roon
 # Internal compatibility paths for existing runtime helpers; new paths use Pi Home.
 ln -s /opt/pi-home /opt/pi-bus-time-display
@@ -22,6 +32,8 @@ python3 -m venv --system-site-packages .venv
 npm --prefix roon-controller ci --omit=dev --no-audit --no-fund
 chmod 755 native-display/pi_bus_native.py scripts/pi-bus-cage-launch
 chmod 755 appliance/alpine/display-session
+cp appliance/alpine/reset-password.py /usr/local/bin/pi-home-reset-password
+chmod 755 /usr/local/bin/pi-home-reset-password
 cp appliance/alpine/init.d/* /etc/init.d/
 chmod 755 /etc/init.d/pi-home-*
 cp appliance/alpine/display-launch /usr/local/bin/pi-home-display-launch
@@ -43,7 +55,7 @@ rc-update add udev-trigger sysinit
 for service in hwclock modules sysctl bootmisc hostname localmount hwdrivers; do rc-update add "$service" boot; done
 for service in killprocs savecache mount-ro; do rc-update add "$service" shutdown; done
 for service in networking dbus networkmanager avahi-daemon seatd pi-home-firstboot pi-home-api pi-home-roon pi-home-setup pi-home-display; do rc-update add "$service" default; done
-# No SSH, shared password or interactive root console in a distributed image.
+# SSH is enabled, but admin stays locked until setup supplies a unique password.
 passwd -l root
 sed -i '/^[^#].*getty/s/^/#/' /etc/inittab
 printf '%s\n' 'features="base mmc ext4"' > /etc/mkinitfs/mkinitfs.conf

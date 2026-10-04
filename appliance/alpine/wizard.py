@@ -29,11 +29,13 @@ class Wizard(Gtk.Application):
 
     def activate(self, *_):
         self.window = Gtk.ApplicationWindow(application=self); self.window.set_title("Set up Pi Home"); self.window.fullscreen()
-        css = Gtk.CssProvider(); css.load_from_data(b"window { background:#1c1b24; color:#f5f5f5; } button { min-height:36px; padding:4px 10px; background:#302d42; color:#fff; } entry { min-height:40px; font-size:20px; } .title {font-size:28px;font-weight:700;color:#aaa2ff;} .primary {background:#817aeb;color:#111;} .key {min-height:28px;padding:2px;} label {font-size:17px;}")
+        css = Gtk.CssProvider(); css.load_from_data(b"window { background:#1c1b24; color:#f5f5f5; } button { min-height:40px; padding:4px 10px; background:#302d42; color:#fff; border-radius:8px; } button:active {background:#aaa2ff;color:#111;} entry { min-height:40px; font-size:20px; background:#282631;color:#fff; } .title {font-size:25px;font-weight:700;color:#aaa2ff;} .brand {font-size:15px;font-weight:800;color:#817aeb;letter-spacing:3px;} .primary {background:#817aeb;color:#111;} .key {min-height:34px;padding:2px;} label {font-size:17px;} .mint .brand, .mint .title {color:#6ed9ae;} .mint .primary, .mint button:active {background:#6ed9ae;}")
         Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), css, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
         self.outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         for edge in ("start", "end", "top", "bottom"): getattr(self.outer, "set_margin_" + edge)(14)
-        self.title = self.label("Welcome to Pi Home"); self.title.add_css_class("title"); self.outer.append(self.title)
+        header = Gtk.Box(spacing=14)
+        brand = self.label("PI HOME"); brand.add_css_class("brand"); header.append(brand)
+        self.title = self.label("Welcome to Pi Home"); self.title.add_css_class("title"); header.append(self.title); self.outer.append(header)
         scroll = Gtk.ScrolledWindow(); scroll.set_vexpand(True); scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         self.content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10); scroll.set_child(self.content); self.outer.append(scroll)
         self.status = self.label(""); self.outer.append(self.status)
@@ -73,6 +75,13 @@ class Wizard(Gtk.Application):
         entry = Gtk.Entry(); entry.set_placeholder_text(placeholder); entry.set_text(text); entry.set_visibility(not secret)
         focus = Gtk.EventControllerFocus(); focus.connect("enter", lambda *_: self.select_entry(entry)); entry.add_controller(focus)
         self.content.append(entry); return entry
+
+    def secret_field(self, placeholder):
+        entry = self.field(placeholder, secret=True)
+        show = Gtk.CheckButton(label="Show password")
+        show.connect("toggled", lambda toggle: entry.set_visibility(toggle.get_active()))
+        self.content.append(show)
+        return entry
 
     def select_entry(self, entry):
         self.entry = entry; self.keyboard.set_visible(True); self.draw_keyboard()
@@ -114,6 +123,8 @@ class Wizard(Gtk.Application):
         self.clear(self.content); self.clear(self.footer); self.keyboard.set_visible(False); self.entry = None
         titles = ["Welcome to Pi Home", "Name your device", "Connect to your network", "Connect to Roon", "Set up your display", "Finish setup"]
         self.title.set_text(f"{self.stage + 1}/6 · {titles[self.stage]}")
+        if self.progress.get("theme") == "fresh-mint": self.window.add_css_class("mint")
+        else: self.window.remove_css_class("mint")
         if self.stage:
             self.footer.append(self.button("Back", lambda: self.back()))
         self.footer.append(self.button("Refresh", self.refresh))
@@ -126,7 +137,7 @@ class Wizard(Gtk.Application):
             self.footer.append(self.button("Save and continue", lambda: self.advance({"action": "name", "hostname": name.get_text()})))
         elif self.stage == 2:
             self.content.append(self.label("Connected" if self.snapshot.get("connected") else "Plug in Ethernet, or enter your Wi-Fi details. Roon needs the same local network, not necessarily internet access."))
-            ssid = self.field("Wi-Fi name (SSID)"); password = self.field("Wi-Fi password", secret=True)
+            ssid = self.field("Wi-Fi name (SSID)"); password = self.secret_field("Wi-Fi password")
             self.content.append(self.button("Connect Wi-Fi", lambda: self.advance({"action": "wifi", "ssid": ssid.get_text(), "password": password.get_text()})))
             self.footer.append(self.button("Continue with current connection", lambda: self.advance({"action": "network"})))
         elif self.stage == 3:
@@ -136,33 +147,44 @@ class Wizard(Gtk.Application):
             select = self.button("Use this zone", lambda: self.advance({"action": "roon", "zone": zones[chooser.get_selected()]})); select.set_sensitive(bool(zones)); self.footer.append(select)
             self.content.append(self.button("Set up Roon later", lambda: self.advance({"action": "roon", "skip": True})))
         elif self.stage == 4:
-            self.content.append(self.label("Display changes apply after a restart. Use Automatic/Normal for HDMI. Original display rotation is not supported here yet."))
+            self.content.append(self.label("Choose your display and region. Touch Display 2 starts in landscape. Driver changes apply after restarting."))
             profiles = ["auto", "original", "touch2-5", "touch2-7", "touch2-10"]
             profile = Gtk.DropDown.new_from_strings(["Automatic / HDMI", "Original Touch Display", "Touch Display 2 · 5-inch", "Touch Display 2 · 7-inch", "Touch Display 2 · 10-inch"])
             profile.set_selected(profiles.index(self.progress.get("profile", "auto"))); self.content.append(profile)
             rotations = ["normal", "90", "180", "270"]; rotation = Gtk.DropDown.new_from_strings(["Normal", "90° clockwise", "180°", "270° clockwise"])
             rotation.set_selected(rotations.index(self.progress.get("rotation", "normal"))); self.content.append(rotation)
+            profile.connect("notify::selected", lambda *_: rotation.set_selected(1 if profiles[profile.get_selected()].startswith("touch2-") else 0))
             theme = Gtk.DropDown.new_from_strings(["Roon · purple", "Fresh Mint · full colour"]); theme.set_selected(1 if self.progress.get("theme") == "fresh-mint" else 0); self.content.append(theme)
-            timezone = self.field("Timezone, e.g. Europe/London", self.progress.get("timezone", "UTC"))
+            theme.connect("notify::selected", lambda *_: self.window.add_css_class("mint") if theme.get_selected() == 1 else self.window.remove_css_class("mint"))
+            self.content.append(self.label("Choose your local timezone; it cannot be inferred reliably from the Pi. UTC is not selected automatically."))
+            timezone = self.field("Timezone, e.g. Asia/Singapore", self.progress.get("timezone", ""))
+            regions = ["Choose region…", "Asia/Singapore", "Europe/London", "Europe/Paris", "America/New_York", "America/Los_Angeles", "Australia/Sydney", "Pacific/Auckland", "UTC"]
+            region = Gtk.DropDown.new_from_strings(regions); self.content.append(region)
+            region.connect("notify::selected", lambda *_: timezone.set_text(regions[region.get_selected()]) if region.get_selected() else None)
             self.footer.append(self.button("Save display", lambda: self.advance({"action": "display", "profile": profiles[profile.get_selected()], "rotation": rotations[rotation.get_selected()], "theme": ("roon", "fresh-mint")[theme.get_selected()], "timezone": timezone.get_text()})))
         elif self.stage == 5:
-            self.content.append(self.label(f"Device: {self.progress.get('hostname')}\nRoon: {self.progress.get('zone') or 'Set up later'}\nWeb settings: http://{self.progress.get('hostname')}.local:8765/admin\nUsername: admin\nChoose your web settings password (at least 10 characters)."))
-            password = self.field("Web settings password", secret=True)
-            self.footer.append(self.button("Finish and restart", lambda: self.finish(password.get_text(), True)))
-            self.content.append(self.button("Finish without restart", lambda: self.finish(password.get_text(), False)))
+            self.content.append(self.label(f"Web settings: http://{self.progress.get('hostname')}.local:8765/admin\nUsername: admin · Choose at least 10 characters.\nWhen SSH is enabled, admin uses this same initial password. Keep it somewhere safe."))
+            password = self.secret_field("Choose password")
+            confirmation = self.secret_field("Enter password again")
+            ssh = Gtk.CheckButton(label="Enable SSH (recommended for recovery)"); ssh.set_active(True); self.content.append(ssh)
+            self.footer.append(self.button("Finish and restart", lambda: self.finish(password.get_text(), True, confirmation.get_text(), ssh.get_active())))
+            self.content.append(self.button("Finish without restart", lambda: self.finish(password.get_text(), False, confirmation.get_text(), ssh.get_active())))
         child = self.footer.get_first_child()
         while child:
             child.set_hexpand(True)
             child = child.get_next_sibling()
+        if self.footer.get_last_child(): self.footer.get_last_child().add_css_class("primary")
 
     def next(self): self.stage += 1; self.render()
     def back(self): self.stage -= 1; self.render()
-    def finish(self, password, reboot):
+    def finish(self, password, reboot, confirmation="", ssh=True):
+        if password != confirmation:
+            self.status.set_text("Passwords do not match. Please enter them again."); return
         def saved(_):
             if reboot:
                 self.async_call({"action": "reboot"}, lambda _: self.quit())
             else: self.quit()
-        self.async_call({"action": "finish", "password": password}, saved)
+        self.async_call({"action": "finish", "password": password, "confirmation": confirmation, "ssh": ssh}, saved)
 
 
 if __name__ == "__main__": Wizard().run(None)

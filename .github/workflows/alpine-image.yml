@@ -21,6 +21,9 @@ jobs:
       - name: Exercise native setup pages using a disposable test-only display
         run: |
           docker run --rm pi-home-alpine:prototype sh -c 'apk add --no-cache xvfb-run && GDK_BACKEND=x11 GSK_RENDERER=cairo dbus-run-session xvfb-run -a -s "-screen 0 800x480x24" python3 appliance/alpine/wizard_smoke.py'
+      - name: Verify SSH account and security policy
+        run: |
+          docker run --rm pi-home-alpine:prototype sh -ec 'python3 -c "from appliance.alpine.setup_service import set_login_password; set_login_password(\"disposable-test-only\"); from pathlib import Path; entry=next(x for x in Path(\"/etc/shadow\").read_text().splitlines() if x.startswith(\"admin:\")); assert entry.split(\":\")[1].startswith(\"\u0024\")"; ssh-keygen -A; sshd -t; sshd -T | grep -q "permitrootlogin no"; sshd -T | grep -q "allowusers admin"; visudo -c'
       - uses: actions/upload-artifact@v4
         with:
           name: pi-home-alpine-prototype

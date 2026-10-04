@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 ROOT = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location("alpine_setup", ROOT / "appliance/alpine/setup_service.py")
@@ -22,24 +22,26 @@ class AlpineSetupTests(unittest.TestCase):
         for overlay in module.PROFILES.values():
             if overlay: (boot / "overlays" / (overlay + ".dtbo")).touch()
         self.run = Mock(return_value="connected")
-        self.setup = module.Setup(self.root, self.run, lambda: {"zones": [{"name": "Lounge"}]})
+        self.login_password = Mock()
+        self.setup = module.Setup(self.root, self.run, lambda: {"zones": [{"name": "Lounge"}]}, self.login_password)
 
     def test_full_setup_persists_password_and_does_not_play_audio(self):
         self.setup.handle({"action": "name", "hostname": "Pi-Home-Lounge"})
         self.setup.handle({"action": "network"})
         self.setup.handle({"action": "roon", "zone": "Lounge"})
         self.setup.handle({"action": "display", "profile": "touch2-10", "rotation": "90", "timezone": "Europe/London", "theme": "roon"})
-        self.setup.handle({"action": "finish", "password": "my-private-password"})
+        self.setup.handle({"action": "finish", "password": "my-private-password", "confirmation": "my-private-password"})
         self.assertTrue(self.setup.saved()["complete"])
         self.assertEqual((self.root / "etc/hostname").read_text(), "pi-home-lounge\n")
         config = (self.root / "etc/pi-home/config.toml").read_text()
         self.assertIn('roon_zone_name = "Lounge"', config); self.assertIn('timezone = "Europe/London"', config)
         boot = (self.root / "boot/config.txt").read_text()
-        self.assertIn("ili79600-10-1inch,swapxy,invx", boot); self.assertIn("kernel=vmlinuz-rpi", boot)
+        self.assertIn("ili79600-10-1inch", boot); self.assertNotIn("swapxy", boot); self.assertIn("kernel=vmlinuz-rpi", boot)
         self.assertNotIn("password", self.setup.progress.read_text())
         env = self.root / "etc/pi-home/secrets.env"
         self.assertIn("ADMIN_PASSWORD=my-private-password", env.read_text()); self.assertEqual(env.stat().st_mode & 0o777, 0o600)
         self.assertEqual(self.run.call_args.args[0], ["rc-service", "pi-home-api", "restart"])
+        self.login_password.assert_called_once_with("my-private-password")
 
     def test_invalid_names_never_execute_commands(self):
         for name in ("-bad", "bad-", "x;reboot", "a b", "../root", "x\n", "x" * 64):
@@ -59,10 +61,10 @@ class AlpineSetupTests(unittest.TestCase):
         self.setup.save({"hostname": "pi-home", "network": True, "roon": True, "display": True})
         self.run.side_effect = ValueError("Service restart failed")
         with self.assertRaises(ValueError):
-            self.setup.handle({"action": "finish", "password": "valid-password"})
+            self.setup.handle({"action": "finish", "password": "valid-password", "confirmation": "valid-password"})
         self.assertFalse(self.setup.saved().get("complete", False))
         self.run.side_effect = None
-        self.setup.handle({"action": "finish", "password": "valid-password"})
+        self.setup.handle({"action": "finish", "password": "valid-password", "confirmation": "valid-password"})
         self.assertTrue(self.setup.saved()["complete"])
 
     def test_wifi_uses_argument_list_not_shell_and_keeps_secrets_out_of_progress(self):
@@ -74,7 +76,7 @@ class AlpineSetupTests(unittest.TestCase):
         for rotation in ("90", "270"):
             self.setup.handle({"action": "display", "profile": "touch2-7", "rotation": rotation})
         text = (self.root / "boot/config.txt").read_text()
-        self.assertEqual(text.count("# BEGIN PI HOME SETUP"), 1); self.assertIn("swapxy,invy", text)
+        self.assertEqual(text.count("# BEGIN PI HOME SETUP"), 1); self.assertNotIn("swapxy", text)
         self.assertIn("kernel=vmlinuz-rpi", text)
 
     def test_invalid_zone_rotation_and_timezone_are_rejected(self):
@@ -94,6 +96,32 @@ class AlpineSetupTests(unittest.TestCase):
         target = self.root / "outside"; target.write_text("secret")
         link = self.root / "link"; link.symlink_to(target)
         with self.assertRaises(OSError): module.read(link)
+
+    def test_confirmation_and_ambiguous_passwords_are_rejected_before_changes(self):
+        self.setup.save({"hostname": "pi-home", "network": True, "roon": True, "display": True})
+        before = (self.root / "etc/pi-home/secrets.env").read_text()
+        for password, confirmation in (("valid-password", "different-password"), (" valid-password", " valid-password"), ('"valid-password"', '"valid-password"')):
+            with self.assertRaises(ValueError): self.setup.handle({"action": "finish", "password": password, "confirmation": confirmation})
+        self.assertEqual(before, (self.root / "etc/pi-home/secrets.env").read_text())
+        self.login_password.assert_not_called()
+
+    def test_ssh_can_be_disabled_explicitly(self):
+        self.setup.save({"hostname": "pi-home", "network": True, "roon": True, "display": True})
+        self.setup.handle({"action": "finish", "password": "valid-password", "confirmation": "valid-password", "ssh": False})
+        self.assertFalse(self.setup.saved()["ssh"])
+        self.assertIn(unittest.mock.call(["rc-update", "del", "sshd", "default"]), self.run.call_args_list)
+
+    def test_ssh_password_is_stdin_not_process_arguments(self):
+        with patch.object(module.subprocess, "run", return_value=Mock(returncode=0)) as run:
+            module.set_login_password("safe-private-password")
+        self.assertEqual(run.call_args.args[0], ["chpasswd"])
+        self.assertEqual(run.call_args.kwargs["input"], "admin:safe-private-password\n")
+
+    def test_dsi_orientation_only_selects_current_dsi_mode(self):
+        spec = importlib.util.spec_from_file_location("orientation", ROOT / "appliance/alpine/setup_orientation.py")
+        orientation = importlib.util.module_from_spec(spec); spec.loader.exec_module(orientation)
+        self.assertEqual(orientation.choose_output('HDMI-A-1 "HDMI"\n  1920x1080 px, 60 Hz (current)\nDSI-1 "DSI"\n  720x1280 px, 60 Hz (preferred, current)\n'), ("DSI-1", True))
+        self.assertEqual(orientation.choose_output('HDMI-A-1 "HDMI"\n  720x1280 px, 60 Hz (current)\n'), (None, False))
 
 
 if __name__ == "__main__": unittest.main()
