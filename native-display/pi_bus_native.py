@@ -482,7 +482,7 @@ class Display(Gtk.Application):
         self.discovery_body.set_orientation(Gtk.Orientation.VERTICAL if portrait else Gtk.Orientation.HORIZONTAL)
         self.discovery_sidebar.set_orientation(Gtk.Orientation.HORIZONTAL if portrait else Gtk.Orientation.VERTICAL)
         self.detail_panel.set_orientation(Gtk.Orientation.VERTICAL if portrait else Gtk.Orientation.HORIZONTAL)
-        artwork_size = min(width - 56, max(240, int(height * .42))) if portrait else (324 if width >= 1200 else min(280, max(220, height - 190)))
+        artwork_size = min(width - 64, max(200, height - (520 if width >= 600 else 440))) if portrait else (324 if width >= 1200 else min(280, max(220, height - 190)))
         self.artwork.set_size_request(artwork_size, artwork_size); self.artwork_button.set_size_request(artwork_size, artwork_size)
         detail_size = max(240, min(width - 56, int(height * .42))) if portrait else max(240, min(width, height) - 60)
         self.detail_artwork.set_size_request(detail_size, detail_size)
@@ -1052,6 +1052,7 @@ class Display(Gtk.Application):
             if self.settings_data.get("display_theme") == "roon": icon_name = icon_name.replace(".svg", "-roon.svg")
             icon_path = Path(__file__).with_name("icons") / icon_name
             icon_size = 108 if self.window.has_css_class("high-resolution") else 72
+            if portrait: icon_size = max(64, min(240, round((self.window.get_height() - 190) / max(4, len(entities)) * .7)))
             icon = Gtk.Image.new_from_gicon(Gio.FileIcon.new(Gio.File.new_for_path(str(icon_path)))); icon.set_pixel_size(icon_size); icon.set_size_request(icon_size, icon_size); icon.set_halign(Gtk.Align.CENTER); icon.set_valign(Gtk.Align.CENTER); icon.add_css_class("home-icon")
             button = Gtk.Button(); button.add_css_class("home-device-button"); button.set_hexpand(not portrait); button.set_vexpand(True); button.set_child(icon); button.connect("clicked", self.toggle_home, entity.get("entity_id", "")); control_row.append(button)
             details = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8); details.set_hexpand(True); details.set_valign(Gtk.Align.CENTER)
