@@ -16,6 +16,7 @@ window = Gtk.Window(default_width=1280, default_height=720); window.add_css_clas
 provider = Gtk.CssProvider(); provider.load_from_data(native.CSS)
 Gtk.StyleContext.add_provider_for_display(window.get_display(), provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 display = native.Display()
+display.window = window
 page = display.build_roon()
 window.set_child(page); window.present()
 context = native.GLib.MainContext.default()
