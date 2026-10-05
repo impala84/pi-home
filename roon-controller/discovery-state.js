@@ -53,6 +53,7 @@ class DiscoveryManager {
     }
     return {
       status: 'ready', items: mixes.status === 'ready' ? mixes.items || [] : [], groups: picks.status === 'ready' ? picks.groups || [] : [],
+      mixes_status: mixes.status, mixes_message: mixes.message || '',
       refreshing: mixes.status !== 'ready' || picks.status !== 'ready' || !!mixes.refreshing || !!picks.refreshing,
     };
   }

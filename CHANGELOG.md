@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1.0-beta.42 Alpine Beta — 6 October 2026
+
+- Gives portrait music pages a player/clock header followed by a separate underlined navigation row; removes vertically expanding horizontal menus and wasted browse space.
+- Uses full-width two-column Recent/New Releases covers, three-column Browse and larger swipeable Daily cards. Recent opens Added first in both orientations.
+- Stacks portrait bus route numbers above arrivals and rearranges Home into horizontal icon/control rows with horizontal level sliders.
+- Shows Mixes loading/unavailable state even when For You succeeds, rather than silently hiding a failed mix request.
+- Automatically reboots after changing a boot-level display profile; orientation and mounting changes restart the display without a full reboot.
+- Raises the reboot confirmation slightly above visual centre in both orientations.
+
 ## 1.1.0-beta.41 Alpine Beta — 6 October 2026
 
 - Removes the obsolete Alpine rejection of the local touchscreen Roon Bridge start/stop endpoint and routes it through the existing privileged service helper. Remote requests remain blocked.

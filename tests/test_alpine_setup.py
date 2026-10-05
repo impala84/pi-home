@@ -504,6 +504,16 @@ class AlpineSetupTests(unittest.TestCase):
         self.assertEqual(module.orientation_transform("touch2-10", "portrait", "inverted"), "180")
         self.assertEqual(module.orientation_transform("touch2-10", "landscape", "inverted"), "270")
 
+    def test_panel_profile_change_automatically_reboots_after_saving(self):
+        self.setup.save({"complete": True, "profile": "touch2-7"})
+        with patch.object(module.threading, "Timer") as timer:
+            result = self.setup.handle({"action": "set_display", "profile": "touch2-10", "orientation": "portrait"})
+            self.assertTrue(result["reboot_required"])
+            timer.assert_called_once()
+            timer.call_args.args[1]()
+            self.run.assert_called_with(["/sbin/reboot"])
+        self.assertEqual((self.root / "etc/pi-home/display-profile").read_text(), "touch2-10\n")
+
     def test_kernel_never_double_rotates_calibrated_touch(self):
         for rotation in ("normal", "90", "180", "270"):
             self.setup.handle({"action": "orientation", "profile": "touch2-7", "rotation": rotation})

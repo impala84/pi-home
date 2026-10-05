@@ -577,6 +577,9 @@ class Setup:
                     boot_id = Path("/proc/sys/kernel/random/boot_id").read_text(encoding="ascii").strip()
                     atomic(self.root / "var/lib/pi-home/reboot-required-boot-id", boot_id + "\n")
                 except OSError: pass
+                # A panel profile changes boot overlays. Apply it automatically;
+                # orientation/mounting alone still only restart the display.
+                threading.Timer(2, lambda: self.run(["/sbin/reboot"])).start()
                 return {"ok": True, "orientation": orientation, "mounting": mounting, "rotation": rotation, "reboot_required": True}
             self.run(["rc-service", "pi-home-input", "restart"])
             threading.Timer(.5, lambda: self.run(["rc-service", "pi-home-display", "restart"])).start()

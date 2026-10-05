@@ -173,6 +173,18 @@ class NativeBrowserControlsTests(unittest.TestCase):
         self.assertIn('horizontal.get_hadjustment()',source)
         self.assertIn('get_hadjustment().connect("value-changed", self.load_visible_discovery_artwork)',source)
 
+    def test_portrait_grids_use_viewport_without_reserving_a_vertical_rail(self):
+        monitor = SimpleNamespace(get_geometry=lambda: SimpleNamespace(width=720))
+        monitors = SimpleNamespace(get_n_items=lambda: 1, get_item=lambda _: monitor)
+        gdk = SimpleNamespace(Display=SimpleNamespace(get_default=lambda: SimpleNamespace(get_monitors=lambda: monitors)))
+        owner = SimpleNamespace(responsive_portrait=True, window=SimpleNamespace(get_width=lambda: 720))
+        self.assertEqual(native_method("browser_grid_metrics", {"Gdk": gdk})(owner)[0], 3)
+        for section in ("recent", "releases"):
+            columns, size = native_method("discovery_grid_metrics", {"Gdk": gdk})(owner, section)
+            self.assertEqual(columns, 2)
+            self.assertGreater(size, 300)
+        self.assertIn('self.discovery_recent_mode = "added"', SOURCE.read_text())
+
     def test_new_release_detail_uses_discover_back_rail_not_browse_search(self):
         source=SOURCE.read_text(encoding="utf-8")
         self.assertIn('self.discovery_section in {"recent", "daily", "releases"}',source)

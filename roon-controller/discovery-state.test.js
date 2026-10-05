@@ -2,6 +2,15 @@
 const test = require('node:test'); const assert = require('node:assert/strict'); const {EventEmitter} = require('node:events');
 const {DiscoveryManager} = require('./discovery-state');
 const tick = () => new Promise(resolve => setImmediate(resolve));
+test('Daily exposes failed mixes even when recommendations succeed', () => {
+  const manager = new DiscoveryManager();
+  manager.state = section => section === 'daily' ? {status:'unavailable', message:'Mixes unavailable'} : {status:'ready', groups:[{items:[]}]};
+  const home = manager.home();
+  assert.equal(home.status, 'ready');
+  assert.equal(home.mixes_status, 'unavailable');
+  assert.equal(home.mixes_message, 'Mixes unavailable');
+  assert.equal(home.groups.length, 1);
+});
 test('worker failures are cached, concurrent polls coalesce and private work is memory-bounded', async () => {
   let count = 0, child;
   const manager = new DiscoveryManager({spawn: (_, args, options) => {count++; assert.deepEqual(options.execArgv, ['--max-old-space-size=128']); child = new EventEmitter(); child.send = () => {}; child.kill = () => {}; return child;}});
