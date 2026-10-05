@@ -64,9 +64,13 @@ class Wizard(Gtk.Application):
             self.progress = result.get("progress", {})
             if self.progress.get("complete"): self.quit(); return
             if self.initial and self.progress:
-                self.stage = next((index for index, key in enumerate(("orientation", "hostname", "network", "roon", "display")) if not self.progress.get(key)), 5)
+                self.stage = next((index for index, key in enumerate(("orientation", "hostname", "network", "roon", "display", "software")) if not self.progress.get(key)), 6)
             self.initial = False
-            self.snapshot = result; self.render()
+            self.snapshot = result
+            if self.stage == 5 and self.progress.get("software"): self.stage = 6
+            self.render()
+            if result.get("software_busy"):
+                GLib.timeout_add_seconds(2, lambda: (self.refresh(), False)[1])
         self.async_call({"action": "status"}, loaded)
 
     def clear(self, box):
@@ -122,8 +126,8 @@ class Wizard(Gtk.Application):
 
     def render(self):
         self.clear(self.content); self.clear(self.footer); self.keyboard.set_visible(False); self.entry = None
-        titles = ["Choose your display", "Name your device", "Connect to your network", "Connect to Roon", "Choose theme and region", "Finish setup"]
-        self.title.set_text(f"{self.stage + 1}/6 · {titles[self.stage]}")
+        titles = ["Choose your display", "Name your device", "Connect to your network", "Connect to Roon", "Choose theme and region", "Choose optional software", "Finish setup"]
+        self.title.set_text(f"{self.stage + 1}/7 · {titles[self.stage]}")
         if self.progress.get("theme") == "fresh-mint": self.window.add_css_class("mint")
         else: self.window.remove_css_class("mint")
         if self.stage:
@@ -170,6 +174,21 @@ class Wizard(Gtk.Application):
             region.connect("notify::selected", lambda *_: timezone.set_text(regions[region.get_selected()]) if region.get_selected() else None)
             self.footer.append(self.button("Save and continue", lambda: self.advance({"action": "display", "profile": self.progress["profile"], "rotation": self.progress["rotation"], "theme": ("roon", "fresh-mint")[theme.get_selected()], "timezone": timezone.get_text()})))
         elif self.stage == 5:
+            self.content.append(self.label("Pi Home already includes storage expansion, time sync, downloads and diagnostics. Choose any additional services for this Pi."))
+            choices = self.progress.get("software_choices", {})
+            bridge = Gtk.CheckButton(label="Install Roon Bridge · use this Pi as an audio endpoint"); bridge.set_active(choices.get("roon_bridge", False)); self.content.append(bridge)
+            netdata = Gtk.CheckButton(label="Install Netdata · official stable Agent with automatic updates"); netdata.set_active(choices.get("netdata", False)); self.content.append(netdata)
+            self.content.append(self.label("Netdata Cloud can be connected later in web Settings. Downloads require internet access and may take several minutes."))
+            self.content.append(self.label(self.progress.get("software_status", "")))
+            def install():
+                self.async_call({"action": "software", "roon_bridge": bridge.get_active(), "netdata": netdata.get_active()}, lambda _: self.refresh())
+            self.footer.append(self.button("Install and continue", install))
+            self.content.append(self.button("Continue without optional software", lambda: self.async_call({"action": "software", "roon_bridge": False, "netdata": False}, lambda _: self.refresh())))
+            if self.snapshot.get("software_busy"):
+                self.content.set_sensitive(False); self.footer.set_sensitive(False)
+            else:
+                self.content.set_sensitive(True); self.footer.set_sensitive(True)
+        elif self.stage == 6:
             self.content.append(self.label(f"Web settings: http://{self.progress.get('hostname')}.local:8765/admin\nChoose the device account used for both Pi Home settings and SSH recovery."))
             username = self.field("Device username", self.progress.get("username", "admin"))
             password = self.secret_field("Choose password")

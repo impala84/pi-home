@@ -68,6 +68,7 @@ sed -i '/^[[:space:]]*makestep[[:space:]]/d' /etc/chrony/chrony.conf
 sed -i -E '/^[[:space:]]*(pool|server)[[:space:]]/ { /[[:space:]]iburst([[:space:]]|$)/! s/$/ iburst/; }' /etc/chrony/chrony.conf
 printf '%s\n' 'makestep 0.1 -1' >> /etc/chrony/chrony.conf
 rc-update add chronyd default
+rc-update add crond default
 # SSH is enabled, but admin stays locked until setup supplies a unique password.
 awk -F: '$1 == "root" && $2 ~ /^[!*]/ {locked=1} END {exit !locked}' /etc/shadow
 sed -i '/^[^#].*getty/s/^/#/' /etc/inittab

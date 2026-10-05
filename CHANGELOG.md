@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.0-beta.35 Alpine Beta — 5 October 2026
+
+- Adds a first-boot optional software step for Roon Bridge and the official stable Netdata Agent, with progress, retry and skip controls.
+- Keeps storage expansion, diagnostics, curl, certificates and time sync in every fresh image. Removes the obsolete Alpine Netdata package from new images and system-tools repair.
+- Enables Netdata's official daily updater and the cron service. Existing installations remain outside Pi Home's application update directories; a reflash starts fresh.
+- Verifies an actual official Netdata installation from the fresh ARM64 image, including its managed boot service and daily updater.
+
 ## 1.1.0-beta.34 Alpine Beta — 5 October 2026
 
 - Replaces the dead-end “Not installed” Roon Bridge controls with an explicit appliance-managed **Install Roon Bridge** action and live installation progress.

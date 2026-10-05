@@ -1,6 +1,19 @@
 # Alpine Beta appliance
 
-Current version: **1.1.0-beta.34 Alpine Beta**. First-run setup creates an
+First boot includes **Choose optional software**. Select Roon Bridge to use the
+Pi as an audio endpoint, and/or Netdata for monitoring. Both require internet
+access. Progress is shown; failed or interrupted downloads can be retried or
+skipped. Connect Netdata Cloud later from web Settings using a fresh Cloud
+connection command. No claim token is embedded in an image.
+
+Every image includes storage expansion, curl, trusted certificates, diagnostics
+and network time. Netdata uses its official stable static Agent under
+`/opt/netdata`, with its official daily updater and cron enabled. Pi Home updates
+replace only Pi Home's application release and preserve Netdata and Roon Bridge.
+Reflashing erases the existing filesystem: choose software again on the new card
+and reconnect the new node to Cloud.
+
+Current version: **1.1.0-beta.35 Alpine Beta**. First-run setup creates an
 owner-chosen device/SSH account, and Settings can manage the installed Netdata
 Agent and its Cloud connection without an Alpine shell. This update is available
 on the Alpine branch.

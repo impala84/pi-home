@@ -325,6 +325,7 @@ class Setup:
         self.tools_lock = threading.Lock()
         self.netdata_install_lock = threading.Lock()
         self.roon_install_lock = threading.Lock()
+        self.software_lock = threading.Lock()
         self.update_process = None
         self.progress = self.root / "var/lib/pi-home-setup/progress.json"
         self.progress.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
@@ -354,7 +355,7 @@ class Setup:
         output = self.run(["nmcli", "-t", "-f", "STATE", "device"])
         return any(line == "connected" for line in output.splitlines())
 
-    def install_official_netdata(self, token, rooms, claim_url):
+    def install_official_netdata(self, token="", rooms="", claim_url="https://app.netdata.cloud"):
         """Replace the Alpine Agent only after an explicit UI request.
 
         The pasted shell is never run. We fetch the one fixed HTTPS endpoint
@@ -373,16 +374,19 @@ class Setup:
                     output.write(chunk)
             installer.chmod(0o700)
             atomic(status, "Installing the current official Netdata Agent…\n")
-            arguments = ["/bin/bash", str(installer), "--non-interactive", "--stable-channel", "--reinstall-clean", "--claim-token", token, "--claim-url", claim_url]
+            arguments = ["/bin/bash", str(installer), "--non-interactive", "--stable-channel", "--static-only", "--auto-update"]
+            if token: arguments.extend(["--claim-token", token, "--claim-url", claim_url])
             if rooms: arguments.extend(["--claim-rooms", rooms])
             environment = {**os.environ, "DISABLE_TELEMETRY": "1"}
             result = subprocess.run(arguments, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=environment, timeout=900)
             if result.returncode: raise ValueError("The official Netdata installer rejected this installation or connection command.")
             ensure_netdata_service(self.root)
             self.run(["rc-update", "add", "netdata", "default"])
+            self.run(["rc-update", "add", "crond", "default"])
+            self.run(["rc-service", "crond", "start"])
             # Netdata's installer has already started the Agent. OpenRC owns
             # it from the next boot, avoiding a duplicate process here.
-            atomic(status, "Official Netdata Agent installed; checking Cloud connection…\n")
+            atomic(status, "Official Netdata Agent installed. " + ("Checking Cloud connection…\n" if token else "Connect to Netdata Cloud from Settings when ready.\n"))
         except Exception as error:
             message = str(error) if isinstance(error, ValueError) else "The official Netdata installation failed. Check the network and try again."
             atomic(status, "Failed: " + message + "\n")
@@ -448,12 +452,45 @@ class Setup:
             if work.exists(): shutil.rmtree(work)
             self.roon_install_lock.release()
 
+    def install_setup_software(self, choices):
+        """Install optional services serially; persist choices, never credentials."""
+        try:
+            for name, installer, lock, status_name, present in (
+                ("roon_bridge", self.install_roon_bridge, self.roon_install_lock, "roonbridge-install-status", "opt/RoonBridge/start.sh"),
+                ("netdata", self.install_official_netdata, self.netdata_install_lock, "netdata-operation-status", "opt/netdata/bin/netdata"),
+            ):
+                if not choices[name] or (self.root / present).is_file(): continue
+                state = self.saved(); state["software_status"] = "Installing " + ("Roon Bridge…" if name == "roon_bridge" else "Netdata…"); self.save(state)
+                lock.acquire(); installer()
+                status = read(self.root / "var/lib/pi-home" / status_name).strip()
+                if status.startswith("Failed:"): raise ValueError(status)
+            state = self.saved(); state.update(software=True, software_status="Selected software is ready."); self.save(state)
+        except Exception:
+            state = self.saved(); state.update(software=False, software_status="Installation could not finish. Check the network and retry, or continue without optional software."); self.save(state)
+        finally:
+            self.software_lock.release()
+
     def handle(self, data):
         state = self.saved(); action = data.get("action")
         if action == "status":
+            if state.get("software_status", "").startswith("Installing") and not self.software_lock.locked():
+                state.update(software=False, software_status="Installation was interrupted. Retry to continue."); self.save(state)
             try: connected = self.connected()
             except (ValueError, subprocess.TimeoutExpired): connected = False
-            return {"ok": True, "progress": state, "connected": connected, "roon": self.roon()}
+            return {"ok": True, "progress": state, "software_busy": self.software_lock.locked(), "connected": connected, "roon": self.roon()}
+        if self.software_lock.locked():
+            raise ValueError("Wait for the selected software installation to finish.")
+        if action == "software":
+            if state.get("complete"): raise ValueError("Setup is already complete.")
+            if not state.get("network"): raise ValueError("Connect to your network first.")
+            choices = {name: data.get(name, False) for name in ("roon_bridge", "netdata")}
+            if any(type(value) is not bool for value in choices.values()): raise ValueError("Choose supported software options.")
+            state.update(software_choices=choices, software=not any(choices.values()), software_status="Installing selected software…" if any(choices.values()) else "Optional software skipped.")
+            self.save(state)
+            if any(choices.values()):
+                self.software_lock.acquire()
+                threading.Thread(target=self.install_setup_software, args=(choices,), daemon=True).start()
+            return {"ok": True, "progress": state}
         if action == "update":
             if not state.get("complete"): raise ValueError("Finish setup before updating.")
             if (self.update_process is not None and self.update_process.poll() is None) or update_locked(self.root):
@@ -710,14 +747,14 @@ class Setup:
         path = self.root / "var/lib/pi-home/tools-status"
         try:
             # Fixed allowlist only: never accept package names from HTTP clients.
-            result = subprocess.run(["apk", "add", "--no-cache", "grim", "procps", "netdata", "netdata-openrc", "chrony", "chrony-openrc"], capture_output=True, text=True, timeout=240)
+            result = subprocess.run(["apk", "add", "--no-cache", "grim", "procps", "curl", "ca-certificates", "chrony", "chrony-openrc"], capture_output=True, text=True, timeout=240)
             if result.returncode: raise ValueError("Installation failed. Check the network, clock and free disk space, then retry.")
             self.run(["rc-update", "add", "chronyd", "default"])
             self.run(["rc-service", "chronyd", "start"])
             launcher = self.root / "usr/local/bin/pi-home-display-launch"
             shutil.copyfile(Path(__file__).with_name("display-launch"), launcher)
             launcher.chmod(0o755)
-            atomic(path, "System tools installed. Enable Netdata if wanted; reboot to apply the cursor theme.\n")
+            atomic(path, "System tools installed. Storage, downloads, diagnostics and time sync are ready.\n")
         except (OSError, ValueError, subprocess.TimeoutExpired):
             atomic(path, "Installation failed. Check the network, clock and free disk space, then retry.\n")
         finally:

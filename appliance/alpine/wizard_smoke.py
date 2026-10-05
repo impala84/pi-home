@@ -10,7 +10,7 @@ assert app.window.get_cursor().get_name() == "none"
 app.progress = {"orientation": True, "hostname": "pi-home-lounge", "network": True, "roon": True, "zone": "Lounge", "display": True, "profile": "auto", "rotation": "normal"}
 app.snapshot = {"connected": True, "roon": {"zones": [{"name": "Lounge"}]}}
 context = GLib.MainContext.default()
-for stage in range(6):
+for stage in range(7):
     app.stage = stage; app.render()
     for _ in range(30):
         while context.pending(): context.iteration(False)
@@ -43,4 +43,4 @@ app.window.destroy()
 icons = Gtk.IconTheme.get_for_display(Gdk.Display.get_default())
 assert icons.has_icon("media-skip-forward-symbolic")
 assert icons.has_icon("media-skip-backward-symbolic")
-print("Native setup: all six real GTK pages and on-screen keyboard passed under Xvfb (not physical touch acceptance).")
+print("Native setup: all seven real GTK pages and on-screen keyboard passed under Xvfb (not physical touch acceptance).")

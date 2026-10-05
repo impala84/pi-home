@@ -51,6 +51,34 @@ class AlpineSetupTests(unittest.TestCase):
             with self.assertRaises(ValueError): self.setup.handle({"action": "name", "hostname": name})
         self.run.assert_not_called()
 
+    def test_optional_software_skip_is_persisted_without_installing(self):
+        self.setup.save({"network": True})
+        result = self.setup.handle({"action": "software", "roon_bridge": False, "netdata": False})
+        self.assertTrue(result["progress"]["software"])
+        self.run.assert_not_called()
+
+    def test_optional_software_cannot_finish_setup_while_installing(self):
+        self.setup.save({"network": True})
+        with patch.object(module.threading, "Thread"):
+            self.setup.handle({"action": "software", "roon_bridge": True, "netdata": False})
+        with self.assertRaisesRegex(ValueError, "Wait for"):
+            self.setup.handle({"action": "finish"})
+        self.assertFalse(self.setup.saved().get("complete", False))
+
+    def test_failed_optional_install_can_be_retried(self):
+        self.setup.save({"network": True})
+        choices = {"roon_bridge": True, "netdata": False}
+        self.setup.software_lock.acquire()
+        def failure():
+            path = self.root / "var/lib/pi-home/roonbridge-install-status"
+            path.parent.mkdir(parents=True, exist_ok=True); path.write_text("Failed: download failed")
+            self.setup.roon_install_lock.release()
+        with patch.object(self.setup, "install_roon_bridge", side_effect=failure):
+            self.setup.install_setup_software(choices)
+        self.assertFalse(self.setup.saved()["software"])
+        self.assertFalse(self.setup.software_lock.locked())
+        self.assertNotIn("complete", self.setup.saved())
+
     def test_password_minimum_is_eight_characters(self):
         module.validate_password("abcdefgh")
         with self.assertRaisesRegex(ValueError, "8–128"):
@@ -67,7 +95,7 @@ class AlpineSetupTests(unittest.TestCase):
             thread.assert_called_once()
         with patch.object(module.subprocess, "run", return_value=Mock(returncode=0)) as run:
             self.setup.install_tools()
-            self.assertEqual(run.call_args.args[0], ["apk", "add", "--no-cache", "grim", "procps", "netdata", "netdata-openrc", "chrony", "chrony-openrc"])
+            self.assertEqual(run.call_args.args[0], ["apk", "add", "--no-cache", "grim", "procps", "curl", "ca-certificates", "chrony", "chrony-openrc"])
         self.assertIn("installed", (self.root / "var/lib/pi-home/tools-status").read_text())
         self.assertFalse(self.setup.tools_lock.locked())
 
