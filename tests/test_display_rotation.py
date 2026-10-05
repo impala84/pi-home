@@ -185,7 +185,10 @@ class DisplayRotationTests(unittest.TestCase):
 
     def test_touchscreen_settings_title_and_checkbox_spacing(self):
         display = (ROOT / "native-display" / "pi_bus_native.py").read_text(encoding="utf-8")
-        self.assertIn('title = self.label("Settings", "settings-title", .5)', display)
+        self.assertIn('self.label("Pi Home", "settings-title")', display)
+        self.assertIn('self.label("Settings", "settings-title")', display)
+        self.assertIn('actions.set_homogeneous(True)', display)
+        self.assertIn('self.settings_row_sizes = Gtk.SizeGroup', display)
         self.assertIn(".setting-line checkbutton label { margin-left: 12px;", display)
 
     def test_mobile_roon_navigation_uses_compact_uppercase_labels(self):

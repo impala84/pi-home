@@ -16,7 +16,7 @@ def settle():
         while GLib.MainContext.default().pending(): GLib.MainContext.default().iteration(False)
         time.sleep(.01)
 
-for width, height in ((1280, 720), (800, 480), (720, 1280), (1200, 1920)):
+for width, height in ((1280, 720), (800, 480), (480, 800), (720, 1280), (1200, 1920)):
     window = Gtk.Window(default_width=width, default_height=height)
     window.set_decorated(False); window.set_resizable(False); window.add_css_class("theme-roon")
     provider = Gtk.CssProvider(); provider.load_from_data(native.CSS)
