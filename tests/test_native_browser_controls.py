@@ -450,7 +450,7 @@ class NativeBrowserControlsTests(unittest.TestCase):
         code = SOURCE.read_text(encoding='utf-8')
         self.assertIn('and not data.get("surprise_preview")', code)
         self.assertIn('active_section = "surprise" if data.get("surprise_preview")',code)
-        self.assertIn('spacer.set_vexpand(True); sidebar.append(spacer); sidebar.append(self.browser_back)',code)
+        self.assertIn('spacer.set_vexpand(True); self.browser_sidebar_spacer = spacer; sidebar.append(spacer); sidebar.append(self.browser_back)',code)
         self.assertIn('self.button("BACK"', code)
         web = (SOURCE.parents[1] / 'roon-controller/static/app.js').read_text(encoding='utf-8')
         self.assertIn("const activeSection = data.surprise_preview ? 'surprise'", web)
