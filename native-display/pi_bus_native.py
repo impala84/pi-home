@@ -684,7 +684,11 @@ class Display(Gtk.Application):
         capture_id = device.get("capture_request")
         if capture_id and capture_id != getattr(self, "last_capture_id", None):
             self.last_capture_id = capture_id
-            self.capture_display(capture_id)
+            # GTK widgets may only be snapshotted on the main loop.  Scheduling
+            # the capture here also avoids relying solely on compositor
+            # screencopy, which can return a valid but black frame while Cage
+            # is directly scanning the fullscreen surface out to DRM.
+            GLib.idle_add(self.capture_display, capture_id)
         now = time.monotonic(); config = None; system = None
         if not self.settings_data or now - self.last_config_fetch >= 60:
             config = get_json(BUS + "/api/admin/config") or {}; self.last_config_fetch = now
@@ -706,19 +710,30 @@ class Display(Gtk.Application):
             print(f"Pi Home core refresh completed in {elapsed:.3f}s", flush=True)
 
     def capture_display(self, capture_id):
-        # Run in the polling worker with the real Cage session environment.
-        # No elevated privileges, temporary screenshot files or display changes.
         data = {"id": capture_id}
         try:
-            result = subprocess.run(["/usr/bin/grim", "-"], capture_output=True, timeout=5, check=True)
-            if len(result.stdout) > 8_388_608 or not result.stdout.startswith(b"\x89PNG\r\n\x1a\n"):
+            # Snapshot the actual live GTK tree.  This captures precisely what
+            # Pi Home rendered (including fetched artwork) and remains reliable
+            # when Cage/wlroots uses direct scan-out, where grim can otherwise
+            # return an all-black but syntactically valid PNG.
+            width, height = self.window.get_width(), self.window.get_height()
+            if width <= 0 or height <= 0:
+                raise ValueError("Display has no drawable size")
+            paintable = Gtk.WidgetPaintable.new(self.window)
+            snapshot = Gtk.Snapshot()
+            paintable.snapshot(snapshot, float(width), float(height))
+            node = snapshot.to_node()
+            if node is None:
+                raise ValueError("Display produced no render node")
+            texture = self.window.get_renderer().render_texture(node, None)
+            image = bytes(texture.save_to_png_bytes().get_data())
+            if len(image) > 8_388_608 or not image.startswith(b"\x89PNG\r\n\x1a\n"):
                 raise ValueError("Invalid screenshot")
-            data["image"] = base64.b64encode(result.stdout).decode("ascii")
-        except FileNotFoundError:
-            data["error"] = "Capture support is missing. Install the latest Pi Home update; on Alpine, open System → Services and install system tools."
-        except (subprocess.SubprocessError, OSError, ValueError):
-            data["error"] = "The display could not be captured. Ensure it is awake; this compositor may not support screenshots."
+            data["image"] = base64.b64encode(image).decode("ascii")
+        except (OSError, RuntimeError, TypeError, ValueError):
+            data["error"] = "The live display could not be rendered. Ensure the touchscreen application is running and try again."
         post_json(BUS + "/api/device/display-capture", data, timeout=5)
+        return False
 
     def apply(self, target, status, roon, config, system, device, image_key, image):
         if status and "display_theme" in status and config is None: self.apply_theme(status["display_theme"])

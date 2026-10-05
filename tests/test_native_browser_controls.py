@@ -374,23 +374,33 @@ class NativeBrowserControlsTests(unittest.TestCase):
         self.assertIn('self.playback_was_active = playing', code)
         self.assertIn('if playing and target != "/sleep.html":', code)
 
-    def test_capture_uses_actual_wayland_output_and_posts_image(self):
+    def test_capture_renders_actual_gtk_tree_and_posts_image(self):
         image = b'\x89PNG\r\n\x1a\nimage'
-        runner = Mock(return_value=SimpleNamespace(stdout=image))
+        texture = SimpleNamespace(save_to_png_bytes=lambda:SimpleNamespace(get_data=lambda:image))
+        node = object()
+        snapshot = SimpleNamespace(to_node=lambda:node)
+        paintable = SimpleNamespace(snapshot=Mock())
+        gtk = SimpleNamespace(WidgetPaintable=SimpleNamespace(new=Mock(return_value=paintable)),Snapshot=Mock(return_value=snapshot))
+        window = SimpleNamespace(get_width=lambda:800,get_height=lambda:480,get_renderer=lambda:SimpleNamespace(render_texture=Mock(return_value=texture)))
         posted = Mock()
-        method = native_method('capture_display', {'subprocess':SimpleNamespace(run=runner,SubprocessError=subprocess.SubprocessError),'base64':base64,'BUS':'http://127.0.0.1:8765','post_json':posted})
-        method(SimpleNamespace(), 'ticket')
-        self.assertEqual(runner.call_args.args[0], ['/usr/bin/grim','-'])
+        method = native_method('capture_display', {'Gtk':gtk,'base64':base64,'BUS':'http://127.0.0.1:8765','post_json':posted})
+        result = method(SimpleNamespace(window=window), 'ticket')
+        paintable.snapshot.assert_called_once_with(snapshot, 800.0, 480.0)
         self.assertEqual(base64.b64decode(posted.call_args.args[1]['image']), image)
         self.assertEqual(posted.call_args.args[1]['id'], 'ticket')
+        self.assertFalse(result)
 
-    def test_missing_capture_support_returns_friendly_error(self):
-        runner = Mock(side_effect=FileNotFoundError())
+    def test_failed_widget_capture_returns_friendly_error(self):
+        gtk = SimpleNamespace(WidgetPaintable=SimpleNamespace(new=Mock(side_effect=RuntimeError())))
         posted = Mock()
-        method = native_method('capture_display', {'subprocess':SimpleNamespace(run=runner,SubprocessError=subprocess.SubprocessError),'base64':base64,'BUS':'http://127.0.0.1:8765','post_json':posted})
-        method(SimpleNamespace(), 'ticket')
-        self.assertIn('Install the latest', posted.call_args.args[1]['error'])
+        method = native_method('capture_display', {'Gtk':gtk,'base64':base64,'BUS':'http://127.0.0.1:8765','post_json':posted})
+        method(SimpleNamespace(window=SimpleNamespace(get_width=lambda:800,get_height=lambda:480)), 'ticket')
+        self.assertIn('could not be rendered', posted.call_args.args[1]['error'])
         self.assertNotIn('image', posted.call_args.args[1])
+
+    def test_capture_request_is_scheduled_on_the_gtk_main_loop(self):
+        code = SOURCE.read_text(encoding='utf-8')
+        self.assertIn('GLib.idle_add(self.capture_display, capture_id)', code)
 
     def test_theme_updates_the_selector_without_triggering_a_save(self):
         calls = []

@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.0-beta.21 Alpine Beta — 5 October 2026
+
+- Render diagnostic screenshots from the live GTK touchscreen tree, including loaded album artwork, so Cage/DRM direct scan-out cannot silently produce a valid but completely black image.
+- Schedule capture on GTK's main loop and return a clear error when the application cannot produce a drawable frame.
+
 ## 1.1.0-beta.20 Alpine Beta — 5 October 2026
 
 - Moved Daily recommendation context out of the cover artwork and into a clear
