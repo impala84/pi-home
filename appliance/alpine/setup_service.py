@@ -207,6 +207,34 @@ depend() { need localmount; after networkmanager; }
     return service
 
 
+def ensure_netdata_service(root):
+    """Adopt Alpine's package or Netdata's official /opt installation."""
+    root = Path(root)
+    service = root / "etc/init.d/netdata"
+    static_agent = root / "opt/netdata/bin/netdata"
+    packaged_agent = root / "usr/sbin/netdata"
+    if not static_agent.is_file() and not packaged_agent.is_file():
+        raise ValueError("Netdata is not installed on this appliance.")
+    service.parent.mkdir(parents=True, exist_ok=True)
+    if static_agent.is_file():
+        managed = """#!/sbin/openrc-run
+description="Netdata monitoring agent"
+supervisor=supervise-daemon
+command=/opt/netdata/bin/netdata
+command_args="-D"
+respawn_delay=5
+respawn_max=0
+output_log=/var/log/pi-home/netdata.log
+error_log=/var/log/pi-home/netdata-error.log
+depend() { need localmount; after networkmanager; }
+"""
+        if not service.exists() or service.read_text(errors="replace") != managed:
+            backup = service.parent / "netdata.pi-home-package-backup"
+            if service.exists() and not backup.exists(): shutil.copyfile(service, backup)
+            atomic(service, managed, 0o755)
+    return service
+
+
 def display_power(root, powered, brightness_percent=100):
     """Control the backlight without disabling the DSI touch controller."""
     brightness_percent = int(brightness_percent)
@@ -336,8 +364,10 @@ class Setup:
             environment = {**os.environ, "DISABLE_TELEMETRY": "1"}
             result = subprocess.run(arguments, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=environment, timeout=900)
             if result.returncode: raise ValueError("The official Netdata installer rejected this installation or connection command.")
+            ensure_netdata_service(self.root)
             self.run(["rc-update", "add", "netdata", "default"])
-            self.run(["rc-service", "netdata", "restart"])
+            # Netdata's installer has already started the Agent. OpenRC owns
+            # it from the next boot, avoiding a duplicate process here.
             atomic(status, "Official Netdata Agent installed; checking Cloud connection…\n")
         except Exception as error:
             message = str(error) if isinstance(error, ValueError) else "The official Netdata installation failed. Check the network and try again."
@@ -401,13 +431,19 @@ class Setup:
             return {"ok": True, "orientation": orientation, "rotation": rotation}
         if action in {"netdata_enable", "netdata_disable"}:
             if not state.get("complete"): raise ValueError("Finish setup before changing services.")
-            if not (self.root / "etc/init.d/netdata").is_file():
-                raise ValueError("Netdata is not installed. Install the Alpine netdata and netdata-openrc packages.")
+            ensure_netdata_service(self.root)
             if action == "netdata_enable":
                 self.run(["rc-update", "add", "netdata", "default"])
-                self.run(["rc-service", "netdata", "start"])
+                running = False
+                try:
+                    with urllib.request.urlopen("http://127.0.0.1:19999/api/v1/info", timeout=.8): running = True
+                except OSError: pass
+                if not running: self.run(["rc-service", "netdata", "start"])
             else:
                 self.run(["rc-service", "netdata", "stop"])
+                cli = self.root / "opt/netdata/bin/netdatacli"
+                if cli.is_file():
+                    subprocess.run([str(cli), "shutdown-agent"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=20)
                 self.run(["rc-update", "del", "netdata", "default"])
             return {"ok": True}
         if action in {"roon_start", "roon_stop", "roon_restart"}:
@@ -610,7 +646,11 @@ class Setup:
 
 def serve():
     install_clock_support()
-    app = Setup(); uid = pwd.getpwnam("morningbus").pw_uid
+    app = Setup()
+    if Path("/opt/netdata/bin/netdata").is_file():
+        ensure_netdata_service(Path("/"))
+        app.run(["rc-update", "add", "netdata", "default"])
+    uid = pwd.getpwnam("morningbus").pw_uid
     path = Path(SOCKET)
     if path.exists():
         if not path.is_socket(): raise RuntimeError("Unexpected setup socket path")

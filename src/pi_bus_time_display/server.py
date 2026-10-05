@@ -608,20 +608,25 @@ def current_boot_id() -> str:
 
 def netdata_snapshot() -> dict:
     service = service_state("netdata.service")
-    details = {"service": service, "installed": service != "not_installed", "version": "", "cloud_status": "unclaimed", "claim_id": ""}
+    static_agent = Path("/opt/netdata/bin/netdata")
+    installed = service != "not_installed" or static_agent.is_file()
+    details = {"service": service if installed else "not_installed", "installed": installed, "version": "", "cloud_status": "unclaimed", "claim_id": ""}
     if not details["installed"]:
         return details
-    version = command_output(["netdata", "-v"])
+    if details["service"] == "not_installed": details["service"] = "stopped"
+    version = command_output([str(static_agent) if static_agent.is_file() else "netdata", "-v"])
     details["version"] = version.replace("netdata ", "", 1).strip() if version and version != "unknown" else "Installed"
     try:
         with urllib.request.urlopen("http://127.0.0.1:19999/api/v1/aclk", timeout=.8) as response:
             aclk_json = json.load(response)
+        details["service"] = "running"
         claimed = bool(aclk_json.get("agent-claimed")); online = bool(aclk_json.get("online"))
         details["cloud_status"] = "online" if claimed and online else "offline" if claimed else "unclaimed"
         details["claim_id"] = str(aclk_json.get("claimed-id") or "")
         details["cloud_available"] = bool(aclk_json.get("aclk-available"))
     except (OSError, ValueError, json.JSONDecodeError):
-        aclk = command_output(["netdatacli", "aclk-state"])
+        static_cli = Path("/opt/netdata/bin/netdatacli")
+        aclk = command_output([str(static_cli) if static_cli.is_file() else "netdatacli", "aclk-state"])
         if aclk and aclk != "unknown":
             fields = {key.strip().lower(): value.strip() for line in aclk.splitlines() if ":" in line for key, value in [line.split(":", 1)]}
             claimed = fields.get("claimed", "").lower() in {"yes", "true", "1"}

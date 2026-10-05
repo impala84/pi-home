@@ -297,11 +297,19 @@ class AlpineSetupTests(unittest.TestCase):
         with self.assertRaises(ValueError): self.setup.handle({"action": "netdata_enable"})
         self.setup.save({"complete": True})
         with self.assertRaisesRegex(ValueError, "not installed"): self.setup.handle({"action": "netdata_enable"})
+        agent = self.root / "usr/sbin/netdata"; agent.parent.mkdir(parents=True); agent.touch()
         service = self.root / "etc/init.d/netdata"; service.parent.mkdir(parents=True); service.touch()
         self.setup.handle({"action": "netdata_enable"})
         self.assertEqual(self.run.call_args.args[0], ["rc-service", "netdata", "start"])
         self.setup.handle({"action": "netdata_disable"})
         self.assertEqual(self.run.call_args.args[0], ["rc-update", "del", "netdata", "default"])
+
+    def test_official_static_netdata_gets_a_managed_openrc_service(self):
+        agent = self.root / "opt/netdata/bin/netdata"; agent.parent.mkdir(parents=True); agent.touch()
+        service = module.ensure_netdata_service(self.root)
+        self.assertIn("command=/opt/netdata/bin/netdata", service.read_text())
+        self.assertIn('command_args="-D"', service.read_text())
+        self.assertEqual(service.stat().st_mode & 0o777, 0o755)
 
     def test_roon_bridge_controls_create_and_use_only_the_openrc_service(self):
         self.setup.save({"complete": True})

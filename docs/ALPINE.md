@@ -1,6 +1,6 @@
 # Alpine Beta appliance
 
-Current version: **1.1.0-beta.32 Alpine Beta**. First-run setup creates an
+Current version: **1.1.0-beta.33 Alpine Beta**. First-run setup creates an
 owner-chosen device/SSH account, and Settings can manage the installed Netdata
 Agent and its Cloud connection without an Alpine shell. This update is available
 on the Alpine branch.

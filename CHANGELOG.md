@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.0-beta.33 Alpine Beta — 5 October 2026
+
+- Detects Netdata's official static installation under `/opt/netdata` instead of incorrectly reporting it as missing when Alpine's packaged binary and OpenRC service are absent.
+- Reads the official Agent's real version and Cloud status, and treats a responsive local dashboard as a running Agent.
+- Adopts the official installation with a managed OpenRC service so Run/Stop controls and startup after reboot work without reinstalling Netdata.
+
 ## 1.1.0-beta.32 Alpine Beta — 5 October 2026
 
 - Replaces raw display rotation degrees with one persisted Landscape or Portrait setting shared by touchscreen and web Settings.

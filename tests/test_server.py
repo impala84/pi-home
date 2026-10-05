@@ -174,6 +174,15 @@ class DisplayModeTests(unittest.TestCase):
         self.assertEqual(details["cloud_status"], "online")
         self.assertEqual(details["claim_id"], "node-123")
 
+    def test_netdata_snapshot_adopts_live_official_static_agent(self):
+        response = unittest.mock.MagicMock(); response.__enter__.return_value = response
+        with patch("pi_bus_time_display.server.service_state", return_value="not_installed"), patch("pi_bus_time_display.server.Path.is_file", return_value=True), patch("pi_bus_time_display.server.command_output", return_value="netdata v2.12.0-2-nightly"), patch("pi_bus_time_display.server.urllib.request.urlopen", return_value=response), patch("pi_bus_time_display.server.json.load", return_value={"agent-claimed": True, "online": True, "claimed-id": "static-node"}):
+            details = netdata_snapshot()
+        self.assertTrue(details["installed"])
+        self.assertEqual(details["service"], "running")
+        self.assertEqual(details["version"], "v2.12.0-2-nightly")
+        self.assertEqual(details["cloud_status"], "online")
+
     def test_unknown_mode_defaults_to_auto(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "display-mode"
