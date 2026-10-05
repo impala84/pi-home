@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.0-beta.39 Alpine Beta — 6 October 2026
+
+- Rebuilds touchscreen Settings to the supplied layout: left-aligned Pi Home Settings title with inline version, compact metrics underneath, Back/Sleep at the top right, common outer margins and equal-height control rows.
+- Uses three equal-width bottom actions with consistent spacing and responsive landscape/portrait grouping. Shows update details as the version tooltip rather than a full-width paragraph.
+- Shortens backend Netdata guidance to concise resource-saving and automatic-update descriptions.
+- Adds real GTK Settings allocation checks and a native review capture to the Alpine image workflow.
+
 ## 1.1.0-beta.38 Alpine Beta — 6 October 2026
 
 - Shows running Netdata and its collector processes in backend Diagnostics with combined RSS memory and CPU usage; hides the row when stopped.

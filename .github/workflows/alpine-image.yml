@@ -35,7 +35,7 @@ jobs:
       - name: Capture native touchscreen visual-review frames
         run: |
           mkdir -p dist/alpine-ui-review/landscape dist/alpine-ui-review/portrait
-          docker run --rm -v "$PWD/dist/alpine-ui-review/landscape:/screenshots" pi-home-alpine:beta sh -c 'apk add --no-cache xvfb-run imagemagick && GDK_BACKEND=x11 GSK_RENDERER=cairo PI_HOME_SCREEN_WIDTH=1280 PI_HOME_SCREEN_HEIGHT=720 PI_HOME_SCREENSHOT_DIR=/screenshots dbus-run-session xvfb-run -a -s "-screen 0 1280x720x24" python3 appliance/alpine/discover_visual_review.py'
+          docker run --rm -v "$PWD/dist/alpine-ui-review/landscape:/screenshots" pi-home-alpine:beta sh -c 'apk add --no-cache xvfb-run imagemagick && GDK_BACKEND=x11 GSK_RENDERER=cairo PI_HOME_SCREEN_WIDTH=1280 PI_HOME_SCREEN_HEIGHT=720 PI_HOME_SCREENSHOT_DIR=/screenshots dbus-run-session xvfb-run -a -s "-screen 0 1280x720x24" sh -ec "python3 appliance/alpine/discover_visual_review.py; python3 appliance/alpine/settings_smoke.py"'
           docker run --rm -v "$PWD/dist/alpine-ui-review/portrait:/screenshots" pi-home-alpine:beta sh -c 'apk add --no-cache xvfb-run imagemagick && GDK_BACKEND=x11 GSK_RENDERER=cairo PI_HOME_SCREEN_WIDTH=720 PI_HOME_SCREEN_HEIGHT=1280 PI_HOME_SCREENSHOT_DIR=/screenshots dbus-run-session xvfb-run -a -s "-screen 0 720x1280x24" python3 appliance/alpine/discover_visual_review.py'
       - name: Verify SSH account and security policy
         run: |

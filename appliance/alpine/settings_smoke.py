@@ -1,0 +1,43 @@
+"""Real GTK Settings allocation checks and optional deterministic review capture."""
+import importlib.util
+import os
+import subprocess
+import time
+from pathlib import Path
+import gi
+gi.require_version("Gtk", "4.0")
+from gi.repository import Gtk, GLib
+
+spec = importlib.util.spec_from_file_location("native_settings", "/opt/pi-home/native-display/pi_bus_native.py")
+native = importlib.util.module_from_spec(spec); spec.loader.exec_module(native)
+Gtk.init()
+def settle():
+    for _ in range(40):
+        while GLib.MainContext.default().pending(): GLib.MainContext.default().iteration(False)
+        time.sleep(.01)
+
+for width, height in ((1280, 720), (800, 480), (720, 1280), (1200, 1920)):
+    window = Gtk.Window(default_width=width, default_height=height)
+    window.set_decorated(False); window.set_resizable(False); window.add_css_class("theme-roon")
+    provider = Gtk.CssProvider(); provider.load_from_data(native.CSS)
+    Gtk.StyleContext.add_provider_for_display(window.get_display(), provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+    display = native.Display(); display.window = window
+    display.build_roon(); window.set_child(display.build_settings())
+    display.device_status.set_text("v1.1.0-beta.39 Alpine")
+    display.touch_diagnostics.set_text("Memory 5.4%  ·  Load 1.53  ·  63.3°C  ·  Controller ready  ·  Bridge offline")
+    display.render_touch_controls({"services":[{"name":name,"enabled":True} for name in ("40","42","401")]}, {"roon_bridge":"stopped"})
+    window.present(); settle(); display.adapt_display(); settle()
+    rows = [display.touch_profile, display.touch_orientation, display.touch_mounting, display.touch_profile.get_parent().get_last_child()]
+    heights = [row.get_height() for row in rows]
+    assert min(heights) > 0 and max(heights)-min(heights) <= 1, (width,height,heights)
+    actions=[]; child=display.settings_actions.get_first_child()
+    while child:
+        actions.append(child.get_width()); child=child.get_next_sibling()
+    assert max(actions)-min(actions) <= 1, actions
+    assert window.get_width() == width and window.get_height() == height, (width,height,window.get_width(),window.get_height())
+    output=os.environ.get("PI_HOME_SCREENSHOT_DIR")
+    if output and (width,height)==(1280,720):
+        Path(output).mkdir(parents=True,exist_ok=True)
+        subprocess.run(["import","-silent","-window","root",str(Path(output)/"settings-1280x720.png")],check=True)
+    window.destroy(); settle()
+print("Real GTK Settings: equal-height rows, equal-width actions and viewport bounds checked.")

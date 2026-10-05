@@ -263,6 +263,27 @@ CSS += b"""
 .portrait.compact-portrait .roon-title { font-size: 28px; }
 .portrait.compact-portrait .roon-artist { font-size: 19px; }
 .portrait.compact-portrait .nav button { min-height: 48px; padding: 4px; font-size: 14px; }
+.settings-page .settings-card { padding: 0; border: 0; background: transparent; }
+.settings-page .settings-column { padding: 0; }
+.settings-page .settings-controls { padding: 8px 0 0; }
+.settings-brand { color: #6ed9ae; }
+.theme-roon .settings-brand { color: #8275ef; }
+.settings-version { font-size: 12px; color: #a4aaa7; }
+.settings-page .settings-diagnostic { font-size: 13px; color: #747974; }
+.settings-divider { background: #232228; min-height: 3px; margin-top: 10px; margin-bottom: 6px; }
+.settings-page .setting-line, .settings-page .settings-select { min-height: 40px; padding: 4px 12px; }
+.settings-page .brightness-setting scale { padding: 3px 10px; }
+.touch-landscape .settings-page { padding: 26px 28px; }
+.touch-landscape .settings-page .settings-card { padding: 0; }
+.touch-landscape .settings-page .settings-version { font-size: 17px; }
+.touch-landscape .settings-page .settings-diagnostic { font-size: 17px; }
+.touch-landscape .settings-page .settings-title { font-size: 43px; }
+.touch-landscape .settings-page .settings-controls { padding: 8px 0 0; }
+.touch-landscape .settings-page .setting-line, .touch-landscape .settings-page .settings-select { min-height: 62px; padding: 5px 18px; }
+.touch-landscape .settings-page .brightness-setting { padding: 5px 18px; }
+.touch-landscape .settings-page .settings-action { min-height: 62px; }
+.portrait .settings-page .settings-title { font-size: 26px; }
+.portrait.compact-portrait .settings-page .settings-title { font-size: 22px; }
 """
 
 
@@ -420,7 +441,9 @@ class Display(Gtk.Application):
         self.now_playing_centre.set_valign(Gtk.Align.START if portrait else Gtk.Align.CENTER)
         if hasattr(self, "settings_controls"):
             self.settings_controls.set_orientation(Gtk.Orientation.VERTICAL if portrait else Gtk.Orientation.HORIZONTAL)
-            self.settings_daily.set_size_request(-1 if portrait else 430, -1)
+            self.settings_daily.set_size_request(-1 if portrait else round((width - 56) * .343), -1)
+            self.settings_controls.set_spacing(20 if portrait else round(width * .052))
+            self.settings_header.set_orientation(Gtk.Orientation.VERTICAL if portrait else Gtk.Orientation.HORIZONTAL)
         self.browser_body.set_orientation(Gtk.Orientation.VERTICAL if portrait else Gtk.Orientation.HORIZONTAL)
         self.browser_sidebar.set_orientation(Gtk.Orientation.HORIZONTAL if portrait else Gtk.Orientation.VERTICAL)
         self.browser_discovery_sidebar.set_orientation(Gtk.Orientation.HORIZONTAL if portrait else Gtk.Orientation.VERTICAL)
@@ -592,10 +615,16 @@ class Display(Gtk.Application):
 
     def build_settings(self):
         page = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8); page.add_css_class("page"); page.add_css_class("settings-page")
-        top = Gtk.Box(spacing=10); top.append(self.button("BACK", self.close_settings)); title = self.label("Settings", "settings-title", .5); title.set_hexpand(True); top.append(title); top.append(self.button("SLEEP", self.sleep)); page.append(top)
+        top = Gtk.Box(spacing=20); top.add_css_class("settings-header"); self.settings_header = top
+        heading = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4); heading.set_hexpand(True)
+        title_row = Gtk.Box(spacing=10); title_row.set_valign(Gtk.Align.CENTER)
+        title_row.append(self.label("Pi Home", "settings-title")); title_row.get_last_child().add_css_class("settings-brand"); title_row.append(self.label("Settings", "settings-title"))
+        self.device_status = self.label("", "settings-version"); self.device_status.set_valign(Gtk.Align.BASELINE); title_row.append(self.device_status); heading.append(title_row)
+        self.touch_diagnostics = self.label("Loading diagnostics…", "settings-diagnostic"); self.touch_diagnostics.set_wrap(True); heading.append(self.touch_diagnostics); top.append(heading)
+        utilities = Gtk.Box(spacing=22); utilities.set_valign(Gtk.Align.START); utilities.append(self.button("BACK", self.close_settings)); utilities.append(self.button("SLEEP", self.sleep)); top.append(utilities); page.append(top)
+        separator = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL); separator.add_css_class("settings-divider"); page.append(separator)
         card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14); card.add_css_class("settings-card"); card.set_vexpand(True)
-        self.device_status = self.label("Checking system…", "muted", .5); card.append(self.device_status)
-        self.touch_diagnostics = self.label("Loading diagnostics…", "settings-diagnostic", .5); self.touch_diagnostics.set_wrap(True); self.touch_diagnostics.set_justify(Gtk.Justification.CENTER); self.touch_diagnostics.set_margin_top(8); self.touch_diagnostics.set_margin_bottom(14); card.append(self.touch_diagnostics)
+        self.settings_row_sizes = Gtk.SizeGroup(mode=Gtk.SizeGroupMode.VERTICAL)
         self.touch_theme_row = Gtk.Box(spacing=8); self.touch_theme_row.append(self.label("Theme")); self.touch_theme_buttons = {}
         for value, title in (("fresh-mint", "Mint"), ("roon", "Roon")):
             button = self.button(title, lambda _button, theme=value: self.change_theme(theme), "theme-choice")
@@ -607,7 +636,8 @@ class Display(Gtk.Application):
         self.touch_orientation = Gtk.DropDown.new_from_strings(["Orientation · Landscape", "Orientation · Portrait"]); self.touch_orientation.add_css_class("settings-select"); display_column.append(self.touch_orientation); controls.append(display_column); card.append(controls)
         self.touch_mounting = Gtk.DropDown.new_from_strings(["Rotation · Standard", "Rotation · 180°"]); self.touch_mounting.add_css_class("settings-select"); display_column.append(self.touch_mounting)
         brightness_row = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3); brightness_row.add_css_class("setting-line"); brightness_row.add_css_class("brightness-setting"); brightness_row.append(self.label("Display brightness", "muted")); self.touch_brightness = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 10, 100, 1); self.touch_brightness.set_draw_value(True); self.touch_brightness.set_value_pos(Gtk.PositionType.RIGHT); self.touch_brightness.connect("value-changed", self.change_brightness); brightness_row.append(self.touch_brightness); display_column.append(brightness_row)
-        actions = Gtk.Box(spacing=12); actions.set_valign(Gtk.Align.END); self.apply_display_button = self.button("APPLY DISPLAY", self.request_display_settings, "settings-action"); self.apply_display_button.set_hexpand(True); actions.append(self.apply_display_button); self.update_button = self.button("INSTALL UPDATE", self.request_update, "settings-action"); self.update_button.set_hexpand(True); actions.append(self.update_button); actions.append(self.button("REBOOT", self.confirm_reboot, "settings-action")); card.append(actions); page.append(card)
+        for row in (self.touch_profile, self.touch_orientation, self.touch_mounting, brightness_row): self.settings_row_sizes.add_widget(row)
+        actions = Gtk.Box(spacing=18); actions.set_homogeneous(True); actions.set_valign(Gtk.Align.END); self.settings_actions = actions; self.apply_display_button = self.button("APPLY DISPLAY", self.request_display_settings, "settings-action"); self.apply_display_button.set_hexpand(True); actions.append(self.apply_display_button); self.update_button = self.button("INSTALL UPDATE", self.request_update, "settings-action"); self.update_button.set_hexpand(True); actions.append(self.update_button); actions.append(self.button("REBOOT", self.confirm_reboot, "settings-action")); card.append(actions); page.append(card)
         return page
 
     def build_sleep(self):
@@ -819,7 +849,8 @@ class Display(Gtk.Application):
         if system is not None:
             self.system_data = system
             update_status = str(system.get("update_status", "Ready"))
-            self.device_status.set_text(f"v{system.get('app_version', '—')}  ·  {update_status}")
+            self.device_status.set_text(f"v{system.get('app_version', '—')}")
+            self.device_status.set_tooltip_text(update_status)
             if update_status.startswith("Update ·"):
                 self.update_status_seen = True
             elif self.update_in_progress and self.update_status_seen:
@@ -944,12 +975,13 @@ class Display(Gtk.Application):
         self.touch_controls_signature = signature
         while child := self.touch_daily.get_last_child():
             if child == self.touch_daily.get_first_child(): break
+            if child.has_css_class("setting-line"): self.settings_row_sizes.remove_widget(child)
             self.touch_daily.remove(child)
-        bridge = Gtk.Box(spacing=8); bridge.add_css_class("setting-line"); bridge_check = Gtk.CheckButton(label="Roon Bridge"); bridge_check.set_active((system or {}).get("roon_bridge") == "active"); bridge_check.connect("toggled", self.toggle_bridge); bridge.append(bridge_check); self.touch_daily.append(bridge)
+        bridge = Gtk.Box(spacing=8); bridge.add_css_class("setting-line"); bridge_check = Gtk.CheckButton(label="Roon Bridge"); bridge_check.set_active((system or {}).get("roon_bridge") in {"active", "running"}); bridge_check.connect("toggled", self.toggle_bridge); bridge.append(bridge_check); self.settings_row_sizes.add_widget(bridge); self.touch_daily.append(bridge)
         services = Gtk.Box(spacing=12); services.add_css_class("setting-line"); services.append(self.label("Buses"))
         for item in device.get("services", []):
             button = Gtk.CheckButton(label=item.get("name", "")); button.set_active(bool(item.get("enabled"))); button.connect("toggled", self.toggle_service, item.get("name", "")); services.append(button)
-        self.touch_daily.append(services)
+        self.settings_row_sizes.add_widget(services); self.touch_daily.append(services)
         self.touch_daily.append(self.touch_theme_row)
 
     def render_home(self, home):
