@@ -2269,7 +2269,7 @@ class Display(Gtk.Application):
 
     def _request_display_settings(self, profile, orientation, mounting):
         result = post_json(BUS + "/api/admin/system-action", {"action": "set_display", "profile": profile, "orientation": orientation, "mounting": mounting}, timeout=15)
-        GLib.idle_add(self.device_status.set_text, "Display saved · restarting display/device…" if result else "Could not apply display settings")
+        GLib.idle_add(self.device_status.set_text, "Display saved · restarting Pi Home…" if result else "Could not apply display settings")
         if not result: GLib.idle_add(self.apply_display_button.set_sensitive, True)
 
 

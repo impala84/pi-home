@@ -6,7 +6,7 @@
 - Uses full-width two-column Recent/New Releases covers, three-column Browse and larger swipeable Daily cards. Recent opens Added first in both orientations.
 - Stacks portrait bus route numbers above arrivals and rearranges Home into horizontal icon/control rows with horizontal level sliders.
 - Shows Mixes loading/unavailable state even when For You succeeds, rather than silently hiding a failed mix request.
-- Automatically reboots after changing a boot-level display profile; orientation and mounting changes restart the display without a full reboot.
+- Apply Display saves the profile, orientation and mounting then automatically reboots, applying the output and touch calibration together. Brightness/theme changes do not reboot.
 - Raises the reboot confirmation slightly above visual centre in both orientations.
 
 ## 1.1.0-beta.41 Alpine Beta — 6 October 2026
