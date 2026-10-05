@@ -1,3 +1,3 @@
 """Pi Home appliance."""
 
-__version__ = "1.1.0-beta.39"
+__version__ = "1.1.0-beta.40"

@@ -34,17 +34,21 @@ for width, height in (tuple(map(int,os.environ["PI_HOME_SETTINGS_VIEWPORT"].spli
         if width<600: window.add_css_class("compact-portrait")
     elif width>=1200: window.add_css_class("touch-landscape")
     display.configure_settings_layout(width,height)
-    display.device_status.set_text("v1.1.0-beta.39 Alpine")
+    display.device_status.set_text("v1.1.0-beta.40 Alpine")
     display.touch_diagnostics.set_text("Memory 5.4%  ·  Load 1.53  ·  63.3°C  ·  Controller ready  ·  Bridge offline")
     display.render_touch_controls({"services":[{"name":name,"enabled":True} for name in ("40","42","401")]}, {"roon_bridge":"stopped"})
     window.present(); settle(); display.adapt_display(); settle()
-    rows = [display.touch_profile, display.touch_orientation, display.touch_mounting, display.touch_profile.get_parent().get_last_child()]
+    rows = [display.touch_profile, display.touch_orientation, display.touch_mounting]
     heights = [row.get_height() for row in rows]
     assert min(heights) > 0 and max(heights)-min(heights) <= 1, (width,height,heights)
     actions=[]; child=display.settings_actions.get_first_child()
     while child:
         actions.append(child.get_width()); child=child.get_next_sibling()
     assert max(actions)-min(actions) <= 1, actions
+    assert display.settings_actions.get_first_child() == display.update_button
+    assert display.update_button.get_next_sibling() == display.apply_display_button
+    theme_widths=[button.get_width() for button in display.touch_theme_buttons.values()]
+    assert max(theme_widths)-min(theme_widths)<=1, theme_widths
     assert window.get_width() == width and window.get_height() == height, (width,height,window.get_width(),window.get_height())
     output=os.environ.get("PI_HOME_SCREENSHOT_DIR")
     if output and (width,height)==(1280,720):

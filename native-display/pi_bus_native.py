@@ -267,6 +267,8 @@ CSS += b"""
 .settings-page .settings-column { padding: 0; }
 .settings-page .settings-controls { padding: 8px 0 0; }
 .settings-brand { color: #6ed9ae; }
+.settings-theme-choice { min-height: 48px; font-size: 16px; }
+.touch-landscape .settings-theme-choice { min-height: 56px; font-size: 19px; }
 .theme-roon .settings-brand { color: #8275ef; }
 .settings-version { font-size: 12px; color: #a4aaa7; }
 .settings-page .settings-diagnostic { font-size: 13px; color: #747974; }
@@ -623,17 +625,18 @@ class Display(Gtk.Application):
         top = Gtk.Box(spacing=20); top.add_css_class("settings-header"); self.settings_header = top
         heading = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4); heading.set_hexpand(True)
         title_row = Gtk.Box(spacing=10); title_row.set_valign(Gtk.Align.CENTER)
-        title_row.append(self.label("Pi Home", "settings-title")); title_row.get_last_child().add_css_class("settings-brand"); title_row.append(self.label("Settings", "settings-title"))
+        title_row.append(self.label("Pi Home", "settings-title")); title_row.get_last_child().add_css_class("settings-brand"); title_row.get_last_child().set_valign(Gtk.Align.BASELINE); title_row.append(self.label("Settings", "settings-title")); title_row.get_last_child().set_valign(Gtk.Align.BASELINE)
         self.device_status = self.label("", "settings-version"); self.device_status.set_valign(Gtk.Align.BASELINE); title_row.append(self.device_status); heading.append(title_row)
         self.touch_diagnostics = self.label("Loading diagnostics…", "settings-diagnostic"); self.touch_diagnostics.set_wrap(True); heading.append(self.touch_diagnostics); top.append(heading)
         utilities = Gtk.Box(spacing=22); utilities.set_valign(Gtk.Align.START); utilities.append(self.button("BACK", self.close_settings)); utilities.append(self.button("SLEEP", self.sleep)); top.append(utilities); page.append(top)
         separator = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL); separator.add_css_class("settings-divider"); page.append(separator)
         card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14); card.add_css_class("settings-card"); card.set_vexpand(True)
         self.settings_row_sizes = Gtk.SizeGroup(mode=Gtk.SizeGroupMode.VERTICAL)
-        self.touch_theme_row = Gtk.Box(spacing=8); self.touch_theme_row.append(self.label("Theme")); self.touch_theme_buttons = {}
+        self.touch_theme_row = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16); self.touch_theme_row.set_margin_top(8); self.touch_theme_row.append(self.label("THEME", "eyebrow")); self.touch_theme_buttons = {}
+        theme_choices = Gtk.Box(spacing=16); theme_choices.set_homogeneous(True); self.touch_theme_row.append(theme_choices)
         for value, title in (("fresh-mint", "Mint"), ("roon", "Roon")):
             button = self.button(title, lambda _button, theme=value: self.change_theme(theme), "theme-choice")
-            self.touch_theme_buttons[value] = button; self.touch_theme_row.append(button)
+            button.set_hexpand(True); button.add_css_class("settings-theme-choice"); self.touch_theme_buttons[value] = button; theme_choices.append(button)
         controls = Gtk.Box(spacing=28); controls.add_css_class("settings-controls"); controls.set_vexpand(True); controls.set_valign(Gtk.Align.START); self.settings_controls = controls
         daily = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16); daily.add_css_class("settings-column"); daily.set_size_request(430, -1); daily.append(self.label("DAILY CONTROLS", "eyebrow")); self.touch_daily = daily; self.settings_daily = daily; controls.append(daily)
         display_column = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16); display_column.add_css_class("settings-column"); display_column.set_hexpand(True); display_column.append(self.label("DISPLAY", "eyebrow"))
@@ -641,9 +644,9 @@ class Display(Gtk.Application):
         self.touch_orientation = Gtk.DropDown.new_from_strings(["Orientation · Landscape", "Orientation · Portrait"]); self.touch_orientation.add_css_class("settings-select"); display_column.append(self.touch_orientation); controls.append(display_column)
         scroll = Gtk.ScrolledWindow(); scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC); scroll.set_vexpand(True); scroll.set_child(controls); card.append(scroll)
         self.touch_mounting = Gtk.DropDown.new_from_strings(["Rotation · Standard", "Rotation · 180°"]); self.touch_mounting.add_css_class("settings-select"); display_column.append(self.touch_mounting)
-        brightness_row = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3); brightness_row.add_css_class("setting-line"); brightness_row.add_css_class("brightness-setting"); brightness_row.append(self.label("Display brightness", "muted")); self.touch_brightness = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 10, 100, 1); self.touch_brightness.set_draw_value(True); self.touch_brightness.set_value_pos(Gtk.PositionType.RIGHT); self.touch_brightness.connect("value-changed", self.change_brightness); brightness_row.append(self.touch_brightness); display_column.append(brightness_row)
-        for row in (self.touch_profile, self.touch_orientation, self.touch_mounting, brightness_row): self.settings_row_sizes.add_widget(row)
-        actions = Gtk.Box(spacing=18); actions.set_homogeneous(True); actions.set_valign(Gtk.Align.END); self.settings_actions = actions; self.apply_display_button = self.button("APPLY DISPLAY", self.request_display_settings, "settings-action"); self.apply_display_button.set_hexpand(True); actions.append(self.apply_display_button); self.update_button = self.button("INSTALL UPDATE", self.request_update, "settings-action"); self.update_button.set_hexpand(True); actions.append(self.update_button); actions.append(self.button("REBOOT", self.confirm_reboot, "settings-action")); card.append(actions); page.append(card)
+        brightness_row = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16); brightness_row.set_margin_top(8); brightness_row.append(self.label("DISPLAY BRIGHTNESS", "eyebrow")); self.touch_brightness = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 10, 100, 1); self.touch_brightness.set_draw_value(True); self.touch_brightness.set_value_pos(Gtk.PositionType.RIGHT); self.touch_brightness.connect("value-changed", self.change_brightness); brightness_row.append(self.touch_brightness); display_column.append(brightness_row)
+        for row in (self.touch_profile, self.touch_orientation, self.touch_mounting): self.settings_row_sizes.add_widget(row)
+        actions = Gtk.Box(spacing=18); actions.set_homogeneous(True); actions.set_valign(Gtk.Align.END); self.settings_actions = actions; self.apply_display_button = self.button("APPLY DISPLAY", self.request_display_settings, "settings-action"); self.apply_display_button.set_hexpand(True); self.update_button = self.button("INSTALL UPDATE", self.request_update, "settings-action"); self.update_button.set_hexpand(True); actions.append(self.update_button); actions.append(self.apply_display_button); actions.append(self.button("REBOOT", self.confirm_reboot, "settings-action")); card.append(actions); page.append(card)
         return page
 
     def build_sleep(self):

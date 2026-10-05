@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.0-beta.40 Alpine Beta — 6 October 2026
+
+- Aligns the installed version with the Pi Home Settings title baseline.
+- Gives Display Brightness its own accent subheading and separate slider, and Theme its own subheading with two equal-width, larger Mint/Roon choices.
+- Reorders bottom actions to Install Update, Apply Display, Reboot, retaining equal widths and margins.
+
 ## 1.1.0-beta.39 Alpine Beta — 6 October 2026
 
 - Rebuilds touchscreen Settings to the supplied layout: left-aligned Pi Home Settings title with inline version, compact metrics underneath, Back/Sleep at the top right, common outer margins and equal-height control rows.
