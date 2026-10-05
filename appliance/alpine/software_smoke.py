@@ -3,7 +3,16 @@ from pathlib import Path
 import subprocess
 from setup_service import Setup
 
-app = Setup()
+def test_command(arguments):
+    result = subprocess.run(arguments, capture_output=True, text=True, timeout=45)
+    if result.returncode:
+        raise ValueError(str(arguments) + ': ' + result.stdout + result.stderr)
+    return result.stdout.strip()
+
+# OpenRC is not PID 1 in this disposable runtime test.
+Path('/run/openrc').mkdir(exist_ok=True)
+Path('/run/openrc/softlevel').write_text('default\n')
+app = Setup(run=test_command)
 app.netdata_install_lock.acquire()
 app.install_official_netdata()
 status = Path('/var/lib/pi-home/netdata-operation-status').read_text()
