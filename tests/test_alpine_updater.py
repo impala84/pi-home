@@ -15,6 +15,14 @@ class AlpineUpdaterTests(unittest.TestCase):
     def test_updates_follow_the_renamed_alpine_beta_branch(self):
         self.assertEqual(updater.BRANCH, "alpine-beta")
 
+    def test_stage_space_tracks_current_release_size_with_a_bounded_reserve(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / "application").write_bytes(b"x" * 1_000_000)
+            required = updater.required_stage_space(root)
+        self.assertGreaterEqual(required, updater.MIN_STAGE_BYTES)
+        self.assertLess(required, 400_000_000)
+
     def test_update_leaves_live_release_directory_before_any_pruning(self):
         with patch.object(updater.os, "chdir") as chdir, patch.object(updater, "wait_for_clock", side_effect=RuntimeError("stop")):
             with self.assertRaisesRegex(RuntimeError, "stop"):

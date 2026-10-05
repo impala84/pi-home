@@ -57,7 +57,7 @@ rc-update add udev sysinit
 rc-update add udev-trigger sysinit
 for service in hwclock modules sysctl bootmisc hostname localmount hwdrivers; do rc-update add "$service" boot; done
 for service in killprocs savecache mount-ro; do rc-update add "$service" shutdown; done
-for service in networking dbus networkmanager avahi-daemon seatd pi-home-firstboot pi-home-api pi-home-roon pi-home-setup pi-home-input pi-home-display; do rc-update add "$service" default; done
+for service in networking dbus networkmanager avahi-daemon seatd pi-home-storage pi-home-firstboot pi-home-api pi-home-roon pi-home-setup pi-home-input pi-home-display; do rc-update add "$service" default; done
 # Pi 4 has no battery-backed RTC. An epoch clock breaks HTTPS (LTA/updates).
 # Restore at least the last known/build time before networking, then let chrony
 # burst and step to exact network time as soon as connectivity appears.

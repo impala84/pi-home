@@ -660,6 +660,7 @@ def system_snapshot(state_dir: Path, include_diagnostics: bool = False) -> dict:
         "app_version": display_version(),
         "alpine_tools": os.getenv("PI_HOME_APPLIANCE_PLATFORM") == "alpine-prototype",
         "tools_status": (state_dir / "tools-status").read_text().strip() if (state_dir / "tools-status").is_file() else "",
+        "storage_status": (state_dir / "storage-status").read_text().strip() if (state_dir / "storage-status").is_file() else "Not yet checked",
     }
     if include_diagnostics:
         snapshot["diagnostics"] = diagnostics_snapshot()

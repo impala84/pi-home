@@ -106,6 +106,15 @@ class AlpinePrototypeTests(unittest.TestCase):
         self.assertIn("pi-home-alpine-beta.img", script)
         self.assertNotIn("pi-home-alpine-prototype.img", script)
 
+    def test_image_includes_first_boot_storage_expansion_before_application(self):
+        dockerfile = (ROOT / "appliance/alpine/Dockerfile").read_text()
+        provision = (ROOT / "appliance/alpine/provision.sh").read_text()
+        firstboot = (ROOT / "appliance/alpine/init.d/pi-home-firstboot").read_text()
+        self.assertIn("cloud-utils-growpart", dockerfile)
+        self.assertIn("e2fsprogs-extra", dockerfile)
+        self.assertIn("pi-home-storage", provision)
+        self.assertIn("need localmount pi-home-storage", firstboot)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -16,12 +16,14 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y dosfstools e2fsprogs fdisk mtools
       - name: Build ARM64 appliance image
         run: bash appliance/alpine/build-image.sh
+      - name: Verify a fresh image expands on a larger card
+        run: bash appliance/alpine/verify-storage-expansion.sh dist/alpine/pi-home-alpine-beta.img.gz
       - name: Validate Alpine runtime without pretending to boot the Pi
         run: |
           docker run --rm --user morningbus pi-home-alpine:beta .venv/bin/python appliance/alpine/smoke.py
       - name: Verify time sync and optional service tools
         run: |
-          docker run --rm pi-home-alpine:beta sh -ec 'test -x /usr/bin/grim; test -x /etc/init.d/netdata; test -e /etc/runlevels/default/chronyd; test -e /etc/runlevels/boot/pi-home-clock; test ! -e /etc/runlevels/boot/hwclock; grep -Eq "^(pool|server).* iburst" /etc/chrony/chrony.conf; grep -qx "makestep 0.1 -1" /etc/chrony/chrony.conf; chronyd -p -f /etc/chrony/chrony.conf'
+          docker run --rm pi-home-alpine:beta sh -ec 'test -x /usr/bin/grim; test -x /usr/bin/growpart; test -x /usr/sbin/resize2fs; test -x /etc/init.d/netdata; test -e /etc/runlevels/default/pi-home-storage; test -e /etc/runlevels/default/chronyd; test -e /etc/runlevels/boot/pi-home-clock; test ! -e /etc/runlevels/boot/hwclock; grep -Eq "^(pool|server).* iburst" /etc/chrony/chrony.conf; grep -qx "makestep 0.1 -1" /etc/chrony/chrony.conf; chronyd -p -f /etc/chrony/chrony.conf'
           docker run --rm pi-home-alpine:beta python3 appliance/alpine/cursor_smoke.py
           docker run --rm pi-home-alpine:beta ps -eo pid=,rss=,pcpu=,args=
       - name: Exercise native setup pages using a disposable test-only display

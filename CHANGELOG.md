@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.1.0-beta.24 Alpine Beta — 5 October 2026
+
+- Expand the flashed root partition and ext4 filesystem to the available SD-card
+  capacity before normal Pi Home services start, using the detected root device
+  rather than a hard-coded MMC path.
+- Include Alpine's `growpart` and `resize2fs` packages in the factory image, make
+  expansion idempotent, and keep boot recoverable with a dedicated storage log
+  and backend status if expansion fails.
+- Replace the updater's fixed 400 MB free-space gate with a requirement derived
+  from the installed application footprint plus a bounded staging reserve.
+
 ## 1.1.0-beta.23 Alpine Beta — 5 October 2026
 
 - Replaced the separate Netdata token and Room fields with one paste box for

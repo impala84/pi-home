@@ -22,6 +22,8 @@ REPO = "https://api.github.com/repos/impala84/pi-home"
 BRANCH = "alpine-beta"
 DISPLAY_REVISION = Path("/run/pi-home/display-source-commit")
 MANAGED_RELEASE = re.compile(r"[0-9a-f]{40}-[0-9]+")
+UPDATE_RESERVE_BYTES = 96_000_000
+MIN_STAGE_BYTES = 160_000_000
 
 
 def status(message):
@@ -81,6 +83,27 @@ def prune_releases(releases, preserve=()):
     for path in releases.iterdir():
         if managed_release(path, releases) and path.resolve() not in preserved:
             shutil.rmtree(path)
+
+
+def tree_disk_usage(path):
+    """Allocated bytes used by one release tree, without following symlinks."""
+    total = 0
+    for root, directories, files in os.walk(path, followlinks=False):
+        for name in directories + files:
+            candidate = Path(root) / name
+            try:
+                stat = candidate.lstat()
+            except OSError:
+                continue
+            total += stat.st_blocks * 512
+    return total
+
+
+def required_stage_space(current):
+    # A new tree is normally close to the current release's allocated size.
+    # Add a bounded reserve for the source archive, extraction and package
+    # growth instead of rejecting every update below an arbitrary 400 MB.
+    return max(MIN_STAGE_BYTES, tree_disk_usage(current) + UPDATE_RESERVE_BYTES)
 
 
 def verified_revision():
@@ -168,8 +191,10 @@ def update():
     current = APP.resolve()
     status("Update · Reclaiming old update space…")
     prune_releases(releases, {current})
-    if shutil.disk_usage(releases).free < 400_000_000:
-        raise RuntimeError("Not enough free space to stage an update; current application unchanged")
+    required = required_stage_space(current)
+    available = shutil.disk_usage(releases).free
+    if available < required:
+        raise RuntimeError(f"Not enough free space to stage this update ({required // 1_000_000} MB required, {available // 1_000_000} MB available); current application unchanged")
     target = releases / (sha + "-" + str(time.time_ns()))
     try:
         # Stage dependencies while the existing app remains running.
