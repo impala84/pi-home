@@ -21,5 +21,8 @@ assert Path('/opt/netdata/bin/netdata').is_file()
 assert Path('/etc/init.d/netdata').is_file()
 assert Path('/etc/runlevels/default/netdata').exists()
 assert Path('/etc/periodic/daily/netdata-updater').exists()
+config = Path('/opt/netdata/etc/netdata/netdata.conf').read_text()
+assert 'enabled = no' in config and 'update every = 3' in config, config
+assert Path('/var/lib/pi-home/netdata-lightweight').read_text().strip() == 'yes'
 subprocess.run(['/opt/netdata/bin/netdata', '-v'], check=True)
 print('Official Netdata installed from the fresh image; service and daily updater present.')
