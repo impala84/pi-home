@@ -10,7 +10,7 @@ const RoonApiStatus = require('node-roon-api-status');
 const RoonApiTransport = require('node-roon-api-transport');
 const {publicQueueItems, updateQueueState} = require('./queue-state');
 const {displayArtist} = require('./artist-name');
-const {playingMetadata, loadDetails, loadArtistProfile} = require('./details-state');
+const {addToLibrary, playingMetadata, loadDetails, loadArtistProfile} = require('./details-state');
 const artistProfileCache = new Map();
 const {BluOSClient, discoverPlayers} = require('./bluos-client');
 const {BrowseManager} = require('./browse-state');
@@ -366,6 +366,11 @@ http.createServer(async (request, response) => {
       if (url.pathname === '/api/bluos/mute') { await bluos.toggleMute(); return json(response, 200, {ok: true}); }
       if (!transport || !zone) return json(response, 409, {error: 'Roon is not connected'});
       if(url.pathname === '/api/discovery/mix-action') return json(response,200,await discovery.mixAction(data.id,zone.zone_id,data.action,data.nonce));
+      if(url.pathname === '/api/library/add') {
+        const result = await addToLibrary(browseService, zone);
+        detailsCache.delete(detailsKey); detailsKey = ''; ensureDetails(true); broadcast();
+        return json(response,200,result);
+      }
       if(url.pathname === '/api/discovery/open') {
         if(!discovery.find(data.key) && data.section) {
           discovery.state(data.section,data.id||'');

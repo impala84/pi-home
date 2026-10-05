@@ -244,12 +244,32 @@ async function searchItem(service, zoneId, query, category, title, session) {
   return chooseItem(loaded.items, title);
 }
 
-async function albumTracks(service, zoneId, item, session) {
-  if (!item?.item_key) return [];
+async function albumContents(service, zoneId, item, session) {
+  if (!item?.item_key) return {tracks: [], library_status: 'unknown'};
   await request(service, 'browse', {hierarchy: 'search', item_key: item.item_key, multi_session_key: session, zone_or_output_id: zoneId});
   const loaded = await request(service, 'load', {hierarchy: 'search', multi_session_key: session, offset: 0, count: 40});
-  return (loaded.items || []).filter(candidate => candidate.hint !== 'header' && candidate.title && candidate.hint !== 'action')
-    .slice(0, 30).map(candidate => ({title: candidate.title, subtitle: candidate.subtitle || ''}));
+  const items = loaded.items || [];
+  const add = items.find(candidate => candidate.item_key && /^\+?\s*add to library$/i.test(String(candidate.title || '').trim()));
+  return {
+    tracks: items.filter(candidate => candidate.hint !== 'header' && candidate.title && candidate.hint !== 'action')
+      .slice(0, 30).map(candidate => ({title: candidate.title, subtitle: candidate.subtitle || ''})),
+    library_status: add ? 'not_in_library' : 'in_library'
+  };
+}
+
+async function addToLibrary(service, zone) {
+  const metadata = playingMetadata(zone);
+  if (!service || !zone?.zone_id || !metadata.album) throw new Error('No album is currently playing');
+  const session = `pi-home-library-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const album = await searchItem(service, zone.zone_id, [metadata.album, metadata.artist].filter(Boolean).join(' '), 'Albums', metadata.album, session);
+  if (!album?.item_key) throw new Error('Roon could not identify this album');
+  await request(service, 'browse', {hierarchy: 'search', item_key: album.item_key, multi_session_key: session, zone_or_output_id: zone.zone_id});
+  const loaded = await request(service, 'load', {hierarchy: 'search', multi_session_key: session, offset: 0, count: 40});
+  const add = (loaded.items || []).find(candidate => candidate.item_key && /^\+?\s*add to library$/i.test(String(candidate.title || '').trim()));
+  if (!add) return {added: false, already_in_library: true};
+  const result = await request(service, 'browse', {hierarchy: 'search', item_key: add.item_key, multi_session_key: session, zone_or_output_id: zone.zone_id});
+  if (result?.is_error) throw new Error(String(result.message || 'Roon could not add this album'));
+  return {added: true, already_in_library: false};
 }
 
 async function loadDetails(service, zone, enrich = loadMusicBrainzMetadata) {
@@ -267,7 +287,10 @@ async function loadDetails(service, zone, enrich = loadMusicBrainzMetadata) {
   base.album_image_key = album?.image_key || metadata.image_key;
   base.artist_image_key = artist?.image_key || null;
   base.subtitle = album?.subtitle || artist?.subtitle || '';
-  try { base.tracks = await albumTracks(service, zone.zone_id, album, `${stamp}-album`); } catch (_) {}
+  try {
+    const contents = await albumContents(service, zone.zone_id, album, `${stamp}-album`);
+    base.tracks = contents.tracks; base.library_status = contents.library_status;
+  } catch (_) { base.library_status = 'unknown'; }
   base.metadata = musicBrainzFacts(null, base.tracks.length);
   const facts = await enrichment;
   if (facts) base.metadata = {...facts, track_count: facts.track_count || base.tracks.length};
@@ -275,4 +298,4 @@ async function loadDetails(service, zone, enrich = loadMusicBrainzMetadata) {
   return base;
 }
 
-module.exports = {loadArtistProfile, playingMetadata, chooseItem, artistCandidates, chooseMusicBrainzGroup, chooseUniqueTitleGroup, musicBrainzFacts, parseBandcampPage, loadAlbumWriteup, loadMusicBrainzMetadata, loadDetails};
+module.exports = {addToLibrary, loadArtistProfile, playingMetadata, chooseItem, artistCandidates, chooseMusicBrainzGroup, chooseUniqueTitleGroup, musicBrainzFacts, parseBandcampPage, loadAlbumWriteup, loadMusicBrainzMetadata, loadDetails};

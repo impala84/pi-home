@@ -460,9 +460,10 @@ class Display(Gtk.Application):
         times = Gtk.Box(); self.elapsed = self.label("0:00", "time"); self.remaining = self.label("−0:00", "time", 1); self.remaining.set_hexpand(True); times.append(self.elapsed); times.append(self.remaining); centre.append(times); self.roon_times = times
         self.controls = Gtk.Box(spacing=14); self.controls.set_halign(Gtk.Align.CENTER); self.controls.add_css_class("transport")
         self.controls.set_margin_top(6); self.controls.set_margin_bottom(16)
+        self.library_add = self.button("＋", self.add_current_album); self.library_add.set_tooltip_text("Add album to library"); self.library_add.set_visible(False)
         self.prev = self.icon_button("media-skip-backward-symbolic", lambda *_: self.control("previous")); self.play = self.icon_button("media-playback-start-symbolic", lambda *_: self.control("playpause"), "play"); self.play.get_child().set_pixel_size(42); self.next = self.icon_button("media-skip-forward-symbolic", lambda *_: self.control("next"))
         self.prev.set_size_request(50, 50); self.prev.set_valign(Gtk.Align.CENTER); self.play.set_size_request(68, 68); self.play.set_valign(Gtk.Align.CENTER); self.next.set_size_request(50, 50); self.next.set_valign(Gtk.Align.CENTER)
-        self.controls.append(self.prev); self.controls.append(self.play); self.controls.append(self.next); centre.append(self.controls)
+        self.controls.append(self.library_add); self.controls.append(self.prev); self.controls.append(self.play); self.controls.append(self.next); centre.append(self.controls)
         volume_row = Gtk.Box(spacing=10); self.mute = self.button("MUTE", self.toggle_audio_mute, "utility"); self.mute.set_size_request(62, 38); volume_row.append(self.mute); self.volume = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0, 100, 1); self.volume.add_css_class("volume"); self.volume.set_hexpand(True); self.volume.set_draw_value(False); self.volume.connect("value-changed", self.change_volume); volume_row.append(self.volume); self.volume_value = self.label("—", "time", 1); self.volume_value.add_css_class("volume-number"); volume_row.append(self.volume_value); centre.append(volume_row)
         content.append(centre); self.roon_views.add_named(content, "now")
         source = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12); source.add_css_class("source-view"); source.set_halign(Gtk.Align.CENTER); source.set_valign(Gtk.Align.CENTER); source.set_hexpand(True); source.set_vexpand(True)
@@ -1731,6 +1732,8 @@ class Display(Gtk.Application):
         self.detail_title.set_text(details.get("album") or details.get("track") or "Nothing playing")
         self.detail_artist.set_text(details.get("artist") or "")
         self.detail_subtitle.set_text("Loading…" if details.get("status") == "loading" else (details.get("subtitle") or ""))
+        self.library_add.set_visible(details.get("library_status") == "not_in_library")
+        self.library_add.set_sensitive(True)
         metadata = details.get("metadata") or {}
         writeup = metadata.get("writeup") or ""; self.detail_writeup.set_text(writeup); self.detail_writeup.set_visible(bool(writeup))
         source = metadata.get("writeup_source") or ""; self.detail_source.set_text(f"SOURCE  {source.upper()}" if source else ""); self.detail_source.set_visible(bool(source))
@@ -1931,6 +1934,13 @@ class Display(Gtk.Application):
     def control(self, action):
         if action == "playpause" and (((self.state or {}).get("amplifier") or {}).get("active_input")): action = "resume"
         threading.Thread(target=post_json, args=(ROON + "/api/control", {"action": action}), daemon=True).start()
+    def add_current_album(self, *_):
+        self.library_add.set_sensitive(False)
+        def run():
+            result = post_json(ROON + "/api/library/add", {}, timeout=15.0)
+            GLib.idle_add(self.library_add.set_visible, not bool(result))
+            GLib.idle_add(self.library_add.set_sensitive, True)
+        threading.Thread(target=run, daemon=True).start()
     def toggle_bridge(self, button):
         threading.Thread(target=post_json, args=(BUS + "/api/device/roon-bridge", {"enabled": button.get_active()}), daemon=True).start()
     def toggle_service(self, button, service):

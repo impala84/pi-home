@@ -515,6 +515,8 @@ function renderDetails(info) {
   $('details-artist').textContent = info.artist || fallback.line2 || '';
   $('details-subtitle').textContent = info.status === 'loading' ? 'Loading…' : (info.subtitle || '');
   $('details-subtitle').classList.toggle('loading-notice',info.status === 'loading');
+  $('library-add').hidden = info.library_status !== 'not_in_library';
+  if (!$('library-add').hidden) $('library-add').disabled = false;
   const metadata = info.metadata || {}; const facts = $('details-facts'); facts.replaceChildren();
   $('details-writeup').textContent = metadata.writeup || '';
   $('details-source').textContent = metadata.writeup_source ? `Source · ${metadata.writeup_source}` : '';
@@ -543,6 +545,15 @@ function renderDetails(info) {
     item.append(number, copy); list.append(item);
   });
 }
+
+$('library-add').onclick = async () => {
+  const button = $('library-add'); button.disabled = true; button.textContent = '…';
+  try {
+    const response = await fetch(api('/api/library/add'), {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'});
+    if (!response.ok) throw new Error('Roon could not add this album');
+    button.hidden = true;
+  } finally { button.textContent = '＋'; if (!button.hidden) button.disabled = false; }
+};
 
 initDiscover();
 fetch(api('/api/state'), {cache: 'no-store'})

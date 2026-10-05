@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const {loadArtistProfile, playingMetadata, chooseItem, artistCandidates, chooseMusicBrainzGroup, chooseUniqueTitleGroup, musicBrainzFacts, parseBandcampPage, loadAlbumWriteup, loadMusicBrainzMetadata, loadDetails} = require('./details-state');
+const {addToLibrary, loadArtistProfile, playingMetadata, chooseItem, artistCandidates, chooseMusicBrainzGroup, chooseUniqueTitleGroup, musicBrainzFacts, parseBandcampPage, loadAlbumWriteup, loadMusicBrainzMetadata, loadDetails} = require('./details-state');
 
 test('artist background follows only a unique exact MusicBrainz identity', async () => {
   const id = '12345678-1234-1234-1234-123456789abc';
@@ -59,6 +59,25 @@ test('loadDetails sends search text directly and merges cached external facts', 
   const result = await loadDetails(service, {zone_id: 'zone', now_playing: {three_line: {line1: 'Track one', line2: 'Artist', line3: 'Album'}, image_key: 'current'}}, enrich);
   assert.equal(result.artist_image_key, 'artist-art'); assert.equal(result.album_image_key, 'album-art'); assert.equal(result.subtitle, '1999'); assert.equal(result.tracks[0].title, 'Track one');
   assert.equal(result.metadata.year, '1999'); assert.deepEqual(result.metadata.genres, ['Electronic']);
+  assert.equal(result.library_status, 'in_library');
+});
+
+test('Add to Library executes only the exact Roon album action', async () => {
+  let stage = 'search', mutation = 0;
+  const service = {
+    browse(options, callback) {
+      if (options.input) stage = 'results';
+      else if (options.item_key === 'album') stage = 'album';
+      else if (options.item_key === 'add') { stage = 'added'; mutation += 1; }
+      callback(false, {action: 'list'});
+    },
+    load(_options, callback) {
+      callback(false, {items: stage === 'results' ? [{title:'Album', subtitle:'Artist', item_key:'album'}]
+        : stage === 'album' ? [{title:'Add to Library', hint:'action', item_key:'add'}, {title:'Track one'}] : []});
+    }
+  };
+  const result = await addToLibrary(service, {zone_id:'zone', now_playing:{three_line:{line1:'Track one',line2:'Artist',line3:'Album'}}});
+  assert.deepEqual(result,{added:true,already_in_library:false}); assert.equal(mutation,1);
 });
 
 test('album information still loads when both Roon searches fail', async () => {
