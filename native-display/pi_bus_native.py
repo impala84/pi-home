@@ -299,6 +299,7 @@ CSS += b"""
 .portrait .home-name { font-size: 21px; }
 .portrait .home-state { font-size: 14px; }
 .portrait.compact-portrait .roon-subnav button { font-size: 10px; min-height: 40px; }
+.portrait.compact-portrait .browser-filter { font-size: 12px; min-height: 40px; padding: 4px 6px; }
 """
 
 
