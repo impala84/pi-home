@@ -254,7 +254,7 @@ CSS += b"""
 .portrait .roon-subnav button { min-height: 48px; padding: 6px 12px; font-size: 15px; }
 .portrait .browser-sidebar { padding: 0 0 8px; }
 .portrait .browser-filter { min-height: 48px; padding: 6px 10px; }
-.portrait .browser-back { margin: 0 0 0 auto; }
+.portrait .browser-back { margin: 0; }
 .portrait .queue-row { min-height: 92px; }
 .portrait .settings-card { padding: 20px; }
 .portrait .settings-controls { padding: 0; }
@@ -1244,7 +1244,7 @@ class Display(Gtk.Application):
         self.discovery_cards = []
         self.discovery_card_scrollers = {}
         self.sync_discovery_sidebar()
-        self.discovery_body.set_margin_end(24 if self.window.has_css_class("portrait") and self.discovery_section != "daily" else 0)
+        self.discovery_body.set_margin_end(24 if getattr(self, "responsive_portrait", False) and self.discovery_section != "daily" else 0)
         if data.get("status") != "ready":
             self.discovery_list.append(self.label("Loading…" if data.get("status") == "loading" else data.get("message", "Discover is unavailable."), "loading-notice" if data.get("status") == "loading" else "browser-message")); return False
         if self.discovery_mix:
@@ -1257,7 +1257,7 @@ class Display(Gtk.Application):
             self.discovery_list.append(controls)
         if self.discovery_section == "daily":
             columns, size = self.browser_grid_metrics(); size = min(212, size)
-            if self.window.has_css_class("portrait"): size = max(120, round((self.window.get_width() - 64) / 2.35))
+            if getattr(self, "responsive_portrait", False): size = max(120, round((self.window.get_width() - 64) / 2.35))
         else:
             columns, size = self.discovery_grid_metrics(self.discovery_section)
         content = self.discovery_list
