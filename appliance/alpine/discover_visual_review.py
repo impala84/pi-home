@@ -180,6 +180,7 @@ display.title.set_text("Solarium"); display.artist.set_text("Emancipator")
 display.library_status = "in_library"; display.library_add.set_visible(True); display.set_library_icon(False)
 display.artwork.set_filename(str(fixture_art("now-playing", "NOW PLAYING")))
 display.render_bluos_inputs({"inputs": [{"id": "tv", "name": "Watch TV"}, {"id": "rega", "name": "Rega P3"}]}, True)
+display.adapt_display()
 capture("now-playing")
 assert window.get_width() == screen_width and window.get_height() == screen_height, (window.get_width(), window.get_height(), screen_width, screen_height)
 footer_bounds = page.get_last_child().compute_bounds(page)[1]

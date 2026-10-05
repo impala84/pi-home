@@ -447,6 +447,9 @@ class Display(Gtk.Application):
 
     def adapt_display(self):
         width, height = self.window.get_width(), self.window.get_height()
+        monitors = Gdk.Display.get_default().get_monitors(); monitor = monitors.get_item(0) if monitors.get_n_items() else None
+        if monitor and width > 1 and height > 1:
+            geometry = monitor.get_geometry(); width, height = min(width, geometry.width), min(height, geometry.height)
         if width < 2 or height < 2:
             monitors = Gdk.Display.get_default().get_monitors(); monitor = monitors.get_item(0) if monitors.get_n_items() else None
             if not monitor: return False
@@ -484,7 +487,10 @@ class Display(Gtk.Application):
         self.discovery_body.set_orientation(Gtk.Orientation.VERTICAL if portrait else Gtk.Orientation.HORIZONTAL)
         self.discovery_sidebar.set_orientation(Gtk.Orientation.HORIZONTAL if portrait else Gtk.Orientation.VERTICAL)
         self.detail_panel.set_orientation(Gtk.Orientation.VERTICAL if portrait else Gtk.Orientation.HORIZONTAL)
-        artwork_size = min(width - 64, max(200, height - 540)) if portrait else (324 if width >= 1200 else min(280, max(220, height - 190)))
+        # Ask GTK how much height the actual text and controls need. Long
+        # titles must shrink the artwork instead of expanding the window.
+        reserved = max(560, 120 + sum(widget.measure(Gtk.Orientation.VERTICAL, max(1, width - 64))[0] for widget in (self.music_header_overlay, self.portrait_music_tabs, self.now_playing_centre, self.music_navigation))) if portrait else 0
+        artwork_size = min(width - 64, max(160, height - reserved)) if portrait else (324 if width >= 1200 else min(280, max(220, height - 190)))
         self.artwork.set_size_request(artwork_size, artwork_size); self.artwork_button.set_size_request(artwork_size, artwork_size)
         if portrait:
             if self.artwork.get_parent() is self.artwork_button:
@@ -647,7 +653,7 @@ class Display(Gtk.Application):
         self.detail_tracks = Gtk.Box(orientation=Gtk.Orientation.VERTICAL); self.detail_tracks.add_css_class("detail-tracks")
         detail_scroll = Gtk.ScrolledWindow(); detail_scroll.add_css_class("queue-scroll"); detail_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC); detail_scroll.set_kinetic_scrolling(True); detail_scroll.set_overlay_scrolling(True); detail_scroll.set_propagate_natural_height(True); detail_scroll.set_max_content_height(210); detail_scroll.set_child(self.detail_tracks); detail_content.append(detail_scroll)
         detail_copy.append(detail_content)
-        detail_panel.append(detail_copy); page.append(self.roon_views); page.append(self.navigation("roon"))
+        detail_panel.append(detail_copy); page.append(self.roon_views); self.music_navigation = self.navigation("roon"); page.append(self.music_navigation)
         takeover = Gtk.Box(); takeover.add_css_class("detail-takeover"); takeover.set_hexpand(True); takeover.set_vexpand(True)
         takeover.append(detail_panel); takeover.set_visible(False); self.detail_takeover = takeover
         root = Gtk.Overlay(); root.set_child(page); root.add_overlay(takeover); return root
@@ -1135,6 +1141,9 @@ class Display(Gtk.Application):
         play_icon = Gtk.Image.new_from_icon_name("media-playback-start-symbolic" if external else ("media-playback-pause-symbolic" if zone.get("state") == "playing" else "media-playback-start-symbolic")); play_icon.set_pixel_size(42); self.play.set_child(play_icon); self.prev.set_sensitive(not external and bool(zone.get("can_previous"))); self.next.set_sensitive(not external and bool(zone.get("can_next"))); self.play.set_sensitive(bool(zone.get("can_play") or zone.get("can_pause")))
         elapsed = int(zone.get("seek_position") or 0); length = int(playing.get("length") or 0); self.seek_updating = True; self.progress.set_range(0, max(1, length)); self.progress.set_value(min(elapsed, length) if length else 0); self.progress.set_sensitive(bool(zone.get("can_seek") and length)); self.seek_updating = False; self.elapsed.set_text(self.format_time(elapsed)); self.remaining.set_text("−" + self.format_time(max(0, length - elapsed)))
         output = zone.get("output") or {}; volume = output.get("volume") or {}; value = volume.get("value"); self.volume_updating = True; self.volume.set_sensitive(value is not None); self.volume.set_value(float(value or 0)); self.volume_value.set_text(str(value) if value is not None else "FIXED"); self.mute.set_sensitive(value is not None); self.mute.set_label("UNMUTE" if volume.get("is_muted") else "MUTE"); self.volume_updating = False
+        text_layout = (self.title.get_text(), self.artist.get_text())
+        if getattr(self, "responsive_portrait", False) and text_layout != getattr(self, "now_text_layout", None):
+            self.now_text_layout = text_layout; GLib.idle_add(self.adapt_display)
 
     def render_bluos_inputs(self, amplifier, have_roon):
         inputs = list(amplifier.get("inputs") or [])
