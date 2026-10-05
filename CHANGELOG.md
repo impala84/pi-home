@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.0-beta.30 Alpine Beta — 5 October 2026
+
+- Keeps the three Netdata actions on one responsive desktop/tablet row, with a mobile-only vertical fallback.
+- Gives appliance system tools their own labelled subsection and suppresses stale failed-operation copy after Netdata reports a live Cloud connection.
+
 ## 1.1.0-beta.29 Alpine Beta — 5 October 2026
 
 - Restores true centred Now Playing title and artist layout on the native touchscreen.

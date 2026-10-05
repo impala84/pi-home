@@ -48,6 +48,17 @@ class DisplayRotationTests(unittest.TestCase):
         self.assertIn("action:'netdata_claim_command'", javascript)
         self.assertIn("command.value=''", javascript)
 
+    def test_netdata_actions_share_one_responsive_row_and_tools_have_a_heading(self):
+        html = (ROOT / "src/pi_bus_time_display/static/admin.html").read_text()
+        css = (ROOT / "src/pi_bus_time_display/static/admin.css").read_text()
+        actions = html[html.index('class="action-buttons netdata-actions"'):html.index('id="netdata-connect"')]
+        self.assertIn('id="netdata-open"', actions)
+        self.assertIn('id="netdata-connect-toggle"', actions)
+        self.assertIn('id="netdata-disconnect"', actions)
+        self.assertIn('<div id="alpine-tools" hidden><h3>System tools</h3>', html)
+        self.assertIn('.netdata-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))', css)
+        self.assertIn('@media(max-width:620px){.netdata-actions{grid-template-columns:1fr}}', css)
+
     def test_bus_colours_are_keyed_by_route_not_row_position(self):
         css = (ROOT / "src/pi_bus_time_display/static/bus-refinements.css").read_text()
         self.assertNotIn(".service:nth-child", css)
