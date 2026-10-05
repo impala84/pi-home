@@ -596,6 +596,7 @@ class Display(Gtk.Application):
         display_column = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16); display_column.add_css_class("settings-column"); display_column.set_hexpand(True); display_column.append(self.label("DISPLAY", "eyebrow"))
         self.touch_profile = Gtk.DropDown.new_from_strings(["Profile · Original 800×480", "Profile · Touch 2 5-inch", "Profile · Touch 2 7-inch", "Profile · Touch 2 10-inch"]); self.touch_profile.add_css_class("settings-select"); display_column.append(self.touch_profile)
         self.touch_orientation = Gtk.DropDown.new_from_strings(["Orientation · Landscape", "Orientation · Portrait"]); self.touch_orientation.add_css_class("settings-select"); display_column.append(self.touch_orientation); controls.append(display_column); card.append(controls)
+        self.touch_mounting = Gtk.DropDown.new_from_strings(["Rotation · Standard", "Rotation · 180°"]); self.touch_mounting.add_css_class("settings-select"); display_column.append(self.touch_mounting)
         brightness_row = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3); brightness_row.add_css_class("setting-line"); brightness_row.add_css_class("brightness-setting"); brightness_row.append(self.label("Display brightness", "muted")); self.touch_brightness = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 10, 100, 1); self.touch_brightness.set_draw_value(True); self.touch_brightness.set_value_pos(Gtk.PositionType.RIGHT); self.touch_brightness.connect("value-changed", self.change_brightness); brightness_row.append(self.touch_brightness); display_column.append(brightness_row)
         actions = Gtk.Box(spacing=12); actions.set_valign(Gtk.Align.END); self.apply_display_button = self.button("APPLY DISPLAY", self.request_display_settings, "settings-action"); self.apply_display_button.set_hexpand(True); actions.append(self.apply_display_button); self.update_button = self.button("INSTALL UPDATE", self.request_update, "settings-action"); self.update_button.set_hexpand(True); actions.append(self.update_button); actions.append(self.button("REBOOT", self.confirm_reboot, "settings-action")); card.append(actions); page.append(card)
         return page
@@ -825,8 +826,8 @@ class Display(Gtk.Application):
             health += f"  ·  Controller {'ready' if states.get('Roon controller') else 'offline'}  ·  Bridge {'ready' if states.get('Roon Bridge') else 'offline'}"
             self.touch_diagnostics.set_text(health)
             if not self.display_controls_loaded:
-                profiles = {"original": 0, "touch2-5": 1, "touch2-7": 2, "touch2-5-7": 2, "touch2-10": 3}; orientations = {"landscape": 0, "portrait": 1}
-                self.touch_profile.set_selected(profiles.get(system.get("display_profile"), 0)); self.touch_orientation.set_selected(orientations.get(system.get("display_orientation"), 0)); self.display_controls_loaded = True
+                profiles = {"original": 0, "touch2-5": 1, "touch2-7": 2, "touch2-5-7": 2, "touch2-10": 3}; orientations = {"landscape": 0, "portrait": 1}; mountings = {"standard": 0, "inverted": 1}
+                self.touch_profile.set_selected(profiles.get(system.get("display_profile"), 0)); self.touch_orientation.set_selected(orientations.get(system.get("display_orientation"), 0)); self.touch_mounting.set_selected(mountings.get(system.get("display_mounting"), 0)); self.display_controls_loaded = True
         self.render_touch_controls(device, self.system_data)
         self.render_home((device or {}).get("home") or {})
         brightness = int((device or {}).get("display_brightness", 100))
@@ -2107,13 +2108,13 @@ class Display(Gtk.Application):
             GLib.idle_add(self.update_button.set_sensitive, True)
 
     def request_display_settings(self, *_):
-        profiles = ("original", "touch2-5", "touch2-7", "touch2-10"); orientations = ("landscape", "portrait")
-        profile = profiles[min(self.touch_profile.get_selected(), len(profiles) - 1)]; orientation = orientations[min(self.touch_orientation.get_selected(), len(orientations) - 1)]
+        profiles = ("original", "touch2-5", "touch2-7", "touch2-10"); orientations = ("landscape", "portrait"); mountings = ("standard", "inverted")
+        profile = profiles[min(self.touch_profile.get_selected(), len(profiles) - 1)]; orientation = orientations[min(self.touch_orientation.get_selected(), len(orientations) - 1)]; mounting = mountings[min(self.touch_mounting.get_selected(), len(mountings) - 1)]
         self.apply_display_button.set_sensitive(False); self.device_status.set_text("Applying display settings…")
-        threading.Thread(target=self._request_display_settings, args=(profile, orientation), daemon=True).start()
+        threading.Thread(target=self._request_display_settings, args=(profile, orientation, mounting), daemon=True).start()
 
-    def _request_display_settings(self, profile, orientation):
-        result = post_json(BUS + "/api/admin/system-action", {"action": "set_display", "profile": profile, "orientation": orientation})
+    def _request_display_settings(self, profile, orientation, mounting):
+        result = post_json(BUS + "/api/admin/system-action", {"action": "set_display", "profile": profile, "orientation": orientation, "mounting": mounting})
         GLib.idle_add(self.device_status.set_text, "Display saved · reloading touchscreen…" if result else "Could not apply display settings")
         if not result: GLib.idle_add(self.apply_display_button.set_sensitive, True)
 

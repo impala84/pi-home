@@ -61,6 +61,15 @@ class DisplayRotationTests(unittest.TestCase):
         self.assertIn('.netdata-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))', css)
         self.assertIn('@media(max-width:620px){.netdata-actions{grid-template-columns:1fr}}', css)
 
+    def test_missing_roon_bridge_offers_an_appliance_installer(self):
+        html = (ROOT / "src/pi_bus_time_display/static/admin.html").read_text()
+        javascript = (ROOT / "src/pi_bus_time_display/static/admin.js").read_text()
+        self.assertIn('id="roon-install"', html)
+        self.assertIn('data-action="roon_install"', html)
+        self.assertIn('id="roon-controls"', html)
+        self.assertIn('watchRoonBridgeInstall()', javascript)
+        self.assertIn("data.roon_bridge_operation_status", javascript)
+
     def test_bus_colours_are_keyed_by_route_not_row_position(self):
         css = (ROOT / "src/pi_bus_time_display/static/bus-refinements.css").read_text()
         self.assertNotIn(".service:nth-child", css)
@@ -141,8 +150,19 @@ class DisplayRotationTests(unittest.TestCase):
         display = (ROOT / "native-display/pi_bus_native.py").read_text(encoding="utf-8")
         self.assertIn('<option value="landscape">Landscape</option>', html)
         self.assertIn('<option value="portrait">Portrait</option>', html)
+        self.assertIn('<option value="inverted">180°</option>', html)
         self.assertIn("orientation:document.getElementById('display-orientation').value", javascript)
-        self.assertIn('{"action": "set_display", "profile": profile, "orientation": orientation}', display)
+        self.assertIn("mounting:document.getElementById('display-mounting').value", javascript)
+        self.assertIn('{"action": "set_display", "profile": profile, "orientation": orientation, "mounting": mounting}', display)
+        self.assertIn('["Rotation · Standard", "Rotation · 180°"]', display)
+
+    def test_ten_inch_profile_uses_native_resolution_and_high_resolution_breakpoint(self):
+        html = (ROOT / "src/pi_bus_time_display/static/admin.html").read_text(encoding="utf-8")
+        appliance = (ROOT / "scripts/pi-bus-appliance-mode").read_text(encoding="utf-8")
+        display = (ROOT / "native-display/pi_bus_native.py").read_text(encoding="utf-8")
+        self.assertIn("Touch Display 2 · 10-inch · 1200×1920", html)
+        self.assertIn("[[ ${profile} == touch2-10 ]] && mode=1200x1920", appliance)
+        self.assertIn('(\"high-resolution\", max(width, height) >= 1200)', display)
 
     def test_landscape_artwork_is_fixed_smaller_and_detail_art_can_close(self):
         display = (ROOT / "native-display" / "pi_bus_native.py").read_text(encoding="utf-8")

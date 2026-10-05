@@ -2,6 +2,8 @@
 import json
 import fcntl
 import os
+import platform
+import posixpath
 from pathlib import Path
 import pwd
 import re
@@ -13,28 +15,38 @@ import struct
 import subprocess
 import threading
 import tempfile
+import tarfile
 import urllib.request
 import uuid
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 SOCKET = "/run/pi-home-setup.sock"
 PROFILES = {"auto": "", "original": "vc4-kms-dsi-7inch", "touch2-5": "vc4-kms-dsi-ili9881-5inch", "touch2-7": "vc4-kms-dsi-ili9881-7inch", "touch2-10": "vc4-kms-dsi-ili79600-10-1inch"}
+ROON_BRIDGE_URL = "https://download.roonlabs.net/builds/RoonBridge_linuxarmv8.tar.bz2"
 
 
-def orientation_transform(profile, orientation):
+def orientation_transform(profile, orientation, mounting="standard"):
     """Translate the user-facing viewport orientation into panel rotation."""
     if orientation not in {"landscape", "portrait"}:
         raise ValueError("Choose Landscape or Portrait.")
+    if mounting not in {"standard", "inverted"}:
+        raise ValueError("Choose Standard or 180° rotation.")
     native_portrait = profile.startswith("touch2-")
     if orientation == "portrait":
-        return "normal" if native_portrait else "90"
-    return "90" if native_portrait else "normal"
+        base = "normal" if native_portrait else "90"
+    else:
+        base = "90" if native_portrait else "normal"
+    return base if mounting == "standard" else {"normal": "180", "90": "270"}[base]
 
 
 def display_orientation(profile, rotation):
     native_portrait = profile.startswith("touch2-")
     portrait = rotation in ({"normal", "180"} if native_portrait else {"90", "270"})
     return "portrait" if portrait else "landscape"
+
+
+def display_mounting(rotation):
+    return "inverted" if rotation in {"180", "270"} else "standard"
 
 
 def read(path):
@@ -202,6 +214,7 @@ respawn_max=0
 output_log=/var/log/pi-home/roonbridge.log
 error_log=/var/log/pi-home/roonbridge-error.log
 export ROON_DATAROOT=/var/roon
+export ROON_ID_DIR=/var/roon
 depend() { need localmount; after networkmanager; }
 """, 0o755)
     return service
@@ -311,6 +324,7 @@ class Setup:
         self.login_credentials = login_credentials
         self.tools_lock = threading.Lock()
         self.netdata_install_lock = threading.Lock()
+        self.roon_install_lock = threading.Lock()
         self.update_process = None
         self.progress = self.root / "var/lib/pi-home-setup/progress.json"
         self.progress.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
@@ -377,6 +391,63 @@ class Setup:
                 installer.unlink(missing_ok=True)
             self.netdata_install_lock.release()
 
+    def install_roon_bridge(self):
+        """Install Roon's official ARM64 payload without its non-Alpine wrapper."""
+        status = self.root / "var/lib/pi-home/roonbridge-install-status"
+        work = self.root / "var/tmp/pi-home-roonbridge-install"
+        archive = work / "RoonBridge.tar.bz2"
+        extracted = work / "RoonBridge"
+        destination = self.root / "opt/RoonBridge"
+        try:
+            if platform.machine() not in {"aarch64", "arm64"}:
+                raise ValueError("Roon Bridge is available here only on a 64-bit ARM Raspberry Pi.")
+            if destination.exists():
+                raise ValueError("Roon Bridge is already installed.")
+            atomic(status, "Installing Roon Bridge compatibility libraries…\n")
+            self.run(["apk", "add", "--no-cache", "gcompat", "libstdc++", "icu-libs", "alsa-lib", "bzip2"])
+            if work.exists(): shutil.rmtree(work)
+            work.mkdir(parents=True, mode=0o700)
+            request = urllib.request.Request(ROON_BRIDGE_URL, headers={"User-Agent": "Pi-Home-RoonBridge-Installer"})
+            atomic(status, "Downloading the official Roon Bridge package…\n")
+            total = 0
+            with urllib.request.urlopen(request, timeout=60) as response, archive.open("wb") as output:
+                while chunk := response.read(1024 * 1024):
+                    total += len(chunk)
+                    if total > 1_000_000_000: raise ValueError("The official Roon Bridge package was unexpectedly large.")
+                    output.write(chunk)
+            atomic(status, "Validating the official Roon Bridge package…\n")
+            with tarfile.open(archive, "r:bz2") as package:
+                members = package.getmembers()
+                if not members or sum(member.size for member in members) > 1_500_000_000:
+                    raise ValueError("The official Roon Bridge package is invalid.")
+                for member in members:
+                    name = posixpath.normpath(member.name)
+                    if name != "RoonBridge" and not name.startswith("RoonBridge/"):
+                        raise ValueError("The official Roon Bridge package contains an unsafe path.")
+                    if not (member.isfile() or member.isdir() or member.issym() or member.islnk()):
+                        raise ValueError("The official Roon Bridge package contains an unsupported file.")
+                    if member.issym() or member.islnk():
+                        target = posixpath.normpath(posixpath.join(posixpath.dirname(name), member.linkname))
+                        if target != "RoonBridge" and not target.startswith("RoonBridge/"):
+                            raise ValueError("The official Roon Bridge package contains an unsafe link.")
+                package.extractall(work)
+            required = (extracted / "start.sh", extracted / "check.sh", extracted / "Bridge/RoonBridge.exe")
+            if not all(path.is_file() for path in required):
+                raise ValueError("The official Roon Bridge package is incomplete.")
+            self.run([str(extracted / "check.sh")])
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            extracted.replace(destination)
+            ensure_roon_bridge_service(self.root)
+            self.run(["rc-update", "add", "roonbridge", "default"])
+            self.run(["rc-service", "roonbridge", "start"])
+            atomic(status, "Roon Bridge installed and running. Enable this endpoint in Roon → Settings → Audio.\n")
+        except Exception as error:
+            message = str(error) if isinstance(error, ValueError) else "Roon Bridge installation failed. Check the network and try again."
+            atomic(status, "Failed: " + message + "\n")
+        finally:
+            if work.exists(): shutil.rmtree(work)
+            self.roon_install_lock.release()
+
     def handle(self, data):
         state = self.saved(); action = data.get("action")
         if action == "status":
@@ -403,16 +474,17 @@ class Setup:
             return {"ok": True, "powered": action != "display_off"}
         if action == "set_display":
             if not state.get("complete"): raise ValueError("Finish setup before changing the display.")
-            profile = str(data.get("profile", "")); orientation = str(data.get("orientation", ""))
+            profile = str(data.get("profile", "")); orientation = str(data.get("orientation", "")); mounting = str(data.get("mounting", "standard"))
             if profile not in PROFILES or profile == "auto": raise ValueError("Choose a supported display.")
             if not (self.root / f"boot/overlays/{PROFILES[profile]}.dtbo").is_file(): raise ValueError("Display driver is missing from this image.")
-            rotation = orientation_transform(profile, orientation)
+            rotation = orientation_transform(profile, orientation, mounting)
             config = self.root / "etc/pi-home"
             previous_profile = read(config / "display-profile").strip() if (config / "display-profile").exists() else "original"
             atomic(config / "display-profile", profile + "\n")
             atomic(config / "display-transform", rotation + "\n")
             atomic(config / "display-orientation", orientation + "\n")
-            state.update(profile=profile, rotation=rotation, display_orientation=orientation); self.save(state)
+            atomic(config / "display-mounting", mounting + "\n")
+            state.update(profile=profile, rotation=rotation, display_orientation=orientation, display_mounting=mounting); self.save(state)
             if previous_profile != profile:
                 boot = self.root / "boot/config.txt"; text = read(boot)
                 text = re.sub(r"\n?# BEGIN PI HOME SETUP\n.*?# END PI HOME SETUP\n?", "\n", text, flags=re.S)
@@ -425,10 +497,10 @@ class Setup:
                     boot_id = Path("/proc/sys/kernel/random/boot_id").read_text(encoding="ascii").strip()
                     atomic(self.root / "var/lib/pi-home/reboot-required-boot-id", boot_id + "\n")
                 except OSError: pass
-                return {"ok": True, "orientation": orientation, "rotation": rotation, "reboot_required": True}
+                return {"ok": True, "orientation": orientation, "mounting": mounting, "rotation": rotation, "reboot_required": True}
             self.run(["rc-service", "pi-home-input", "restart"])
             threading.Timer(.5, lambda: self.run(["rc-service", "pi-home-display", "restart"])).start()
-            return {"ok": True, "orientation": orientation, "rotation": rotation}
+            return {"ok": True, "orientation": orientation, "mounting": mounting, "rotation": rotation}
         if action in {"netdata_enable", "netdata_disable"}:
             if not state.get("complete"): raise ValueError("Finish setup before changing services.")
             ensure_netdata_service(self.root)
@@ -458,6 +530,14 @@ class Setup:
             else:
                 self.run(["rc-service", "roonbridge", "restart"])
             return {"ok": True}
+        if action == "roon_install":
+            if not state.get("complete"): raise ValueError("Finish setup before installing Roon Bridge.")
+            if (self.root / "opt/RoonBridge/start.sh").is_file(): raise ValueError("Roon Bridge is already installed.")
+            if not self.roon_install_lock.acquire(blocking=False): return {"ok": True, "queued": False}
+            status = self.root / "var/lib/pi-home/roonbridge-install-status"; status.parent.mkdir(parents=True, exist_ok=True)
+            atomic(status, "Roon Bridge installation queued…\n")
+            threading.Thread(target=self.install_roon_bridge, daemon=True).start()
+            return {"ok": True, "queued": True}
         if action in {"netdata_claim", "netdata_claim_command", "netdata_disconnect"}:
             if not state.get("complete"): raise ValueError("Finish setup before changing Netdata Cloud.")
             if not (self.root / "etc/init.d/netdata").is_file(): raise ValueError("Netdata is not installed.")

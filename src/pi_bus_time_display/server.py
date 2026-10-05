@@ -33,7 +33,7 @@ ALPINE_SYSTEM_ACTIONS = {
     "update", "reboot", "netdata_enable", "netdata_disable", "netdata_claim",
     "netdata_claim_command", "netdata_official_install", "netdata_disconnect",
     "device_credentials", "install_tools", "display_on", "display_off",
-    "set_brightness", "set_display", "roon_start", "roon_stop", "roon_restart",
+    "set_brightness", "set_display", "roon_install", "roon_start", "roon_stop", "roon_restart",
 }
 SYSTEM_ACTIONS = ALPINE_SYSTEM_ACTIONS | {
     "leds_enable", "leds_disable",
@@ -584,6 +584,10 @@ def display_orientation(profile: str, rotation: str) -> str:
     return "portrait" if portrait else "landscape"
 
 
+def display_mounting(rotation: str) -> str:
+    return "inverted" if rotation in {"180", "270"} else "standard"
+
+
 def display_config_dir() -> Path:
     return Path("/etc/pi-home" if os.getenv("PI_HOME_APPLIANCE_PLATFORM") == "alpine-prototype" else "/etc/pi-bus-time-display")
 
@@ -668,6 +672,11 @@ def system_snapshot(state_dir: Path, include_diagnostics: bool = False) -> dict:
     except (OSError, ValueError):
         viewport_orientation = display_orientation(display_profile, display_rotation)
     try:
+        mounting = (display_config / "display-mounting").read_text(encoding="utf-8").strip()
+        if mounting not in {"standard", "inverted"}: raise ValueError
+    except (OSError, ValueError):
+        mounting = display_mounting(display_rotation)
+    try:
         changed_boot_id = (state_dir / "reboot-required-boot-id").read_text(encoding="ascii").strip()
         reboot_required = bool(changed_boot_id and changed_boot_id == current_boot_id())
     except OSError:
@@ -692,6 +701,7 @@ def system_snapshot(state_dir: Path, include_diagnostics: bool = False) -> dict:
         "hostname": socket.gethostname(),
         "wifi_ssid": active_wifi,
         "roon_bridge": roon_service,
+        "roon_bridge_operation_status": (state_dir / "roonbridge-install-status").read_text().strip() if (state_dir / "roonbridge-install-status").is_file() else "",
         "roon_controller": roon_controller,
         "netdata": netdata["service"],
         "netdata_details": netdata,
@@ -700,6 +710,7 @@ def system_snapshot(state_dir: Path, include_diagnostics: bool = False) -> dict:
         "update_status": update_status,
         "display_rotation": display_rotation,
         "display_orientation": viewport_orientation,
+        "display_mounting": mounting,
         "display_profile": display_profile,
         "reboot_required": reboot_required,
         "app_version": display_version(),
@@ -735,7 +746,7 @@ def write_control_request(state_dir: Path, request: dict) -> bool:
             if request["action"] == "device_credentials":
                 payload.update(username=str(request.get("username", "")), password=str(request.get("password", "")), confirmation=str(request.get("confirmation", "")))
             if request["action"] == "set_display":
-                payload.update(profile=str(request.get("profile", "")), orientation=str(request.get("orientation", "")))
+                payload.update(profile=str(request.get("profile", "")), orientation=str(request.get("orientation", "")), mounting=str(request.get("mounting", "standard")))
             try:
                 with socket.socket(socket.AF_UNIX) as client:
                     client.settimeout(105 if request["action"] in {"netdata_claim", "netdata_claim_command"} else 15); client.connect("/run/pi-home-setup.sock")
@@ -1150,11 +1161,14 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
                     if action == "set_display":
                         profile = str(data.get("profile", ""))
                         orientation = str(data.get("orientation", ""))
+                        mounting = str(data.get("mounting", "standard"))
                         if profile not in {"original", "touch2-5", "touch2-7", "touch2-5-7", "touch2-10"}:
                             raise ValueError("Unknown display profile")
                         if orientation not in {"landscape", "portrait"}:
                             raise ValueError("Unknown display orientation")
-                        request.update({"profile": profile, "orientation": orientation})
+                        if mounting not in {"standard", "inverted"}:
+                            raise ValueError("Unknown display rotation")
+                        request.update({"profile": profile, "orientation": orientation, "mounting": mounting})
                     queued = write_control_request(mode_path.parent, request)
                     if events:
                         events.emit("system.action.queued", action=action)

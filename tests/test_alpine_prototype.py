@@ -21,6 +21,7 @@ class AlpinePrototypeTests(unittest.TestCase):
     def test_every_alpine_helper_action_is_accepted_by_the_http_api(self):
         self.assertLessEqual(ALPINE_SYSTEM_ACTIONS, SYSTEM_ACTIONS)
         self.assertIn("netdata_official_install", SYSTEM_ACTIONS)
+        self.assertIn("roon_install", ALPINE_SYSTEM_ACTIONS)
         self.assertIn("roon_start", ALPINE_SYSTEM_ACTIONS)
 
     def test_export_sanitizer_removes_container_identity_and_resets_network_identity(self):
@@ -66,8 +67,8 @@ class AlpinePrototypeTests(unittest.TestCase):
         client = Mock(); client.__enter__ = Mock(return_value=client); client.__exit__ = Mock(return_value=False)
         client.makefile.return_value.readline.return_value = b'{"ok":true}\n'
         with patch.dict(os.environ, {"PI_HOME_APPLIANCE_PLATFORM": "alpine-prototype"}), patch("pi_bus_time_display.server.socket.socket", return_value=client):
-            self.assertTrue(write_control_request(Path("/unused"), {"action": "set_display", "profile": "touch2-10", "orientation": "portrait"}))
-        self.assertEqual(json.loads(client.sendall.call_args.args[0]), {"action": "set_display", "profile": "touch2-10", "orientation": "portrait"})
+            self.assertTrue(write_control_request(Path("/unused"), {"action": "set_display", "profile": "touch2-10", "orientation": "portrait", "mounting": "inverted"}))
+        self.assertEqual(json.loads(client.sendall.call_args.args[0]), {"action": "set_display", "profile": "touch2-10", "orientation": "portrait", "mounting": "inverted"})
 
     def test_roon_bridge_actions_are_forwarded_to_the_alpine_helper(self):
         client = Mock(); client.__enter__ = Mock(return_value=client); client.__exit__ = Mock(return_value=False)

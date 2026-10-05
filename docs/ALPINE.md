@@ -1,6 +1,6 @@
 # Alpine Beta appliance
 
-Current version: **1.1.0-beta.33 Alpine Beta**. First-run setup creates an
+Current version: **1.1.0-beta.34 Alpine Beta**. First-run setup creates an
 owner-chosen device/SSH account, and Settings can manage the installed Netdata
 Agent and its Cloud connection without an Alpine shell. This update is available
 on the Alpine branch.
@@ -285,8 +285,9 @@ the network. This revision still requires a new image or local shell access.
 
 ## Deliberate limitations
 
-- Roon **controller**, not Roon Bridge audio endpoint. Roon Bridge's Linux
-  compatibility/redistribution is a separate gate; this image does not bundle it.
+- Roon Bridge remains separately distributed and is not bundled in the image.
+  Services can explicitly download Roon's official ARM64 payload, validate it,
+  install its Alpine compatibility libraries and manage it through OpenRC.
 - Routine Wi-Fi, hostname, reboot, profile/rotation, brightness, status-light,
   update, access and Netdata controls are handled by fixed Alpine helper actions.
   Arbitrary package management and a general-purpose root console remain outside

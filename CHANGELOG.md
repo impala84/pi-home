@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.0-beta.34 Alpine Beta — 5 October 2026
+
+- Replaces the dead-end “Not installed” Roon Bridge controls with an explicit appliance-managed **Install Roon Bridge** action and live installation progress.
+- Downloads Roon’s fixed official ARM64 package without executing its incompatible Debian/systemd installer wrapper, validates every archive path and required executable, and preserves Roon’s separate distribution model.
+- Installs the Alpine glibc compatibility, ICU, C++, ALSA and bzip2 dependencies, verifies Roon’s own compatibility check, and creates the managed OpenRC service before starting the endpoint.
+- Keeps Start, Stop and Restart available after installation and directs the owner to enable the new endpoint in Roon’s Audio settings.
+
 ## 1.1.0-beta.33 Alpine Beta — 5 October 2026
 
 - Detects Netdata's official static installation under `/opt/netdata` instead of incorrectly reporting it as missing when Alpine's packaged binary and OpenRC service are absent.

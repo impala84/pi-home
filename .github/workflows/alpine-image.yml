@@ -23,7 +23,8 @@ jobs:
           docker run --rm --user morningbus pi-home-alpine:beta .venv/bin/python appliance/alpine/smoke.py
       - name: Verify time sync and optional service tools
         run: |
-          docker run --rm pi-home-alpine:beta sh -ec 'test -x /usr/bin/grim; test -x /usr/bin/growpart; test -x /usr/sbin/resize2fs; test -x /usr/bin/curl; test -x /usr/bin/openssl; test -x /etc/init.d/netdata; test -e /etc/runlevels/default/pi-home-storage; test -e /etc/runlevels/default/chronyd; test -e /etc/runlevels/boot/pi-home-clock; test ! -e /etc/runlevels/boot/hwclock; grep -Eq "^(pool|server).* iburst" /etc/chrony/chrony.conf; grep -qx "makestep 0.1 -1" /etc/chrony/chrony.conf; chronyd -p -f /etc/chrony/chrony.conf'
+          docker run --rm pi-home-alpine:beta sh -ec 'test -x /usr/bin/grim; test -x /usr/bin/growpart; test -x /usr/sbin/resize2fs; test -x /usr/bin/curl; test -x /usr/bin/openssl; test -e /lib/ld-linux-aarch64.so.1; test -e /usr/lib/libstdc++.so.6; test -x /etc/init.d/netdata; test -e /etc/runlevels/default/pi-home-storage; test -e /etc/runlevels/default/chronyd; test -e /etc/runlevels/boot/pi-home-clock; test ! -e /etc/runlevels/boot/hwclock; grep -Eq "^(pool|server).* iburst" /etc/chrony/chrony.conf; grep -qx "makestep 0.1 -1" /etc/chrony/chrony.conf; chronyd -p -f /etc/chrony/chrony.conf'
+          docker run --rm pi-home-alpine:beta sh -ec 'mkdir /tmp/roon-check; curl --fail --silent --show-error --location https://download.roonlabs.net/builds/RoonBridge_linuxarmv8.tar.bz2 | tar -xj -C /tmp/roon-check; /tmp/roon-check/RoonBridge/check.sh'
           docker run --rm pi-home-alpine:beta python3 appliance/alpine/cursor_smoke.py
           docker run --rm pi-home-alpine:beta ps -eo pid=,rss=,pcpu=,args=
       - name: Exercise native setup pages using a disposable test-only display

@@ -1,7 +1,9 @@
 import importlib.util
+import io
 import fcntl
 import json
 from pathlib import Path
+import tarfile
 import tempfile
 import unittest
 from unittest.mock import Mock, patch
@@ -329,6 +331,31 @@ class AlpineSetupTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "not installed"):
             self.setup.handle({"action": "roon_start"})
 
+    def test_official_roon_bridge_payload_is_validated_and_installed_for_openrc(self):
+        payload = io.BytesIO()
+        with tarfile.open(fileobj=payload, mode="w:bz2") as package:
+            for name in ("RoonBridge/start.sh", "RoonBridge/check.sh", "RoonBridge/Bridge/RoonBridge.exe"):
+                data = b"#!/bin/sh\nexit 0\n" if name.endswith(".sh") else b"ELF"
+                member = tarfile.TarInfo(name); member.size = len(data); member.mode = 0o755
+                package.addfile(member, io.BytesIO(data))
+        response = io.BytesIO(payload.getvalue())
+        status = self.root / "var/lib/pi-home"; status.mkdir(parents=True)
+        self.setup.roon_install_lock.acquire()
+        with patch.object(module.platform, "machine", return_value="aarch64"), patch.object(module.urllib.request, "urlopen", return_value=response):
+            self.setup.install_roon_bridge()
+        self.assertTrue((self.root / "opt/RoonBridge/start.sh").is_file())
+        self.assertIn("command=/opt/RoonBridge/start.sh", (self.root / "etc/init.d/roonbridge").read_text())
+        self.run.assert_any_call(["apk", "add", "--no-cache", "gcompat", "libstdc++", "icu-libs", "alsa-lib", "bzip2"])
+        self.run.assert_any_call(["rc-service", "roonbridge", "start"])
+        self.assertIn("installed and running", (status / "roonbridge-install-status").read_text())
+
+    def test_roon_bridge_install_is_explicit_and_non_overlapping(self):
+        self.setup.save({"complete": True})
+        with patch.object(module.threading, "Thread") as thread:
+            self.assertTrue(self.setup.handle({"action": "roon_install"})["queued"])
+            self.assertFalse(self.setup.handle({"action": "roon_install"})["queued"])
+        thread.assert_called_once()
+
     def test_sleep_extinguishes_backlight_and_wake_restores_saved_brightness(self):
         backlight = self.root / "sys/class/backlight/rpi_backlight"; backlight.mkdir(parents=True)
         (backlight / "brightness").write_text("255"); (backlight / "max_brightness").write_text("255"); (backlight / "bl_power").write_text("0")
@@ -408,9 +435,10 @@ class AlpineSetupTests(unittest.TestCase):
         self.setup.save({"complete": True, "profile": "touch2-10"})
         config = self.root / "etc/pi-home"; (config / "display-profile").write_text("touch2-10\n")
         with patch.object(module.threading, "Timer") as timer:
-            result = self.setup.handle({"action": "set_display", "profile": "touch2-10", "orientation": "landscape"})
-        self.assertEqual(result["rotation"], "90")
+            result = self.setup.handle({"action": "set_display", "profile": "touch2-10", "orientation": "landscape", "mounting": "inverted"})
+        self.assertEqual(result["rotation"], "270")
         self.assertEqual((config / "display-orientation").read_text(), "landscape\n")
+        self.assertEqual((config / "display-mounting").read_text(), "inverted\n")
         self.run.assert_called_with(["rc-service", "pi-home-input", "restart"])
         timer.assert_called_once()
 
@@ -419,6 +447,10 @@ class AlpineSetupTests(unittest.TestCase):
         self.assertEqual(module.orientation_transform("original", "portrait"), "90")
         self.assertEqual(module.orientation_transform("touch2-10", "portrait"), "normal")
         self.assertEqual(module.orientation_transform("touch2-10", "landscape"), "90")
+        self.assertEqual(module.orientation_transform("original", "landscape", "inverted"), "180")
+        self.assertEqual(module.orientation_transform("original", "portrait", "inverted"), "270")
+        self.assertEqual(module.orientation_transform("touch2-10", "portrait", "inverted"), "180")
+        self.assertEqual(module.orientation_transform("touch2-10", "landscape", "inverted"), "270")
 
     def test_kernel_never_double_rotates_calibrated_touch(self):
         for rotation in ("normal", "90", "180", "270"):
