@@ -184,6 +184,7 @@ capture("now-playing")
 assert window.get_width() == screen_width and window.get_height() == screen_height, (window.get_width(), window.get_height(), screen_width, screen_height)
 footer_bounds = page.get_last_child().compute_bounds(page)[1]
 assert footer_bounds.get_y() + footer_bounds.get_height() <= screen_height - 4
+if screen_height > screen_width: assert display.artwork.get_width() == display.artwork.get_height()
 
 bus = display.build_bus(); window.set_child(bus)
 display.render_bus({"status": "ok", "stop_name": "Flamingo Valley", "stop_code": "83249", "services": [{"service": number, "arrivals": [{"minutes": value, "monitored": True} for value in (1, 14, 28)]} for number in ("40", "42")]})

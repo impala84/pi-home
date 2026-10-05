@@ -486,6 +486,15 @@ class Display(Gtk.Application):
         self.detail_panel.set_orientation(Gtk.Orientation.VERTICAL if portrait else Gtk.Orientation.HORIZONTAL)
         artwork_size = min(width - 64, max(200, height - 540)) if portrait else (324 if width >= 1200 else min(280, max(220, height - 190)))
         self.artwork.set_size_request(artwork_size, artwork_size); self.artwork_button.set_size_request(artwork_size, artwork_size)
+        if portrait:
+            if self.artwork.get_parent() is self.artwork_button:
+                self.artwork_button.set_child(None); self.artwork_viewport.set_child(self.artwork); self.artwork_button.set_child(self.artwork_viewport)
+            for axis in ("width", "height"):
+                getattr(self.artwork_viewport, "set_min_content_" + axis)(artwork_size)
+                getattr(self.artwork_viewport, "set_max_content_" + axis)(artwork_size)
+            self.artwork_viewport.set_size_request(artwork_size, artwork_size)
+        elif self.artwork_button.get_child() is self.artwork_viewport:
+            self.artwork_viewport.set_child(None); self.artwork_button.set_child(self.artwork)
         detail_size = max(240, min(width - 56, int(height * .42))) if portrait else max(240, min(width, height) - 60)
         self.detail_artwork.set_size_request(detail_size, detail_size)
         if previous is not None and previous != portrait:
@@ -555,6 +564,7 @@ class Display(Gtk.Application):
         content = Gtk.Box(spacing=26); content.add_css_class("now-playing-content"); content.set_vexpand(True); content.set_margin_start(8); content.set_margin_end(8); content.set_margin_top(8); content.set_margin_bottom(8); self.now_playing_content = content
         self.artwork = Gtk.Picture(); self.artwork.add_css_class("artwork"); self.artwork.set_size_request(280, 280); self.artwork.set_valign(Gtk.Align.CENTER); self.artwork.set_content_fit(Gtk.ContentFit.COVER); self.set_browser_placeholder(self.artwork)
         artwork_button = Gtk.Button(); artwork_button.add_css_class("artwork-button"); artwork_button.set_halign(Gtk.Align.CENTER); artwork_button.set_valign(Gtk.Align.CENTER); artwork_button.set_child(self.artwork); artwork_button.connect("clicked", lambda *_: self.set_roon_view("details")); content.append(artwork_button); self.artwork_button = artwork_button
+        self.artwork_viewport = Gtk.ScrolledWindow(); self.artwork_viewport.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.NEVER); self.artwork_viewport.set_propagate_natural_width(False); self.artwork_viewport.set_propagate_natural_height(False)
         centre = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=7); centre.set_valign(Gtk.Align.CENTER); centre.set_hexpand(True); self.now_playing_centre = centre
         self.title = self.label("Waiting for Roon…", "roon-title", .5); self.title.set_hexpand(True); self.title.set_halign(Gtk.Align.FILL); self.title.set_wrap(True); self.title.set_lines(2); self.title.set_justify(Gtk.Justification.CENTER)
         self.artist = self.label("Enable Pi Home Roon Controller in Roon", "roon-artist", .5); self.artist.set_hexpand(True); self.artist.set_halign(Gtk.Align.FILL); self.artist.set_wrap(True); self.artist.set_justify(Gtk.Justification.CENTER); centre.append(self.title); centre.append(self.artist)
