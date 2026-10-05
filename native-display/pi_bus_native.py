@@ -440,11 +440,7 @@ class Display(Gtk.Application):
         self.now_playing_content.set_orientation(Gtk.Orientation.VERTICAL if portrait else Gtk.Orientation.HORIZONTAL)
         self.now_playing_centre.set_valign(Gtk.Align.START if portrait else Gtk.Align.CENTER)
         if hasattr(self, "settings_controls"):
-            self.settings_controls.set_orientation(Gtk.Orientation.VERTICAL if portrait else Gtk.Orientation.HORIZONTAL)
-            self.settings_daily.set_size_request(-1 if portrait else round((width - 56) * .343), -1)
-            self.settings_controls.set_spacing(20 if portrait else round(width * .052))
-            self.settings_header.set_orientation(Gtk.Orientation.VERTICAL if portrait else Gtk.Orientation.HORIZONTAL)
-            self.settings_actions.set_orientation(Gtk.Orientation.VERTICAL if portrait else Gtk.Orientation.HORIZONTAL)
+            self.configure_settings_layout(width, height)
         self.browser_body.set_orientation(Gtk.Orientation.VERTICAL if portrait else Gtk.Orientation.HORIZONTAL)
         self.browser_sidebar.set_orientation(Gtk.Orientation.HORIZONTAL if portrait else Gtk.Orientation.VERTICAL)
         self.browser_discovery_sidebar.set_orientation(Gtk.Orientation.HORIZONTAL if portrait else Gtk.Orientation.VERTICAL)
@@ -613,6 +609,14 @@ class Display(Gtk.Application):
         self.home_status = self.label("Connecting to Home Assistant…", "muted", .5); page.append(self.home_status)
         self.home_grid = Gtk.Grid(column_spacing=11, row_spacing=11); self.home_grid.add_css_class("home-grid"); self.home_grid.set_column_homogeneous(True); self.home_grid.set_row_homogeneous(True); self.home_grid.set_vexpand(True); page.append(self.home_grid)
         page.append(self.navigation("home")); return page
+
+    def configure_settings_layout(self, width, height):
+        portrait = height > width
+        self.settings_controls.set_orientation(Gtk.Orientation.VERTICAL if portrait else Gtk.Orientation.HORIZONTAL)
+        self.settings_daily.set_size_request(-1 if portrait else round((width - 56) * .343), -1)
+        self.settings_controls.set_spacing(20 if portrait else round(width * .052))
+        self.settings_header.set_orientation(Gtk.Orientation.VERTICAL if portrait else Gtk.Orientation.HORIZONTAL)
+        self.settings_actions.set_orientation(Gtk.Orientation.VERTICAL if portrait else Gtk.Orientation.HORIZONTAL)
 
     def build_settings(self):
         page = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8); page.add_css_class("page"); page.add_css_class("settings-page")
