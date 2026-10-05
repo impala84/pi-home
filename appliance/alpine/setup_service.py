@@ -26,7 +26,7 @@ ROON_BRIDGE_URL = "https://download.roonlabs.net/builds/RoonBridge_linuxarmv8.ta
 
 
 def configure_netdata_lightweight(root, enabled):
-    """Manage only sampling and ML; preserve Cloud, alerts and database settings."""
+    """Manage the lightweight profile; preserve Cloud, alerts and storage."""
     if type(enabled) is not bool:
         raise ValueError("Choose a supported Netdata monitoring mode.")
     root = Path(root)
@@ -36,14 +36,20 @@ def configure_netdata_lightweight(root, enabled):
     text = read(path) if path.exists() else ""
     backup = directory / "netdata.conf.pi-home-backup"
     if not backup.exists(): atomic(backup, text, 0o640)
-    for section, key, value in (("ml", "enabled", "no" if enabled else "auto"), ("db", "update every", "3" if enabled else "1")):
+    settings = [("ml", "enabled", "no" if enabled else "auto"), ("db", "update every", "3" if enabled else "1")]
+    original_plugins = re.search(r"(?ms)^\[plugins\][^\n]*\n(.*?)(?=^\[|\Z)", read(backup))
+    for key in ("netflow", "otel", "scripts.d", "nfacct", "network-viewer", "debugfs", "apps", "go.d"):
+        previous = re.search(rf"(?m)^[ \t]*{re.escape(key)}[ \t]*=[ \t]*(.*)$", original_plugins.group(1)) if original_plugins else None
+        value = ("yes" if key in {"apps", "go.d"} else "no") if enabled else (previous.group(1) if previous else None)
+        settings.append(("plugins", key, value))
+    for section, key, value in settings:
         pattern = rf"(?ms)^\[{section}\][^\n]*\n(.*?)(?=^\[|\Z)"
         match = re.search(pattern, text)
-        setting = f"    {key} = {value}\n"
+        setting = f"    {key} = {value}\n" if value is not None else ""
         if match:
-            body = re.sub(rf"(?m)^\s*{key}\s*=.*\n?", "", match.group(1))
+            body = re.sub(rf"(?m)^[ \t]*{re.escape(key)}[ \t]*=.*\n?", "", match.group(1))
             text = text[:match.start(1)] + body.rstrip() + "\n" + setting + text[match.end(1):]
-        else:
+        elif value is not None:
             text = text.rstrip() + f"\n\n[{section}]\n" + setting
     atomic(path, text, 0o644)
     (root / "var/lib/pi-home").mkdir(parents=True, exist_ok=True)

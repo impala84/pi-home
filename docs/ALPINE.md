@@ -17,6 +17,9 @@ Netdata installation downloads the latest official **stable** static Agent;
 Alpine's older packaged Agent is not installed. First-boot software selection
 defaults to **Lightweight monitoring**: three-second metric samples and ML
 anomaly detection disabled. Alerts, dashboard, database and Cloud connectivity
+remain available. The profile disables netflow, otel, scripts.d, nfacct,
+network-viewer and debugfs while keeping apps and go.d enabled. Original plugin
+overrides are restored when lightweight mode is turned off. Other collectors
 remain enabled. Memory savings depend on the collected metrics and workload.
 Change this later under **System → Services → Netdata**; turning it off selects
 one-second sampling and automatic ML. Existing Agents are not modified merely

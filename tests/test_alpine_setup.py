@@ -294,10 +294,15 @@ class AlpineSetupTests(unittest.TestCase):
         self.assertIn("update every = 3", first)
         self.assertIn("db = dbengine", first)
         self.assertIn("bind to = localhost", first)
+        for plugin in ("netflow", "otel", "scripts.d", "nfacct", "network-viewer", "debugfs"):
+            self.assertIn(plugin + " = no", first)
+        self.assertIn("apps = yes", first)
+        self.assertIn("go.d = yes", first)
         self.assertEqual(config.with_name("netdata.conf.pi-home-backup").read_text(), original)
         module.configure_netdata_lightweight(self.root, False)
         self.assertIn("enabled = auto", config.read_text())
         self.assertIn("update every = 1", config.read_text())
+        self.assertNotIn("netflow =", config.read_text())
         with self.assertRaises(ValueError): module.configure_netdata_lightweight(self.root, "yes")
 
     def test_update_requires_completed_setup_and_uses_fixed_updater(self):

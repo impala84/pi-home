@@ -3,6 +3,8 @@
 ## 1.1.0-beta.38 Alpine Beta — 6 October 2026
 
 - Shows running Netdata and its collector processes in backend Diagnostics with combined RSS memory and CPU usage; hides the row when stopped.
+- Renames the backend System Services tab to Tools, leaving the main Services menu unchanged.
+- Uses the tested lightweight plugin selection: disables netflow, otel, scripts.d, nfacct, network-viewer and debugfs; keeps apps and go.d enabled. Turning lightweight mode off restores the original plugin overrides.
 - Adds a persisted Lightweight monitoring option to first-boot software selection and backend Services. New official installations default to three-second sampling and disabled ML anomaly detection, retaining alerts, dashboard, database and Cloud connectivity.
 - Explains that installation downloads the latest official stable Agent, not Alpine's package, with Netdata's daily updater maintaining it independently of Pi Home updates. Existing installations remain unchanged until the option is selected; disabling it restores one-second sampling and automatic ML.
 - Backs up Netdata configuration before managing only its ML and sampling settings, and restarts a running Agent to apply changes.
