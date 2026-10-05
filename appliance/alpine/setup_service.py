@@ -360,6 +360,13 @@ class Setup:
             operation_status = self.root / "var/lib/pi-home/netdata-operation-status"
             operation_status.parent.mkdir(parents=True, exist_ok=True)
             atomic(operation_status, "Applying Netdata Cloud connection settings…\n")
+            if action in {"netdata_claim", "netdata_claim_command"}:
+                packages = []
+                if not (self.root / "usr/bin/openssl").is_file(): packages.append("openssl")
+                if not any((self.root / path).exists() for path in ("usr/bin/curl", "usr/bin/wget")): packages.append("curl")
+                if packages:
+                    atomic(operation_status, "Installing Netdata Cloud connection support…\n")
+                    self.run(["apk", "add", "--no-cache", *packages])
             self.run(["rc-service", "netdata", "stop"])
             try:
                 if action == "netdata_disconnect":

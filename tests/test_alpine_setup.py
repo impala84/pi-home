@@ -192,6 +192,16 @@ class AlpineSetupTests(unittest.TestCase):
         self.assertNotIn("private-token", self.setup.progress.read_text())
         self.assertEqual(self.run.call_args.args[0], ["rc-service", "netdata", "start"])
 
+    def test_netdata_claim_installs_missing_helper_dependencies_before_stopping_agent(self):
+        self.setup.save({"complete": True})
+        service = self.root / "etc/init.d/netdata"; service.parent.mkdir(parents=True); service.touch()
+        wget = self.root / "usr/bin/wget"; wget.parent.mkdir(parents=True); wget.touch()
+        with patch.object(module, "run_netdata_claim_helper", return_value=True):
+            self.setup.handle({"action": "netdata_claim", "token": "private-token", "rooms": "room-1234"})
+        calls = [call.args[0] for call in self.run.call_args_list]
+        self.assertIn(["apk", "add", "--no-cache", "openssl"], calls)
+        self.assertLess(calls.index(["apk", "add", "--no-cache", "openssl"]), calls.index(["rc-service", "netdata", "stop"]))
+
     def test_installed_netdata_claim_helper_receives_only_validated_values(self):
         helper = self.root / "usr/sbin/netdata-claim.sh"; helper.parent.mkdir(parents=True); helper.touch()
         completed = Mock(returncode=0)

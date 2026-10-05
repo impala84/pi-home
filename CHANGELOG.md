@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.0-beta.28 Alpine Beta — 5 October 2026
+
+- Install the `openssl` command required by Alpine Netdata's claim helper when
+  connecting an existing appliance, before stopping the local Agent.
+- Include both OpenSSL and curl in newly built appliance images and verify them
+  explicitly in the image workflow, while retaining the detailed claim errors
+  introduced in beta.27.
+
 ## 1.1.0-beta.27 Alpine Beta — 5 October 2026
 
 - Add an asynchronous Now Playing library button backed by Roon's own library
