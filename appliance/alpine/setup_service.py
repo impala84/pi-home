@@ -25,6 +25,31 @@ PROFILES = {"auto": "", "original": "vc4-kms-dsi-7inch", "touch2-5": "vc4-kms-ds
 ROON_BRIDGE_URL = "https://download.roonlabs.net/builds/RoonBridge_linuxarmv8.tar.bz2"
 
 
+def configure_netdata_lightweight(root, enabled):
+    """Manage only sampling and ML; preserve Cloud, alerts and database settings."""
+    if type(enabled) is not bool:
+        raise ValueError("Choose a supported Netdata monitoring mode.")
+    root = Path(root)
+    directory = root / ("opt/netdata/etc/netdata" if (root / "opt/netdata/bin/netdata").is_file() else "etc/netdata")
+    directory.mkdir(parents=True, exist_ok=True)
+    path = directory / "netdata.conf"
+    text = read(path) if path.exists() else ""
+    backup = directory / "netdata.conf.pi-home-backup"
+    if not backup.exists(): atomic(backup, text, 0o640)
+    for section, key, value in (("ml", "enabled", "no" if enabled else "auto"), ("db", "update every", "3" if enabled else "1")):
+        pattern = rf"(?ms)^\[{section}\][^\n]*\n(.*?)(?=^\[|\Z)"
+        match = re.search(pattern, text)
+        setting = f"    {key} = {value}\n"
+        if match:
+            body = re.sub(rf"(?m)^\s*{key}\s*=.*\n?", "", match.group(1))
+            text = text[:match.start(1)] + body.rstrip() + "\n" + setting + text[match.end(1):]
+        else:
+            text = text.rstrip() + f"\n\n[{section}]\n" + setting
+    atomic(path, text, 0o644)
+    (root / "var/lib/pi-home").mkdir(parents=True, exist_ok=True)
+    atomic(root / "var/lib/pi-home/netdata-lightweight", "yes\n" if enabled else "no\n")
+
+
 def orientation_transform(profile, orientation, mounting="standard"):
     """Translate the user-facing viewport orientation into panel rotation."""
     if orientation not in {"landscape", "portrait"}:
@@ -381,11 +406,17 @@ class Setup:
             result = subprocess.run(arguments, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=environment, timeout=900)
             if result.returncode: raise ValueError("The official Netdata installer rejected this installation or connection command.")
             ensure_netdata_service(self.root)
+            preference = self.root / "var/lib/pi-home/netdata-lightweight"
+            lightweight = not preference.exists() or read(preference).strip() != "no"
+            configure_netdata_lightweight(self.root, lightweight)
+            # The installer may have started an Agent outside OpenRC.
+            subprocess.run(["rc-service", "netdata", "stop"], capture_output=True, check=False, timeout=30)
+            subprocess.run(["/opt/netdata/bin/netdatacli", "shutdown-agent"], capture_output=True, check=False, timeout=30)
+            self.run(["rc-service", "netdata", "start"])
             self.run(["rc-update", "add", "netdata", "default"])
             self.run(["rc-update", "add", "crond", "default"])
             self.run(["rc-service", "crond", "start"])
-            # Netdata's installer has already started the Agent. OpenRC owns
-            # it from the next boot, avoiding a duplicate process here.
+            # Restart under the managed service to apply the selected profile.
             atomic(status, "Official Netdata Agent installed. " + ("Checking Cloud connection…\n" if token else "Connect to Netdata Cloud from Settings when ready.\n"))
         except Exception as error:
             message = str(error) if isinstance(error, ValueError) else "The official Netdata installation failed. Check the network and try again."
@@ -485,9 +516,15 @@ class Setup:
             if not state.get("network"): raise ValueError("Connect to your network first.")
             choices = {name: data.get(name, False) for name in ("roon_bridge", "netdata")}
             if any(type(value) is not bool for value in choices.values()): raise ValueError("Choose supported software options.")
-            state.update(software_choices=choices, software=not any(choices.values()), software_status="Installing selected software…" if any(choices.values()) else "Optional software skipped.")
+            lightweight = data.get("netdata_lightweight", True)
+            if type(lightweight) is not bool: raise ValueError("Choose a supported Netdata monitoring mode.")
+            (self.root / "var/lib/pi-home").mkdir(parents=True, exist_ok=True)
+            atomic(self.root / "var/lib/pi-home/netdata-lightweight", "yes\n" if lightweight else "no\n")
+            choices["netdata_lightweight"] = lightweight
+            selected = choices["roon_bridge"] or choices["netdata"]
+            state.update(software_choices=choices, software=not selected, software_status="Installing selected software…" if selected else "Optional software skipped.")
             self.save(state)
-            if any(choices.values()):
+            if selected:
                 self.software_lock.acquire()
                 threading.Thread(target=self.install_setup_software, args=(choices,), daemon=True).start()
             return {"ok": True, "progress": state}
@@ -538,6 +575,14 @@ class Setup:
             self.run(["rc-service", "pi-home-input", "restart"])
             threading.Timer(.5, lambda: self.run(["rc-service", "pi-home-display", "restart"])).start()
             return {"ok": True, "orientation": orientation, "mounting": mounting, "rotation": rotation}
+        if action == "netdata_lightweight":
+            if not state.get("complete"): raise ValueError("Finish setup first.")
+            if not (self.root / "opt/netdata/bin/netdata").is_file() and not (self.root / "usr/sbin/netdata").is_file(): raise ValueError("Netdata is not installed.")
+            configure_netdata_lightweight(self.root, data.get("enabled"))
+            ensure_netdata_service(self.root)
+            running = subprocess.run(["rc-service", "netdata", "status"], capture_output=True, check=False, timeout=10).returncode == 0
+            if running: self.run(["rc-service", "netdata", "restart"])
+            return {"ok": True}
         if action in {"netdata_enable", "netdata_disable"}:
             if not state.get("complete"): raise ValueError("Finish setup before changing services.")
             ensure_netdata_service(self.root)

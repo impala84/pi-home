@@ -178,10 +178,12 @@ class Wizard(Gtk.Application):
             choices = self.progress.get("software_choices", {})
             bridge = Gtk.CheckButton(label="Install Roon Bridge · use this Pi as an audio endpoint"); bridge.set_active(choices.get("roon_bridge", False)); self.content.append(bridge)
             netdata = Gtk.CheckButton(label="Install Netdata · official stable Agent with automatic updates"); netdata.set_active(choices.get("netdata", False)); self.content.append(netdata)
+            lightweight = Gtk.CheckButton(label="Lightweight Netdata · 3-second samples, no ML anomaly detection"); lightweight.set_active(choices.get("netdata_lightweight", True)); self.content.append(lightweight)
+            self.content.append(self.label("Downloads the latest official stable Agent, not Alpine’s older package. Lightweight mode keeps alerts, dashboard and Cloud connectivity; memory savings vary."))
             self.content.append(self.label("Netdata Cloud can be connected later in web Settings. Downloads require internet access and may take several minutes."))
             self.content.append(self.label(self.progress.get("software_status", "")))
             def install():
-                self.async_call({"action": "software", "roon_bridge": bridge.get_active(), "netdata": netdata.get_active()}, lambda _: self.refresh())
+                self.async_call({"action": "software", "roon_bridge": bridge.get_active(), "netdata": netdata.get_active(), "netdata_lightweight": lightweight.get_active()}, lambda _: self.refresh())
             self.footer.append(self.button("Install and continue", install))
             self.content.append(self.button("Continue without optional software", lambda: self.async_call({"action": "software", "roon_bridge": False, "netdata": False}, lambda _: self.refresh())))
             if self.snapshot.get("software_busy"):

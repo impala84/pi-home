@@ -281,6 +281,25 @@ class AlpineSetupTests(unittest.TestCase):
         self.run.assert_any_call(["apk", "add", "--no-cache", "curl", "ca-certificates"])
         self.assertNotIn("private-token", (self.root / "var/lib/pi-home/netdata-operation-status").read_text())
 
+    def test_netdata_lightweight_preserves_other_settings_and_is_idempotent(self):
+        agent = self.root / "opt/netdata/bin/netdata"; agent.parent.mkdir(parents=True); agent.touch()
+        config = self.root / "opt/netdata/etc/netdata/netdata.conf"; config.parent.mkdir(parents=True)
+        original = "[ml]\n    enabled = yes\n[db]\n    update every = 1\n    db = dbengine\n[web]\n    bind to = localhost\n"
+        config.write_text(original)
+        module.configure_netdata_lightweight(self.root, True)
+        first = config.read_text()
+        module.configure_netdata_lightweight(self.root, True)
+        self.assertEqual(first, config.read_text())
+        self.assertIn("enabled = no", first)
+        self.assertIn("update every = 3", first)
+        self.assertIn("db = dbengine", first)
+        self.assertIn("bind to = localhost", first)
+        self.assertEqual(config.with_name("netdata.conf.pi-home-backup").read_text(), original)
+        module.configure_netdata_lightweight(self.root, False)
+        self.assertIn("enabled = auto", config.read_text())
+        self.assertIn("update every = 1", config.read_text())
+        with self.assertRaises(ValueError): module.configure_netdata_lightweight(self.root, "yes")
+
     def test_update_requires_completed_setup_and_uses_fixed_updater(self):
         with patch.object(module.subprocess, "Popen") as spawn:
             with self.assertRaises(ValueError): self.setup.handle({"action": "update"})

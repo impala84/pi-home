@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.0-beta.38 Alpine Beta — 6 October 2026
+
+- Shows running Netdata and its collector processes in backend Diagnostics with combined RSS memory and CPU usage; hides the row when stopped.
+- Adds a persisted Lightweight monitoring option to first-boot software selection and backend Services. New official installations default to three-second sampling and disabled ML anomaly detection, retaining alerts, dashboard, database and Cloud connectivity.
+- Explains that installation downloads the latest official stable Agent, not Alpine's package, with Netdata's daily updater maintaining it independently of Pi Home updates. Existing installations remain unchanged until the option is selected; disabling it restores one-second sampling and automatic ML.
+- Backs up Netdata configuration before managing only its ML and sampling settings, and restarts a running Agent to apply changes.
+
 ## 1.1.0-beta.37 Alpine Beta — 5 October 2026
 
 - Replaces the non-working browse-based library action with the exact private Roon calls observed from the official client. Resolves the playing album and profile through the selected zone, and confirms library membership from Roon's pushed state.

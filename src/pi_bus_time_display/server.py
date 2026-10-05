@@ -31,7 +31,7 @@ from .releases import ReleaseChecker
 CONTROL_REQUEST_LOCK = threading.Lock()
 ALPINE_SYSTEM_ACTIONS = {
     "update", "reboot", "netdata_enable", "netdata_disable", "netdata_claim",
-    "netdata_claim_command", "netdata_official_install", "netdata_disconnect",
+    "netdata_claim_command", "netdata_official_install", "netdata_disconnect", "netdata_lightweight",
     "device_credentials", "install_tools", "display_on", "display_off",
     "set_brightness", "set_display", "roon_install", "roon_start", "roon_stop", "roon_restart",
 }
@@ -499,6 +499,7 @@ def diagnostics_snapshot() -> dict:
         "api": {"label": "Bus data service", "rss_kb": 0, "cpu_percent": 0.0, "pids": [], "active": False},
         "controller": {"label": "Roon controller", "rss_kb": 0, "cpu_percent": 0.0, "pids": [], "active": False},
         "bridge": {"label": "Roon Bridge", "rss_kb": 0, "cpu_percent": 0.0, "pids": [], "active": False},
+        "netdata": {"label": "Netdata", "rss_kb": 0, "cpu_percent": 0.0, "pids": [], "active": False},
     }
     for line in command_output(["ps", "-eo", "pid=,rss=,pcpu=,args="]).splitlines():
         parts = line.strip().split(None, 3)
@@ -506,6 +507,7 @@ def diagnostics_snapshot() -> dict:
             continue
         pid, rss, cpu, args = parts
         lowered = args.lower()
+        executable = lowered.split()[0]
         group = None
         if "pi_bus_native.py" in lowered or "/cage" in lowered:
             group = "display"
@@ -513,6 +515,8 @@ def diagnostics_snapshot() -> dict:
             group = "controller"
         elif "roonbridge" in lowered or "roon bridge" in lowered:
             group = "bridge"
+        elif Path(executable).name == "netdata" or executable.startswith(("/opt/netdata/usr/libexec/netdata/", "/usr/libexec/netdata/", "/usr/lib/netdata/")):
+            group = "netdata"
         elif ("pi-bus-time-display" in lowered or "/pi-home " in lowered) and "native" not in lowered:
             group = "api"
         if group:
@@ -552,7 +556,7 @@ def diagnostics_snapshot() -> dict:
         "load": load, "cpu_count": os.cpu_count() or 1, "uptime_seconds": round(uptime),
         "temperature_c": temperature,
         "throttled": throttled.split("=", 1)[-1] if "=" in throttled else "unknown",
-        "processes": list(groups.values()),
+        "processes": [value for key, value in groups.items() if key != "netdata" or value["active"]],
     }
 
 
@@ -705,6 +709,7 @@ def system_snapshot(state_dir: Path, include_diagnostics: bool = False) -> dict:
         "roon_controller": roon_controller,
         "netdata": netdata["service"],
         "netdata_details": netdata,
+        "netdata_lightweight": (state_dir / "netdata-lightweight").is_file() and (state_dir / "netdata-lightweight").read_text().strip() == "yes",
         "device_username": device_username,
         "pi_leds": pi_led_state(state_dir),
         "update_status": update_status,
@@ -743,13 +748,16 @@ def write_control_request(state_dir: Path, request: dict) -> bool:
                 payload.update(token=str(request.get("token", "")), rooms=str(request.get("rooms", "")))
             if request["action"] in {"netdata_claim_command", "netdata_official_install"}:
                 payload["command"] = str(request.get("command", ""))
+            if request["action"] == "netdata_lightweight":
+                if type(request.get("enabled")) is not bool: raise ValueError("Choose a supported Netdata monitoring mode.")
+                payload["enabled"] = request["enabled"]
             if request["action"] == "device_credentials":
                 payload.update(username=str(request.get("username", "")), password=str(request.get("password", "")), confirmation=str(request.get("confirmation", "")))
             if request["action"] == "set_display":
                 payload.update(profile=str(request.get("profile", "")), orientation=str(request.get("orientation", "")), mounting=str(request.get("mounting", "standard")))
             try:
                 with socket.socket(socket.AF_UNIX) as client:
-                    client.settimeout(105 if request["action"] in {"netdata_claim", "netdata_claim_command"} else 15); client.connect("/run/pi-home-setup.sock")
+                    client.settimeout(105 if request["action"] in {"netdata_claim", "netdata_claim_command", "netdata_lightweight"} else 15); client.connect("/run/pi-home-setup.sock")
                     client.sendall((json.dumps(payload) + "\n").encode())
                     result = json.loads(client.makefile("rb").readline(4096))
             except OSError as error: raise ValueError("Alpine system helper is not ready. Please retry.") from error
@@ -1154,6 +1162,10 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
                         request.update(token=str(data.get("token", "")), rooms=str(data.get("rooms", "")))
                     if action in {"netdata_claim_command", "netdata_official_install"}:
                         request["command"] = str(data.get("command", ""))
+                    if action == "netdata_lightweight":
+                        if type(data.get("enabled")) is not bool:
+                            raise ValueError("Choose a supported Netdata monitoring mode.")
+                        request["enabled"] = data["enabled"]
                     if action == "device_credentials":
                         request.update(username=str(data.get("username", "")).strip(), password=str(data.get("password", "")), confirmation=str(data.get("confirmation", "")))
                     if action == "set_rotation":

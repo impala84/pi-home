@@ -30,6 +30,23 @@ class DisplayModeTests(unittest.TestCase):
         self.assertTrue(all(process["active"] for process in data["processes"]))
         self.assertEqual({call.args[0] for call in services.call_args_list}, {"pi-home-roon", "pi-home-api", "pi-home-display", "roonbridge"})
 
+    def test_diagnostics_includes_netdata_and_collectors_only_when_running(self):
+        from pi_bus_time_display.server import diagnostics_snapshot
+        output = "12 204800 1.2 /opt/netdata/bin/netdata -D\n13 10240 0.3 /opt/netdata/usr/libexec/netdata/plugins.d/apps.plugin\n14 99999 9.9 grep netdata\n"
+        with patch("pi_bus_time_display.server.command_output", return_value=output), patch("pi_bus_time_display.server.service_state", return_value="stopped"):
+            data = diagnostics_snapshot()
+        netdata = next(process for process in data["processes"] if process["label"] == "Netdata")
+        self.assertEqual(netdata["rss_kb"], 215040)
+        self.assertAlmostEqual(netdata["cpu_percent"], 1.5)
+        self.assertEqual(netdata["pids"], [12, 13])
+        with patch("pi_bus_time_display.server.command_output", return_value=""), patch("pi_bus_time_display.server.service_state", return_value="stopped"):
+            self.assertNotIn("Netdata", [process["label"] for process in diagnostics_snapshot()["processes"]])
+
+    def test_diagnostics_detects_alpine_packaged_netdata(self):
+        from pi_bus_time_display.server import diagnostics_snapshot
+        with patch("pi_bus_time_display.server.command_output", return_value="22 1024 0.1 /usr/sbin/netdata"), patch("pi_bus_time_display.server.service_state", return_value="stopped"):
+            self.assertTrue(next(process for process in diagnostics_snapshot()["processes"] if process["label"] == "Netdata")["active"])
+
     def test_bus_disabled_persists_and_automatic_stays_on_music(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "config.toml"
@@ -224,6 +241,12 @@ class DisplayModeTests(unittest.TestCase):
             self.assertEqual(display_target(config, path, {"zone": {"state": "playing"}}, evening), "http://127.0.0.1:8766/")
 
     def test_touchscreen_update_request_is_atomically_queued(self):
+        import json
+        with patch.dict(os.environ, {"PI_HOME_APPLIANCE_PLATFORM": "alpine-prototype"}), patch("pi_bus_time_display.server.socket.socket") as sock:
+            client = sock.return_value.__enter__.return_value
+            client.makefile.return_value.readline.return_value = b'{"ok":true}\n'
+            self.assertTrue(write_control_request(Path("/unused"), {"action": "netdata_lightweight", "enabled": True}))
+            self.assertEqual(json.loads(client.sendall.call_args.args[0]), {"action": "netdata_lightweight", "enabled": True})
         with tempfile.TemporaryDirectory() as directory:
             state_dir = Path(directory)
             self.assertTrue(write_control_request(state_dir, {"action": "update"}))
