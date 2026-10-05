@@ -6,6 +6,12 @@ ROOT = Path(__file__).parents[1]
 
 
 class DisplayRotationTests(unittest.TestCase):
+    def test_native_settings_dropdown_popup_has_explicit_readable_colours(self):
+        display = (ROOT / "native-display/pi_bus_native.py").read_text(encoding="utf-8")
+        self.assertIn(".settings-select popover contents { background: #e4e3e8; color: #17171a;", display)
+        self.assertIn(".settings-select popover listview row label { color: #17171a; }", display)
+        self.assertIn(".settings-select popover listview row:selected { background: #c9c5ff; color: #111116; }", display)
+
     def test_native_browse_is_vertical_only_and_back_is_not_an_overlay(self):
         display = (ROOT / "native-display/pi_bus_native.py").read_text()
         self.assertNotIn('browser.add_overlay(self.browser_back)', display)

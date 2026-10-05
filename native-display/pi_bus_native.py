@@ -193,6 +193,12 @@ CSS += b"""
 .theme-choice.active { background: #6ed9ae; color: #101714; }
 .theme-roon .theme-choice.active { background: #817aeb; color: #fff; }
 .settings-select label { color: #fff; }
+.settings-select popover contents { background: #e4e3e8; color: #17171a; border: 1px solid #77727e; border-radius: 8px; }
+.settings-select popover listview { background: transparent; color: #17171a; }
+.settings-select popover listview row { min-height: 46px; padding: 5px 12px; color: #17171a; }
+.settings-select popover listview row label { color: #17171a; }
+.settings-select popover listview row:selected { background: #c9c5ff; color: #111116; }
+.settings-select popover listview row:selected label { color: #111116; }
 .artist-play { padding: 12px 18px; border: 0; border-radius: 7px; background: #303030; color: #6ed9ae; font-size: 18px; font-weight: 650; }
 .theme-roon .artist-play { background: #292929; color: #817aeb; }
 .artist-albums-heading { font-size: 16px; font-weight: 750; }

@@ -2,6 +2,7 @@
 
 ## 1.1.0-beta.35 Alpine Beta — 5 October 2026
 
+- Gives native GTK settings dropdown popups an explicit light-gray surface, dark text and a pale-purple selection so their options remain legible under the Pi Home dark theme.
 - Adds a first-boot optional software step for Roon Bridge and the official stable Netdata Agent, with progress, retry and skip controls.
 - Keeps storage expansion, diagnostics, curl, certificates and time sync in every fresh image. Removes the obsolete Alpine Netdata package from new images and system-tools repair.
 - Enables Netdata's official daily updater and the cron service. Existing installations remain outside Pi Home's application update directories; a reflash starts fresh.
