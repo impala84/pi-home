@@ -192,14 +192,29 @@ class AlpineSetupTests(unittest.TestCase):
         self.assertNotIn("private-token", self.setup.progress.read_text())
         self.assertEqual(self.run.call_args.args[0], ["rc-service", "netdata", "start"])
 
-    def test_installed_legacy_netdata_claim_helper_is_used_without_capturing_token(self):
+    def test_installed_legacy_netdata_claim_helper_is_not_used(self):
         helper = self.root / "usr/sbin/netdata-claim.sh"; helper.parent.mkdir(parents=True); helper.touch()
-        with patch.object(module.subprocess, "run", return_value=Mock(returncode=0)) as run:
-            module.claim_netdata(self.root, "private-token", "room-1234")
-        self.assertEqual(run.call_args.args[0][0], str(helper))
-        self.assertIn("-daemon-not-running", run.call_args.args[0])
-        self.assertIs(run.call_args.kwargs["stdout"], module.subprocess.DEVNULL)
-        self.assertFalse((self.root / "etc/netdata/claim.conf").exists())
+        module.claim_netdata(self.root, "private-token", "room-1234")
+        claim = self.root / "etc/netdata/claim.conf"
+        self.assertTrue(claim.exists())
+        self.assertIn("token = private-token", claim.read_text())
+
+    def test_cloud_generated_command_is_parsed_but_never_executed(self):
+        command = "bash <(curl -Ss https://get.netdata.cloud/kickstart.sh) --stable-channel --claim-token 'private-token' --claim-rooms room-1234,room-5678 --claim-url https://app.netdata.cloud"
+        self.assertEqual(module.parse_netdata_connection_command(command), ("private-token", "room-1234,room-5678", "https://app.netdata.cloud"))
+        self.setup.save({"complete": True})
+        service = self.root / "etc/init.d/netdata"; service.parent.mkdir(parents=True); service.touch()
+        self.setup.handle({"action": "netdata_claim_command", "command": command})
+        claim = self.root / "etc/netdata/claim.conf"
+        self.assertIn("token = private-token", claim.read_text())
+        self.assertIn("rooms = room-1234,room-5678", claim.read_text())
+        self.assertNotIn("private-token", self.setup.progress.read_text())
+
+    def test_cloud_command_rejects_non_netdata_script_or_non_cloud_url(self):
+        with self.assertRaisesRegex(ValueError, "official Netdata"):
+            module.parse_netdata_connection_command("bash <(curl -Ss https://example.com/script) --claim-token private-token")
+        with self.assertRaisesRegex(ValueError, "official Netdata Cloud"):
+            module.parse_netdata_connection_command("bash <(curl -Ss https://get.netdata.cloud/kickstart.sh) --claim-token private-token --claim-url https://example.com")
 
     def test_update_requires_completed_setup_and_uses_fixed_updater(self):
         with patch.object(module.subprocess, "Popen") as spawn:

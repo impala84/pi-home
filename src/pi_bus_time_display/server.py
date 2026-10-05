@@ -675,7 +675,7 @@ def write_control_request(state_dir: Path, request: dict) -> bool:
     as display-off immediately followed by display-on.
     """
     if os.getenv("PI_HOME_APPLIANCE_PLATFORM") == "alpine-prototype":
-        if request.get("action") in {"update", "reboot", "netdata_enable", "netdata_disable", "netdata_claim", "netdata_disconnect", "device_credentials", "install_tools", "display_on", "display_off", "set_brightness"}:
+        if request.get("action") in {"update", "reboot", "netdata_enable", "netdata_disable", "netdata_claim", "netdata_claim_command", "netdata_disconnect", "device_credentials", "install_tools", "display_on", "display_off", "set_brightness"}:
             payload = {"action": request["action"]}
             if request["action"] in {"display_on", "set_brightness"}:
                 brightness = int(request.get("brightness", 100))
@@ -683,11 +683,13 @@ def write_control_request(state_dir: Path, request: dict) -> bool:
                 payload["brightness"] = brightness
             if request["action"] == "netdata_claim":
                 payload.update(token=str(request.get("token", "")), rooms=str(request.get("rooms", "")))
+            if request["action"] == "netdata_claim_command":
+                payload["command"] = str(request.get("command", ""))
             if request["action"] == "device_credentials":
                 payload.update(username=str(request.get("username", "")), password=str(request.get("password", "")), confirmation=str(request.get("confirmation", "")))
             try:
                 with socket.socket(socket.AF_UNIX) as client:
-                    client.settimeout(105 if request["action"] == "netdata_claim" else 15); client.connect("/run/pi-home-setup.sock")
+                    client.settimeout(105 if request["action"] in {"netdata_claim", "netdata_claim_command"} else 15); client.connect("/run/pi-home-setup.sock")
                     client.sendall((json.dumps(payload) + "\n").encode())
                     result = json.loads(client.makefile("rb").readline(4096))
             except OSError as error: raise ValueError("Alpine system helper is not ready. Please retry.") from error
@@ -1080,7 +1082,7 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
                     return
                 if self.path == "/api/admin/system-action":
                     action = str(data.get("action", ""))
-                    allowed = {"update", "reboot", "roon_start", "roon_stop", "roon_restart", "netdata_enable", "netdata_disable", "netdata_claim", "netdata_disconnect", "device_credentials", "install_tools", "leds_enable", "leds_disable", "set_hostname", "set_wifi", "set_rotation", "set_display"}
+                    allowed = {"update", "reboot", "roon_start", "roon_stop", "roon_restart", "netdata_enable", "netdata_disable", "netdata_claim", "netdata_claim_command", "netdata_disconnect", "device_credentials", "install_tools", "leds_enable", "leds_disable", "set_hostname", "set_wifi", "set_rotation", "set_display"}
                     if action not in allowed:
                         raise ValueError("Unknown system action")
                     request = {"action": action}
@@ -1091,6 +1093,8 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
                         request["password"] = str(data.get("password", ""))
                     if action == "netdata_claim":
                         request.update(token=str(data.get("token", "")), rooms=str(data.get("rooms", "")))
+                    if action == "netdata_claim_command":
+                        request["command"] = str(data.get("command", ""))
                     if action == "device_credentials":
                         request.update(username=str(data.get("username", "")).strip(), password=str(data.get("password", "")), confirmation=str(data.get("confirmation", "")))
                     if action == "set_rotation":

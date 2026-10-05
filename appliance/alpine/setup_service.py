@@ -6,6 +6,7 @@ from pathlib import Path
 import pwd
 import re
 import secrets
+import shlex
 import shutil
 import socket
 import struct
@@ -77,19 +78,42 @@ def validate_password(password):
         raise ValueError("Do not start or end the password with spaces or quotation marks.")
 
 
-def claim_netdata(root, token, rooms):
-    """Use the claim interface supplied by the installed Agent version."""
+def parse_netdata_connection_command(value):
+    """Extract credentials from Netdata's generated command without running it."""
+    value = str(value or "").strip()
+    if not 20 <= len(value) <= 16_384 or "\x00" in value:
+        raise ValueError("Paste the complete connection command from Netdata Cloud.")
+    if "https://get.netdata.cloud/kickstart.sh" not in value:
+        raise ValueError("Use the official Netdata Cloud connection command.")
+    try:
+        words = shlex.split(value)
+    except ValueError as error:
+        raise ValueError("The Netdata Cloud command could not be read. Copy it again in full.") from error
+    options = {}
+    for index, word in enumerate(words):
+        for name in ("claim-token", "claim-rooms", "claim-url"):
+            flag = "--" + name
+            if word == flag and index + 1 < len(words): options[name] = words[index + 1]
+            elif word.startswith(flag + "="): options[name] = word[len(flag) + 1:]
+    token = str(options.get("claim-token", "")).strip()
+    rooms = str(options.get("claim-rooms", "")).strip()
+    url = str(options.get("claim-url", "https://app.netdata.cloud")).strip().rstrip("/")
+    if not 8 <= len(token) <= 512 or any(character.isspace() or ord(character) < 33 for character in token):
+        raise ValueError("The pasted command does not contain a valid claim token.")
+    room_values = [room.strip() for room in rooms.split(",") if room.strip()]
+    if any(not re.fullmatch(r"[A-Za-z0-9._:-]{4,128}", room) for room in room_values):
+        raise ValueError("The pasted command contains an invalid Netdata Room ID.")
+    if url != "https://app.netdata.cloud":
+        raise ValueError("Only the official Netdata Cloud service is supported.")
+    return token, ",".join(room_values), url
+
+
+def claim_netdata(root, token, rooms, url="https://app.netdata.cloud"):
+    """Configure the installed Agent using Netdata's supported claim file."""
     root = Path(root)
-    legacy = next((path for path in (root / "usr/sbin/netdata-claim.sh", root / "usr/libexec/netdata/netdata-claim.sh") if path.is_file()), None)
-    if legacy:
-        args = [str(legacy), "-url=https://app.netdata.cloud", "-token=" + token, "-daemon-not-running"]
-        if rooms: args.append("-rooms=" + rooms)
-        result = subprocess.run(args, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=90)
-        if result.returncode: raise ValueError("Netdata Cloud rejected the claim. Check the token, Room ID and clock, then retry.")
-        return
     claim = root / "etc/netdata/claim.conf"; claim.parent.mkdir(parents=True, exist_ok=True)
     room_line = "    rooms = " + rooms + "\n" if rooms else ""
-    atomic(claim, "[global]\n    url = https://app.netdata.cloud\n    token = " + token + "\n" + room_line + "    insecure = no\n", 0o640)
+    atomic(claim, "[global]\n    url = " + url + "\n    token = " + token + "\n" + room_line + "    insecure = no\n", 0o640)
     try:
         netdata = __import__("grp").getgrnam("netdata")
         os.chown(claim, 0, netdata.gr_gid)
@@ -236,11 +260,15 @@ class Setup:
                 self.run(["rc-service", "netdata", "stop"])
                 self.run(["rc-update", "del", "netdata", "default"])
             return {"ok": True}
-        if action in {"netdata_claim", "netdata_disconnect"}:
+        if action in {"netdata_claim", "netdata_claim_command", "netdata_disconnect"}:
             if not state.get("complete"): raise ValueError("Finish setup before changing Netdata Cloud.")
             if not (self.root / "etc/init.d/netdata").is_file(): raise ValueError("Netdata is not installed.")
-            if action == "netdata_claim":
+            if action == "netdata_claim_command":
+                token, rooms, claim_url = parse_netdata_connection_command(data.get("command"))
+                room_values = rooms.split(",") if rooms else []
+            elif action == "netdata_claim":
                 token = str(data.get("token", "")).strip(); rooms = str(data.get("rooms", "")).strip()
+                claim_url = "https://app.netdata.cloud"
                 if not 8 <= len(token) <= 512 or any(character.isspace() or ord(character) < 33 for character in token):
                     raise ValueError("Enter the claim token shown by Netdata Cloud.")
                 room_values = [value.strip() for value in rooms.split(",") if value.strip()]
@@ -255,7 +283,7 @@ class Setup:
                 if cloud.exists():
                     if cloud.is_symlink() or not cloud.is_dir(): raise ValueError("Netdata Cloud identity needs manual repair.")
                     shutil.rmtree(cloud)
-                if action == "netdata_claim": claim_netdata(self.root, token, ",".join(room_values))
+                if action in {"netdata_claim", "netdata_claim_command"}: claim_netdata(self.root, token, ",".join(room_values), claim_url)
             except Exception:
                 # Claim failure must not leave local monitoring unavailable.
                 self.run(["rc-service", "netdata", "start"])

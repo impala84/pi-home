@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.1.0-beta.23 Alpine Beta — 5 October 2026
+
+- Replaced the separate Netdata token and Room fields with one paste box for
+  the complete official Netdata Cloud connection command.
+- Parse only the claim token, Rooms and official Cloud URL from that command;
+  pasted shell is never executed, logged or retained.
+- Configure the already-installed Agent through Netdata's current private
+  `claim.conf` method and restart only Netdata, avoiding the obsolete helper
+  that was rejecting otherwise valid claims.
+
 ## 1.1.0-beta.22 Alpine Beta — 5 October 2026
 
 - Added authenticated physical-screen view controls to Diagnostics so Recent,

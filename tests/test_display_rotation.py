@@ -39,6 +39,15 @@ class DisplayRotationTests(unittest.TestCase):
         self.assertIn("'/favicon-roon.svg':'/favicon.svg'", javascript)
         self.assertIn('>Check and install</button>', html)
 
+    def test_netdata_accepts_the_official_generated_command_not_raw_token_fields(self):
+        html = (ROOT / "src/pi_bus_time_display/static/admin.html").read_text()
+        javascript = (ROOT / "src/pi_bus_time_display/static/admin.js").read_text()
+        self.assertIn('id="netdata-command"', html)
+        self.assertIn('https://get.netdata.cloud/kickstart.sh', html)
+        self.assertNotIn('id="netdata-token"', html)
+        self.assertIn("action:'netdata_claim_command'", javascript)
+        self.assertIn("command.value=''", javascript)
+
     def test_bus_colours_are_keyed_by_route_not_row_position(self):
         css = (ROOT / "src/pi_bus_time_display/static/bus-refinements.css").read_text()
         self.assertNotIn(".service:nth-child", css)

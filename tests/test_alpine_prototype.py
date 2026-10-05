@@ -1,4 +1,5 @@
 import importlib.util
+import json
 import os
 from pathlib import Path
 import tempfile
@@ -55,6 +56,15 @@ class AlpinePrototypeTests(unittest.TestCase):
         with patch.dict(os.environ, {"PI_HOME_APPLIANCE_PLATFORM": "alpine-prototype"}):
             with self.assertRaisesRegex(ValueError, "between 10 and 100"):
                 write_control_request(Path("/unused"), {"action": "set_brightness", "brightness": 0})
+
+    def test_netdata_generated_command_is_forwarded_only_to_the_local_helper(self):
+        command = "bash <(curl -Ss https://get.netdata.cloud/kickstart.sh) --claim-token private-token --claim-rooms room-1234"
+        client = Mock(); client.__enter__ = Mock(return_value=client); client.__exit__ = Mock(return_value=False)
+        client.makefile.return_value.readline.return_value = b'{"ok":true}\n'
+        with patch.dict(os.environ, {"PI_HOME_APPLIANCE_PLATFORM": "alpine-prototype"}), patch("pi_bus_time_display.server.socket.socket", return_value=client):
+            self.assertTrue(write_control_request(Path("/unused"), {"action": "netdata_claim_command", "command": command}))
+        payload = json.loads(client.sendall.call_args.args[0])
+        self.assertEqual(payload, {"action": "netdata_claim_command", "command": command})
 
     def test_credentials_are_unique_private_and_idempotent(self):
         passwords = []
