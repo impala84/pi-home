@@ -2081,7 +2081,7 @@ class Display(Gtk.Application):
         requested = button.get_active(); button.set_sensitive(False)
         threading.Thread(target=self._toggle_bridge, args=(button, requested), daemon=True).start()
     def _toggle_bridge(self, button, requested):
-        result = post_json(BUS + "/api/device/roon-bridge", {"enabled": requested})
+        result = post_json(BUS + "/api/device/roon-bridge", {"enabled": requested}, timeout=110)
         def finish():
             if not result:
                 button.handler_block_by_func(self.toggle_bridge)

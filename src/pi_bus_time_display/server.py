@@ -757,7 +757,7 @@ def write_control_request(state_dir: Path, request: dict) -> bool:
                 payload.update(profile=str(request.get("profile", "")), orientation=str(request.get("orientation", "")), mounting=str(request.get("mounting", "standard")))
             try:
                 with socket.socket(socket.AF_UNIX) as client:
-                    client.settimeout(105 if request["action"] in {"netdata_claim", "netdata_claim_command", "netdata_lightweight"} else 15); client.connect("/run/pi-home-setup.sock")
+                    client.settimeout(105 if request["action"] in {"netdata_claim", "netdata_claim_command", "netdata_lightweight", "roon_start", "roon_stop", "roon_restart"} else 15); client.connect("/run/pi-home-setup.sock")
                     client.sendall((json.dumps(payload) + "\n").encode())
                     result = json.loads(client.makefile("rb").readline(4096))
             except OSError as error: raise ValueError("Alpine system helper is not ready. Please retry.") from error
