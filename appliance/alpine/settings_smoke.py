@@ -34,7 +34,7 @@ for width, height in (tuple(map(int,os.environ["PI_HOME_SETTINGS_VIEWPORT"].spli
         if width<600: window.add_css_class("compact-portrait")
     elif width>=1200: window.add_css_class("touch-landscape")
     display.configure_settings_layout(width,height)
-    display.device_status.set_text("v1.1.0-beta.40 Alpine")
+    display.device_status.set_text("v1.1.0-beta.41 Alpine")
     display.touch_diagnostics.set_text("Memory 5.4%  ·  Load 1.53  ·  63.3°C  ·  Controller ready  ·  Bridge offline")
     display.render_touch_controls({"services":[{"name":name,"enabled":True} for name in ("40","42","401")]}, {"roon_bridge":"stopped"})
     window.present(); settle(); display.adapt_display(); settle()
@@ -56,5 +56,16 @@ for width, height in (tuple(map(int,os.environ["PI_HOME_SETTINGS_VIEWPORT"].spli
     if output and (width,height)==(1280,720):
         Path(output).mkdir(parents=True,exist_ok=True)
         subprocess.run(["import","-silent","-window","root",str(Path(output)/"settings-1280x720.png")],check=True)
+    display.render_touch_controls({"services":[]},{"roon_bridge":"not_installed"})
+    assert display.touch_daily.get_first_child().get_next_sibling().get_first_child().get_text()=="Buses"
+    display.render_touch_controls({"services":[]},{"roon_bridge":"running"})
+    bridge_check=display.touch_daily.get_first_child().get_next_sibling().get_first_child()
+    assert bridge_check.get_active()
+    from unittest.mock import patch
+    with patch.object(native,"post_json",return_value=None), patch.object(native.threading,"Thread"):
+        bridge_check.set_active(False)
+        display._toggle_bridge(bridge_check,False); settle()
+        assert bridge_check.get_active() and bridge_check.get_sensitive()
+        assert "Could not change Roon Bridge" in display.touch_diagnostics.get_text()
     window.destroy(); settle()
 print("Real GTK Settings: equal-height rows, equal-width actions and viewport bounds checked.")

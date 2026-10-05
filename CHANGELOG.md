@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.0-beta.41 Alpine Beta — 6 October 2026
+
+- Removes the obsolete Alpine rejection of the local touchscreen Roon Bridge start/stop endpoint and routes it through the existing privileged service helper. Remote requests remain blocked.
+- Shows the touchscreen Bridge checkbox only for installed services, disables it during mutations, restores state with visible failure feedback and promptly refreshes actual service status.
+- Restores visible update stages and failures beside the Settings title, including the queued/requesting stage, without expanding the header beyond the viewport.
+
 ## 1.1.0-beta.40 Alpine Beta — 6 October 2026
 
 - Aligns the installed version with the Pi Home Settings title baseline.

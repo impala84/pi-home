@@ -942,9 +942,6 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
             super().do_GET()
 
         def do_POST(self):
-            if os.getenv("PI_HOME_APPLIANCE_PLATFORM") == "alpine-prototype" and self.path == "/api/device/roon-bridge":
-                self.send_json(501, b'{"error":"OS controls are unavailable in Alpine Beta"}')
-                return
             if self.path == "/api/admin/display-capture":
                 if not self.authorised():
                     return
@@ -1061,7 +1058,14 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
                     else: state.enabled_services.discard(service)
                     state.save_enabled_services()
                 elif self.path == "/api/device/roon-bridge":
-                    write_control_request(mode_path.parent, {"action": "roon_start" if data.get("enabled") else "roon_stop"})
+                    if type(data.get("enabled")) is not bool:
+                        self.send_json(400, b'{"error":"Choose whether Roon Bridge should run"}')
+                        return
+                    try:
+                        write_control_request(mode_path.parent, {"action": "roon_start" if data["enabled"] else "roon_stop"})
+                    except (OSError, ValueError) as error:
+                        self.send_json(502, json.dumps({"error": str(error)}).encode())
+                        return
                 else:
                     entity_id = str(data.get("entity_id", ""))
                     if entity_id not in state.config.home_assistant_entities:

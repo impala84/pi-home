@@ -627,7 +627,7 @@ class Display(Gtk.Application):
         heading = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4); heading.set_hexpand(True)
         title_row = Gtk.Box(spacing=10); title_row.set_valign(Gtk.Align.CENTER)
         title_row.append(self.label("Pi Home", "settings-title")); title_row.get_last_child().add_css_class("settings-brand"); title_row.get_last_child().set_valign(Gtk.Align.BASELINE); title_row.append(self.label("Settings", "settings-title")); title_row.get_last_child().set_valign(Gtk.Align.BASELINE)
-        self.device_status = self.label("", "settings-version"); self.device_status.set_valign(Gtk.Align.BASELINE); title_row.append(self.device_status); heading.append(title_row)
+        self.device_status = self.label("", "settings-version"); self.device_status.set_valign(Gtk.Align.BASELINE); self.device_status.set_max_width_chars(32); self.device_status.set_ellipsize(Pango.EllipsizeMode.END); title_row.append(self.device_status); heading.append(title_row)
         self.touch_diagnostics = self.label("Loading diagnostics…", "settings-diagnostic"); self.touch_diagnostics.set_wrap(True); heading.append(self.touch_diagnostics); top.append(heading)
         utilities = Gtk.Box(spacing=22); utilities.set_valign(Gtk.Align.START); utilities.append(self.button("BACK", self.close_settings)); utilities.append(self.button("SLEEP", self.sleep)); top.append(utilities); page.append(top)
         separator = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL); separator.add_css_class("settings-divider"); page.append(separator)
@@ -859,7 +859,9 @@ class Display(Gtk.Application):
         if system is not None:
             self.system_data = system
             update_status = str(system.get("update_status", "Ready"))
-            self.device_status.set_text(f"v{system.get('app_version', '—')}")
+            visible_update = update_status.startswith(("Update ·", "Failed:"))
+            waiting_for_update = self.update_in_progress and not self.update_status_seen and update_status == "Ready"
+            if not waiting_for_update: self.device_status.set_text(update_status if visible_update else f"v{system.get('app_version', '—')}")
             self.device_status.set_tooltip_text(update_status)
             if update_status.startswith("Update ·"):
                 self.update_status_seen = True
@@ -987,7 +989,9 @@ class Display(Gtk.Application):
             if child == self.touch_daily.get_first_child(): break
             if child.has_css_class("setting-line"): self.settings_row_sizes.remove_widget(child)
             self.touch_daily.remove(child)
-        bridge = Gtk.Box(spacing=8); bridge.add_css_class("setting-line"); bridge_check = Gtk.CheckButton(label="Roon Bridge"); bridge_check.set_active((system or {}).get("roon_bridge") in {"active", "running"}); bridge_check.connect("toggled", self.toggle_bridge); bridge.append(bridge_check); self.settings_row_sizes.add_widget(bridge); self.touch_daily.append(bridge)
+        bridge_state = (system or {}).get("roon_bridge")
+        if bridge_state in {"active", "running", "inactive", "stopped"}:
+            bridge = Gtk.Box(spacing=8); bridge.add_css_class("setting-line"); bridge_check = Gtk.CheckButton(label="Roon Bridge"); bridge_check.set_active(bridge_state in {"active", "running"}); bridge_check.connect("toggled", self.toggle_bridge); bridge.append(bridge_check); self.settings_row_sizes.add_widget(bridge); self.touch_daily.append(bridge)
         services = Gtk.Box(spacing=12); services.add_css_class("setting-line"); services.append(self.label("Buses"))
         for item in device.get("services", []):
             button = Gtk.CheckButton(label=item.get("name", "")); button.set_active(bool(item.get("enabled"))); button.connect("toggled", self.toggle_service, item.get("name", "")); services.append(button)
@@ -2074,7 +2078,21 @@ class Display(Gtk.Application):
         self.library_add.set_child(icon)
         self.library_add.set_tooltip_text("Unfavourite album" if filled else "Favourite album")
     def toggle_bridge(self, button):
-        threading.Thread(target=post_json, args=(BUS + "/api/device/roon-bridge", {"enabled": button.get_active()}), daemon=True).start()
+        requested = button.get_active(); button.set_sensitive(False)
+        threading.Thread(target=self._toggle_bridge, args=(button, requested), daemon=True).start()
+    def _toggle_bridge(self, button, requested):
+        result = post_json(BUS + "/api/device/roon-bridge", {"enabled": requested})
+        def finish():
+            if not result:
+                button.handler_block_by_func(self.toggle_bridge)
+                button.set_active(not requested)
+                button.handler_unblock_by_func(self.toggle_bridge)
+                self.touch_diagnostics.set_text("Could not change Roon Bridge. Check backend Tools for service status.")
+            self.touch_controls_signature = None
+            self.last_system_fetch = 0
+            button.set_sensitive(True)
+            return False
+        GLib.idle_add(finish)
     def toggle_service(self, button, service):
         threading.Thread(target=post_json, args=(BUS + "/api/device/service-visibility", {"service": service, "enabled": button.get_active()}), daemon=True).start()
     def toggle_home(self, _button, entity_id):

@@ -27,7 +27,7 @@ by updating Pi Home. The initial configuration is backed up alongside
 `netdata.conf` as `netdata.conf.pi-home-backup`; unrelated configuration is
 preserved. Diagnostics shows combined Netdata/collector RSS and CPU when running.
 
-Current version: **1.1.0-beta.40 Alpine Beta**. First-run setup creates an
+Current version: **1.1.0-beta.41 Alpine Beta**. First-run setup creates an
 owner-chosen device/SSH account, and Settings can manage the installed Netdata
 Agent and its Cloud connection without an Alpine shell. This update is available
 on the Alpine branch.

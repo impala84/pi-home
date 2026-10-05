@@ -11,6 +11,29 @@ from pi_bus_time_display.server import State, active_wifi_ssid, automatic_displa
 
 
 class DisplayModeTests(unittest.TestCase):
+    def test_touchscreen_bridge_reaches_alpine_helper_and_rejects_remote_requests(self):
+        import io
+        from unittest.mock import Mock
+        from pi_bus_time_display.server import make_handler
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory)
+            Handler = make_handler(State(Config(), path), path / "config.toml", path / "env", path / "mode")
+            for enabled in (True, False):
+                handler = Handler.__new__(Handler)
+                handler.path = "/api/device/roon-bridge"
+                handler.client_address = ("127.0.0.1", 1)
+                payload = b'{"enabled":true}' if enabled else b'{"enabled":false}'
+                handler.headers = {"Content-Length": str(len(payload))}
+                handler.rfile = io.BytesIO(payload); handler.send_json = Mock()
+                with patch.dict(os.environ, {"PI_HOME_APPLIANCE_PLATFORM": "alpine-prototype"}), patch("pi_bus_time_display.server.write_control_request") as action:
+                    handler.do_POST()
+                    action.assert_called_once_with(path, {"action":"roon_start" if enabled else "roon_stop"})
+                    self.assertEqual(handler.send_json.call_args.args[0], 200)
+                    handler.client_address = ("10.0.0.2", 1)
+                    handler.do_POST()
+                    self.assertEqual(handler.send_json.call_args.args[0], 403)
+                    self.assertEqual(action.call_count, 1)
+
     def test_display_orientation_is_derived_from_each_panels_native_shape(self):
         self.assertEqual(display_orientation("original", "normal"), "landscape")
         self.assertEqual(display_orientation("original", "90"), "portrait")
