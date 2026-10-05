@@ -21,6 +21,22 @@ SOCKET = "/run/pi-home-setup.sock"
 PROFILES = {"auto": "", "original": "vc4-kms-dsi-7inch", "touch2-5": "vc4-kms-dsi-ili9881-5inch", "touch2-7": "vc4-kms-dsi-ili9881-7inch", "touch2-10": "vc4-kms-dsi-ili79600-10-1inch"}
 
 
+def orientation_transform(profile, orientation):
+    """Translate the user-facing viewport orientation into panel rotation."""
+    if orientation not in {"landscape", "portrait"}:
+        raise ValueError("Choose Landscape or Portrait.")
+    native_portrait = profile.startswith("touch2-")
+    if orientation == "portrait":
+        return "normal" if native_portrait else "90"
+    return "90" if native_portrait else "normal"
+
+
+def display_orientation(profile, rotation):
+    native_portrait = profile.startswith("touch2-")
+    portrait = rotation in ({"normal", "180"} if native_portrait else {"90", "270"})
+    return "portrait" if portrait else "landscape"
+
+
 def read(path):
     with os.fdopen(os.open(path, os.O_RDONLY | os.O_NOFOLLOW)) as file:
         return file.read()
@@ -355,6 +371,34 @@ class Setup:
             if not state.get("complete"): raise ValueError("Finish setup before controlling the display.")
             display_power(self.root, action != "display_off", data.get("brightness", 100))
             return {"ok": True, "powered": action != "display_off"}
+        if action == "set_display":
+            if not state.get("complete"): raise ValueError("Finish setup before changing the display.")
+            profile = str(data.get("profile", "")); orientation = str(data.get("orientation", ""))
+            if profile not in PROFILES or profile == "auto": raise ValueError("Choose a supported display.")
+            if not (self.root / f"boot/overlays/{PROFILES[profile]}.dtbo").is_file(): raise ValueError("Display driver is missing from this image.")
+            rotation = orientation_transform(profile, orientation)
+            config = self.root / "etc/pi-home"
+            previous_profile = read(config / "display-profile").strip() if (config / "display-profile").exists() else "original"
+            atomic(config / "display-profile", profile + "\n")
+            atomic(config / "display-transform", rotation + "\n")
+            atomic(config / "display-orientation", orientation + "\n")
+            state.update(profile=profile, rotation=rotation, display_orientation=orientation); self.save(state)
+            if previous_profile != profile:
+                boot = self.root / "boot/config.txt"; text = read(boot)
+                text = re.sub(r"\n?# BEGIN PI HOME SETUP\n.*?# END PI HOME SETUP\n?", "\n", text, flags=re.S)
+                if not Path(str(boot) + ".setup-backup").exists(): atomic(Path(str(boot) + ".setup-backup"), text)
+                text = re.sub(r"^display_auto_detect=.*$", "display_auto_detect=0", text, flags=re.M)
+                overlay = PROFILES[profile]
+                text += f"\n# BEGIN PI HOME SETUP\n[all]\ndtoverlay={overlay}\n# END PI HOME SETUP\n"
+                atomic(boot, text)
+                try:
+                    boot_id = Path("/proc/sys/kernel/random/boot_id").read_text(encoding="ascii").strip()
+                    atomic(self.root / "var/lib/pi-home/reboot-required-boot-id", boot_id + "\n")
+                except OSError: pass
+                return {"ok": True, "orientation": orientation, "rotation": rotation, "reboot_required": True}
+            self.run(["rc-service", "pi-home-input", "restart"])
+            threading.Timer(.5, lambda: self.run(["rc-service", "pi-home-display", "restart"])).start()
+            return {"ok": True, "orientation": orientation, "rotation": rotation}
         if action in {"netdata_enable", "netdata_disable"}:
             if not state.get("complete"): raise ValueError("Finish setup before changing services.")
             if not (self.root / "etc/init.d/netdata").is_file():
@@ -513,7 +557,8 @@ class Setup:
             atomic(boot, text)
             config = self.root / "etc/pi-home"
             atomic(config / "display-profile", profile); atomic(config / "display-transform", rotation)
-            state.update(orientation=True, profile=profile, rotation=rotation)
+            atomic(config / "display-orientation", display_orientation(profile, rotation))
+            state.update(orientation=True, profile=profile, rotation=rotation, display_orientation=display_orientation(profile, rotation))
             if action == "display":
                 self.setting("display_theme", theme); self.setting("timezone", timezone)
                 state.update(display=True, theme=theme, timezone=timezone)

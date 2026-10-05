@@ -124,6 +124,15 @@ def apply_led_preference() -> None:
     set_pi_leds(enabled)
 
 
+def orientation_transform(profile: str, orientation: str) -> str:
+    if orientation not in {"landscape", "portrait"}:
+        raise ValueError("Invalid display orientation")
+    native_portrait = profile.startswith("touch2-")
+    if orientation == "portrait":
+        return "normal" if native_portrait else "90"
+    return "90" if native_portrait else "normal"
+
+
 def execute(data: dict) -> None:
     action = data.get("action")
     report("Update · Starting…" if action == "update" else "Working…")
@@ -152,9 +161,10 @@ def execute(data: dict) -> None:
         report("Display rotation updated.")
     elif action == "set_display":
         profile = str(data.get("profile", "original"))
-        transform = str(data.get("transform", "normal"))
-        if profile not in {"original", "touch2-5", "touch2-7", "touch2-5-7", "touch2-10"} or transform not in {"normal", "90", "180", "270"}:
+        orientation = str(data.get("orientation", "landscape"))
+        if profile not in {"original", "touch2-5", "touch2-7", "touch2-5-7", "touch2-10"}:
             raise ValueError("Invalid display configuration")
+        transform = orientation_transform(profile, orientation)
         run(["/usr/local/sbin/pi-bus-appliance-mode", "display", profile, transform])
         report("Display settings updated.")
     elif action in {"roon_start", "roon_stop", "roon_restart"}:

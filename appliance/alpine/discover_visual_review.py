@@ -58,10 +58,11 @@ def item(title, artist, number, kind="album"):
 
 
 Gtk.init()
-window = Gtk.Window(default_width=1280, default_height=720)
+screen_width = int(os.environ.get("PI_HOME_SCREEN_WIDTH", "1280"))
+screen_height = int(os.environ.get("PI_HOME_SCREEN_HEIGHT", "720"))
+window = Gtk.Window(default_width=screen_width, default_height=screen_height)
 window.set_decorated(False)
 window.set_resizable(False)
-window.add_css_class("touch-landscape")
 window.add_css_class("theme-roon")
 provider = Gtk.CssProvider(); provider.load_from_data(native.CSS)
 Gtk.StyleContext.add_provider_for_display(window.get_display(), provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
@@ -69,6 +70,9 @@ display = native.Display()
 page = display.build_roon()
 window.set_child(page)
 window.present()
+settle()
+display.window = window
+display.adapt_display()
 display.discovery_active = True
 display.discovery_request = 1
 display.set_roon_view("discover")

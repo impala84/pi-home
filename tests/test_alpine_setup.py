@@ -396,6 +396,22 @@ class AlpineSetupTests(unittest.TestCase):
             self.assertTrue(self.setup.handle({"action": "reboot"})["ok"])
             timer.assert_called_once()
 
+    def test_completed_appliance_applies_semantic_orientation_without_reboot(self):
+        self.setup.save({"complete": True, "profile": "touch2-10"})
+        config = self.root / "etc/pi-home"; (config / "display-profile").write_text("touch2-10\n")
+        with patch.object(module.threading, "Timer") as timer:
+            result = self.setup.handle({"action": "set_display", "profile": "touch2-10", "orientation": "landscape"})
+        self.assertEqual(result["rotation"], "90")
+        self.assertEqual((config / "display-orientation").read_text(), "landscape\n")
+        self.run.assert_called_with(["rc-service", "pi-home-input", "restart"])
+        timer.assert_called_once()
+
+    def test_semantic_orientation_accounts_for_native_panel_shape(self):
+        self.assertEqual(module.orientation_transform("original", "landscape"), "normal")
+        self.assertEqual(module.orientation_transform("original", "portrait"), "90")
+        self.assertEqual(module.orientation_transform("touch2-10", "portrait"), "normal")
+        self.assertEqual(module.orientation_transform("touch2-10", "landscape"), "90")
+
     def test_kernel_never_double_rotates_calibrated_touch(self):
         for rotation in ("normal", "90", "180", "270"):
             self.setup.handle({"action": "orientation", "profile": "touch2-7", "rotation": rotation})

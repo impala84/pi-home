@@ -6,6 +6,7 @@ user_file=/etc/pi-bus-time-display/display-user
 service=/etc/systemd/system/pi-bus-native.service
 transform_file=/etc/pi-bus-time-display/display-transform
 profile_file=/etc/pi-bus-time-display/display-profile
+orientation_file=/etc/pi-bus-time-display/display-orientation
 input_rules=/etc/udev/rules.d/99-pi-bus-kiosk-input.rules
 reboot_marker=/var/lib/pi-bus-time-display/reboot-required-boot-id
 
@@ -181,6 +182,11 @@ case ${1:-} in
     fi
     printf '%s\n' "${profile}" >"${profile_file}"
     printf '%s\n' "${transform}" >"${transform_file}"
+    if [[ ${profile} == touch2-* ]]; then
+      [[ ${transform} == normal || ${transform} == 180 ]] && printf 'portrait\n' >"${orientation_file}" || printf 'landscape\n' >"${orientation_file}"
+    else
+      [[ ${transform} == 90 || ${transform} == 270 ]] && printf 'portrait\n' >"${orientation_file}" || printf 'landscape\n' >"${orientation_file}"
+    fi
     set_boot_rotation "${transform}" "${profile}"
     configure_input "${transform}" "${profile}"
     configure_touch2_overlay "${profile}" "${transform}"

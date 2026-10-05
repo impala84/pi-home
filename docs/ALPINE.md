@@ -1,6 +1,6 @@
 # Alpine Beta appliance
 
-Current version: **1.1.0-beta.31 Alpine Beta**. First-run setup creates an
+Current version: **1.1.0-beta.32 Alpine Beta**. First-run setup creates an
 owner-chosen device/SSH account, and Settings can manage the installed Netdata
 Agent and its Cloud connection without an Alpine shell. This update is available
 on the Alpine branch.
@@ -11,6 +11,15 @@ require at least eight characters; setup still requires confirmation.
 Sleep and brightness are applied by the local root-owned helper: sleep writes zero
 backlight brightness but deliberately leaves the DSI/Goodix pipeline alive so a
 touch can wake the screen again.
+
+Display orientation is a shared appliance setting in both touchscreen and web
+Settings. Landscape and Portrait are translated to the correct physical panel
+rotation (the original display is natively landscape; Touch Display 2 panels
+are natively portrait), then Cage and touch calibration reload together when
+the hardware profile is unchanged. GTK lays out Now Playing, Queue, Browse,
+Discover, navigation and Settings from the resulting viewport dimensions. Auto
+orientation is intentionally omitted because the supported panels do not expose
+a dependable orientation sensor.
 
 Active branch: `alpine-beta`, based on Discover beta.7. The former
 `alpine-appliance-prototype` branch is a temporary update bridge for beta.14

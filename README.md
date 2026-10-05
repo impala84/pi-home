@@ -2,7 +2,7 @@
 
 Pi Home is an independent Raspberry Pi touchscreen interface for Roon, with optional Singapore bus arrivals and Home Assistant controls. It runs a native GTK4 display in Cage/Wayland, alongside a phone/desktop web interface. Chromium is not required.
 
-The Stable baseline is **v1.0.0**. The separate **v1.1.0-beta.31 Alpine Beta** focuses on the finished-appliance experience: first-run setup accepts an owner-chosen device/SSH account without imposing Alpine's interactive password-strength policy; Settings manages the installed Netdata Agent and accepts Netdata Cloud's official generated connection command without executing pasted shell; and the touchscreen uses hard-bounded discovery cards, physical-edge Daily swipe tracks, recommendation headings with an in-grid duotone seed album, release-specific Back navigation, a stable Now Playing artwork placeholder and viewport-aware artwork loading for smoother horizontal swipes. Its diagnostics capture now renders the live GTK touchscreen tree directly, including artwork, instead of depending on Cage compositor capture during direct scan-out. Alpine appliances follow their own verified Alpine Beta updates. This is not stable v1.1.
+The Stable baseline is **v1.0.0**. The separate **v1.1.0-beta.32 Alpine Beta** focuses on the finished-appliance experience: first-run setup accepts an owner-chosen device/SSH account without imposing Alpine's interactive password-strength policy; Settings manages the installed Netdata Agent and accepts Netdata Cloud's official generated connection command without executing pasted shell; and the touchscreen uses hard-bounded discovery cards, physical-edge Daily swipe tracks, recommendation headings with an in-grid duotone seed album, release-specific Back navigation, a stable Now Playing artwork placeholder and viewport-aware artwork loading for smoother horizontal swipes. Its diagnostics capture now renders the live GTK touchscreen tree directly, including artwork, instead of depending on Cage compositor capture during direct scan-out. Alpine appliances follow their own verified Alpine Beta updates. This is not stable v1.1.
 
 ## Features
 
@@ -16,6 +16,7 @@ beta.14 and older appliances can cross to the renamed channel safely.
 - Optional Singapore LTA arrivals: up to four service rows and three arrivals per service.
 - Optional Home Assistant controls for up to eight allow-listed `fan`, `light`, `switch` and `input_boolean` entities.
 - Fresh Mint and Roon-inspired themes, shared across touchscreen and web.
+- Shared Landscape/Portrait display settings with panel-aware rotation and responsive native GTK layouts from 480×800 through 1920×1200.
 - Scheduled sleep, touch wake, brightness/orientation controls and playback-aware wake behaviour. TV/record inputs do not independently hold the display awake.
 - Password-protected web settings, diagnostics, actual display capture and controlled system actions.
 - Published-release updates with Stable/Beta selection, preserving appliance configuration and credentials.

@@ -7,10 +7,22 @@ from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
 from pi_bus_time_display.config import Config, load_config
-from pi_bus_time_display.server import State, active_wifi_ssid, automatic_display_target, clear_sleep_mode_on_start, display_target, home_assistant_set_state, home_assistant_set_value, netdata_snapshot, read_display_mode, service_state, set_display_mode, system_snapshot, within_sleep_window, write_config, write_control_request
+from pi_bus_time_display.server import State, active_wifi_ssid, automatic_display_target, clear_sleep_mode_on_start, display_config_dir, display_orientation, display_target, home_assistant_set_state, home_assistant_set_value, netdata_snapshot, read_display_mode, service_state, set_display_mode, system_snapshot, within_sleep_window, write_config, write_control_request
 
 
 class DisplayModeTests(unittest.TestCase):
+    def test_display_orientation_is_derived_from_each_panels_native_shape(self):
+        self.assertEqual(display_orientation("original", "normal"), "landscape")
+        self.assertEqual(display_orientation("original", "90"), "portrait")
+        self.assertEqual(display_orientation("touch2-10", "normal"), "portrait")
+        self.assertEqual(display_orientation("touch2-10", "90"), "landscape")
+
+    def test_alpine_display_settings_use_the_appliance_configuration(self):
+        with patch.dict(os.environ, {"PI_HOME_APPLIANCE_PLATFORM": "alpine-prototype"}):
+            self.assertEqual(display_config_dir(), Path("/etc/pi-home"))
+        with patch.dict(os.environ, {}, clear=True):
+            self.assertEqual(display_config_dir(), Path("/etc/pi-bus-time-display"))
+
     def test_alpine_diagnostics_uses_openrc_service_names(self):
         from pi_bus_time_display.server import diagnostics_snapshot
         with patch.dict(os.environ, {"PI_HOME_APPLIANCE_PLATFORM": "alpine-prototype"}), patch("pi_bus_time_display.server.command_output", return_value=""), patch("pi_bus_time_display.server.service_state", return_value="running") as services:

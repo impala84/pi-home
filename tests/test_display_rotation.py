@@ -110,18 +110,47 @@ class DisplayRotationTests(unittest.TestCase):
 
     def test_landscape_profile_has_dedicated_large_touch_layout(self):
         display = (ROOT / "native-display" / "pi_bus_native.py").read_text(encoding="utf-8")
-        self.assertIn('self.window.add_css_class("touch-landscape")', display)
+        self.assertIn('(\"touch-landscape\", width >= 1200 and not portrait)', display)
         self.assertIn(".touch-landscape .settings-title", display)
         self.assertIn(".touch-landscape .roon-subnav button", display)
         self.assertIn('self.stack.add_named(self.build_boot_splash(), "boot")', display)
         self.assertIn('.boot-logo { color: #6ef0be', display)
 
+    def test_portrait_reflows_shared_gtk_components_from_the_viewport(self):
+        display = (ROOT / "native-display" / "pi_bus_native.py").read_text(encoding="utf-8")
+        self.assertIn('portrait = height > width', display)
+        self.assertIn('self.now_playing_content.set_orientation', display)
+        self.assertIn('self.settings_controls.set_orientation', display)
+        self.assertIn('self.browser_body.set_orientation', display)
+        self.assertIn('self.discovery_body.set_orientation', display)
+        self.assertIn('self.detail_panel.set_orientation', display)
+        self.assertIn('self.browser_search_columns.set_orientation', display)
+        self.assertIn('.portrait .now-playing-content', display)
+        self.assertIn('.portrait .queue-row', display)
+
+    def test_visual_review_captures_real_landscape_and_portrait_viewports(self):
+        workflow = (ROOT / ".github/workflows/alpine-image.yml").read_text(encoding="utf-8")
+        visual = (ROOT / "appliance/alpine/discover_visual_review.py").read_text(encoding="utf-8")
+        self.assertIn("PI_HOME_SCREEN_WIDTH=1280 PI_HOME_SCREEN_HEIGHT=720", workflow)
+        self.assertIn("PI_HOME_SCREEN_WIDTH=720 PI_HOME_SCREEN_HEIGHT=1280", workflow)
+        self.assertIn('display.adapt_display()', visual)
+
+    def test_web_and_touchscreen_share_semantic_display_orientation(self):
+        html = (ROOT / "src/pi_bus_time_display/static/admin.html").read_text(encoding="utf-8")
+        javascript = (ROOT / "src/pi_bus_time_display/static/admin.js").read_text(encoding="utf-8")
+        display = (ROOT / "native-display/pi_bus_native.py").read_text(encoding="utf-8")
+        self.assertIn('<option value="landscape">Landscape</option>', html)
+        self.assertIn('<option value="portrait">Portrait</option>', html)
+        self.assertIn("orientation:document.getElementById('display-orientation').value", javascript)
+        self.assertIn('{"action": "set_display", "profile": profile, "orientation": orientation}', display)
+
     def test_landscape_artwork_is_fixed_smaller_and_detail_art_can_close(self):
         display = (ROOT / "native-display" / "pi_bus_native.py").read_text(encoding="utf-8")
         web_html = (ROOT / "roon-controller" / "static" / "index.html").read_text(encoding="utf-8")
         web_js = (ROOT / "roon-controller" / "static" / "app.js").read_text(encoding="utf-8")
-        self.assertIn("self.artwork.set_size_request(324, 324)", display)
-        self.assertIn("self.artwork_button.set_size_request(324, 324)", display)
+        self.assertIn("artwork_size = min(width - 56", display)
+        self.assertIn("self.artwork.set_size_request(artwork_size, artwork_size)", display)
+        self.assertIn("self.artwork_button.set_size_request(artwork_size, artwork_size)", display)
         self.assertIn('detail_artwork_button.connect("clicked", lambda *_: self.set_roon_view("now"))', display)
         self.assertIn('id="details-artwork-close"', web_html)
         self.assertIn("$('details-artwork-close').onclick = () => setMusicView('now')", web_js)

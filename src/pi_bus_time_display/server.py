@@ -33,7 +33,7 @@ ALPINE_SYSTEM_ACTIONS = {
     "update", "reboot", "netdata_enable", "netdata_disable", "netdata_claim",
     "netdata_claim_command", "netdata_official_install", "netdata_disconnect",
     "device_credentials", "install_tools", "display_on", "display_off",
-    "set_brightness", "roon_start", "roon_stop", "roon_restart",
+    "set_brightness", "set_display", "roon_start", "roon_stop", "roon_restart",
 }
 SYSTEM_ACTIONS = ALPINE_SYSTEM_ACTIONS | {
     "leds_enable", "leds_disable",
@@ -578,6 +578,16 @@ def service_state(name: str) -> str:
     return "running" if command_output(["systemctl", "is-active", name]) == "active" else "stopped"
 
 
+def display_orientation(profile: str, rotation: str) -> str:
+    native_portrait = profile.startswith("touch2-")
+    portrait = rotation in ({"normal", "180"} if native_portrait else {"90", "270"})
+    return "portrait" if portrait else "landscape"
+
+
+def display_config_dir() -> Path:
+    return Path("/etc/pi-home" if os.getenv("PI_HOME_APPLIANCE_PLATFORM") == "alpine-prototype" else "/etc/pi-bus-time-display")
+
+
 def pi_led_state(state_dir: Path) -> str:
     names = {item.name.lower() for item in Path("/sys/class/leds").glob("*")}
     if not names.intersection({"act", "pwr", "led0", "led1"}):
@@ -638,14 +648,20 @@ def system_snapshot(state_dir: Path, include_diagnostics: bool = False) -> dict:
         update_status = (state_dir / "update-status").read_text(encoding="utf-8").strip()
     except OSError:
         update_status = "Ready"
+    display_config = display_config_dir()
     try:
-        display_rotation = Path("/etc/pi-bus-time-display/display-transform").read_text(encoding="utf-8").strip()
+        display_rotation = (display_config / "display-transform").read_text(encoding="utf-8").strip()
     except OSError:
         display_rotation = "normal"
     try:
-        display_profile = Path("/etc/pi-bus-time-display/display-profile").read_text(encoding="utf-8").strip()
+        display_profile = (display_config / "display-profile").read_text(encoding="utf-8").strip()
     except OSError:
         display_profile = "original"
+    try:
+        viewport_orientation = (display_config / "display-orientation").read_text(encoding="utf-8").strip()
+        if viewport_orientation not in {"landscape", "portrait"}: raise ValueError
+    except (OSError, ValueError):
+        viewport_orientation = display_orientation(display_profile, display_rotation)
     try:
         changed_boot_id = (state_dir / "reboot-required-boot-id").read_text(encoding="ascii").strip()
         reboot_required = bool(changed_boot_id and changed_boot_id == current_boot_id())
@@ -678,6 +694,7 @@ def system_snapshot(state_dir: Path, include_diagnostics: bool = False) -> dict:
         "pi_leds": pi_led_state(state_dir),
         "update_status": update_status,
         "display_rotation": display_rotation,
+        "display_orientation": viewport_orientation,
         "display_profile": display_profile,
         "reboot_required": reboot_required,
         "app_version": display_version(),
@@ -712,6 +729,8 @@ def write_control_request(state_dir: Path, request: dict) -> bool:
                 payload["command"] = str(request.get("command", ""))
             if request["action"] == "device_credentials":
                 payload.update(username=str(request.get("username", "")), password=str(request.get("password", "")), confirmation=str(request.get("confirmation", "")))
+            if request["action"] == "set_display":
+                payload.update(profile=str(request.get("profile", "")), orientation=str(request.get("orientation", "")))
             try:
                 with socket.socket(socket.AF_UNIX) as client:
                     client.settimeout(105 if request["action"] in {"netdata_claim", "netdata_claim_command"} else 15); client.connect("/run/pi-home-setup.sock")
@@ -1125,12 +1144,12 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
                         request["transform"] = "180" if data.get("rotated") else "normal"
                     if action == "set_display":
                         profile = str(data.get("profile", ""))
-                        transform = str(data.get("transform", ""))
+                        orientation = str(data.get("orientation", ""))
                         if profile not in {"original", "touch2-5", "touch2-7", "touch2-5-7", "touch2-10"}:
                             raise ValueError("Unknown display profile")
-                        if transform not in {"normal", "90", "180", "270"}:
+                        if orientation not in {"landscape", "portrait"}:
                             raise ValueError("Unknown display orientation")
-                        request.update({"profile": profile, "transform": transform})
+                        request.update({"profile": profile, "orientation": orientation})
                     queued = write_control_request(mode_path.parent, request)
                     if events:
                         events.emit("system.action.queued", action=action)

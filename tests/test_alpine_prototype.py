@@ -47,7 +47,7 @@ class AlpinePrototypeTests(unittest.TestCase):
     def test_unsupported_privileged_actions_fail_without_queuing(self):
         with tempfile.TemporaryDirectory() as folder, patch.dict(os.environ, {"PI_HOME_APPLIANCE_PLATFORM": "alpine-prototype"}):
             state = Path(folder)
-            for action in ("set_wifi", "set_display"):
+            for action in ("set_wifi",):
                 with self.assertRaisesRegex(ValueError, "unavailable in Alpine Beta"):
                     write_control_request(state, {"action": action})
             self.assertEqual(list(state.iterdir()), [])
@@ -61,6 +61,13 @@ class AlpinePrototypeTests(unittest.TestCase):
         with patch.dict(os.environ, {"PI_HOME_APPLIANCE_PLATFORM": "alpine-prototype"}):
             with self.assertRaisesRegex(ValueError, "between 10 and 100"):
                 write_control_request(Path("/unused"), {"action": "set_brightness", "brightness": 0})
+
+    def test_responsive_display_settings_are_forwarded_to_the_alpine_helper(self):
+        client = Mock(); client.__enter__ = Mock(return_value=client); client.__exit__ = Mock(return_value=False)
+        client.makefile.return_value.readline.return_value = b'{"ok":true}\n'
+        with patch.dict(os.environ, {"PI_HOME_APPLIANCE_PLATFORM": "alpine-prototype"}), patch("pi_bus_time_display.server.socket.socket", return_value=client):
+            self.assertTrue(write_control_request(Path("/unused"), {"action": "set_display", "profile": "touch2-10", "orientation": "portrait"}))
+        self.assertEqual(json.loads(client.sendall.call_args.args[0]), {"action": "set_display", "profile": "touch2-10", "orientation": "portrait"})
 
     def test_roon_bridge_actions_are_forwarded_to_the_alpine_helper(self):
         client = Mock(); client.__enter__ = Mock(return_value=client); client.__exit__ = Mock(return_value=False)

@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.0-beta.32 Alpine Beta — 5 October 2026
+
+- Replaces raw display rotation degrees with one persisted Landscape or Portrait setting shared by touchscreen and web Settings.
+- Applies orientation through the panel-aware Cage/Wayland and touch-calibration path, then reloads the Alpine display without requiring a full reboot when the selected screen hardware is unchanged.
+- Makes the native GTK interface respond to its real viewport: Now Playing stacks artwork above metadata and transport in portrait, while settings, Browse, Discover, Queue, navigation and the Add to Library heart reflow or resize through shared responsive rules.
+- Preserves the current 7-inch landscape arrangement while adding compact portrait and high-resolution 10-inch behaviour without separate per-screen page implementations.
+
 ## 1.1.0-beta.31 Alpine Beta — 5 October 2026
 
 - Routes Roon Bridge Start, Stop and Restart through Alpine's privileged OpenRC helper instead of rejecting them as Raspberry Pi OS-only controls.
