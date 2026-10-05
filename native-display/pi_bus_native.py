@@ -616,6 +616,7 @@ class Display(Gtk.Application):
         portrait = height > width
         self.settings_controls.set_orientation(Gtk.Orientation.VERTICAL if portrait else Gtk.Orientation.HORIZONTAL)
         self.settings_daily.set_size_request(-1 if portrait else round((width - 56) * .343), -1)
+        self.settings_daily.set_hexpand(portrait)
         self.settings_controls.set_spacing(20 if portrait else round(width * .052))
         self.settings_header.set_orientation(Gtk.Orientation.VERTICAL if portrait else Gtk.Orientation.HORIZONTAL)
         self.settings_actions.set_orientation(Gtk.Orientation.VERTICAL if portrait else Gtk.Orientation.HORIZONTAL)

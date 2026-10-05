@@ -49,6 +49,8 @@ for width, height in (tuple(map(int,os.environ["PI_HOME_SETTINGS_VIEWPORT"].spli
     assert display.update_button.get_next_sibling() == display.apply_display_button
     theme_widths=[button.get_width() for button in display.touch_theme_buttons.values()]
     assert max(theme_widths)-min(theme_widths)<=1, theme_widths
+    if width==1280 and height==720:
+        assert abs(display.settings_daily.get_width()-420)<=2, display.settings_daily.get_width()
     assert window.get_width() == width and window.get_height() == height, (width,height,window.get_width(),window.get_height())
     output=os.environ.get("PI_HOME_SCREENSHOT_DIR")
     if output and (width,height)==(1280,720):
