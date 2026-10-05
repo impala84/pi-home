@@ -258,23 +258,6 @@ async function albumContents(service, zoneId, item, session) {
   };
 }
 
-async function addToLibrary(service, zone) {
-  const metadata = playingMetadata(zone);
-  if (!service || !zone?.zone_id || !metadata.album) throw new Error('No album is currently playing');
-  const session = `pi-home-library-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  const album = await searchItem(service, zone.zone_id, [metadata.album, metadata.artist].filter(Boolean).join(' '), 'Albums', metadata.album, session);
-  if (!album?.item_key) throw new Error('Roon could not identify this album');
-  await request(service, 'browse', {hierarchy: 'search', item_key: album.item_key, multi_session_key: session, zone_or_output_id: zone.zone_id});
-  const loaded = await request(service, 'load', {hierarchy: 'search', multi_session_key: session, offset: 0, count: 40});
-  const add = (loaded.items || []).find(candidate => candidate.item_key && /^\+?\s*add to library$/i.test(String(candidate.title || '').trim()));
-  const remove = (loaded.items || []).find(candidate => candidate.item_key && /^remove from library$/i.test(String(candidate.title || '').trim()));
-  if (!add && remove) return {added: false, already_in_library: true};
-  if (!add) throw new Error('Roon did not expose an Add to Library action for this album');
-  const result = await request(service, 'browse', {hierarchy: 'search', item_key: add.item_key, multi_session_key: session, zone_or_output_id: zone.zone_id});
-  if (result?.is_error) throw new Error(String(result.message || 'Roon could not add this album'));
-  return {added: true, already_in_library: false};
-}
-
 async function loadDetails(service, zone, enrich = loadMusicBrainzMetadata) {
   const metadata = playingMetadata(zone);
   const base = {status: 'ready', ...metadata, album_image_key: metadata.image_key, artist_image_key: null, subtitle: '', tracks: []};
@@ -301,4 +284,4 @@ async function loadDetails(service, zone, enrich = loadMusicBrainzMetadata) {
   return base;
 }
 
-module.exports = {addToLibrary, loadArtistProfile, playingMetadata, chooseItem, artistCandidates, chooseMusicBrainzGroup, chooseUniqueTitleGroup, musicBrainzFacts, parseBandcampPage, loadAlbumWriteup, loadMusicBrainzMetadata, loadDetails};
+module.exports = {loadArtistProfile, playingMetadata, chooseItem, artistCandidates, chooseMusicBrainzGroup, chooseUniqueTitleGroup, musicBrainzFacts, parseBandcampPage, loadAlbumWriteup, loadMusicBrainzMetadata, loadDetails};

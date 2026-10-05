@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.0-beta.37 Alpine Beta — 5 October 2026
+
+- Replaces the non-working browse-based library action with the exact private Roon calls observed from the official client. Resolves the playing album and profile through the selected zone, and confirms library membership from Roon's pushed state.
+- Uses Roon's + / outline heart / filled heart behaviour, including separate favourite and unfavourite actions on the canonical library edition. Keeps status work asynchronous and cached, rejects stale album actions and shows unconfirmed-action errors.
+- Stops the library button stretching vertically and adds real Alpine GTK square-allocation checks at six landscape/portrait viewport sizes.
+- Verifies Add to Library for Judas Priest's Rocka Rolla on the live Core, plus favourite/unfavourite with the original state restored. Final physical Pi acceptance remains an appliance test.
+
 ## 1.1.0-beta.36 Alpine Beta — 5 October 2026
 
 - Gives native GTK settings dropdown popups an explicit light-gray surface, dark text and a pale-purple selection so their options remain legible under the Pi Home dark theme.

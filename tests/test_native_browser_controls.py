@@ -56,7 +56,12 @@ class NativeBrowserControlsTests(unittest.TestCase):
         code = SOURCE.read_text(encoding="utf-8")
         self.assertIn('self.library_add = self.button("", self.add_current_album)', code)
         self.assertIn('self.library_add.set_visible(has_album)', code)
-        self.assertIn('self.set_library_icon(self.library_status == "in_library")', code)
+        self.assertIn('self.set_library_icon(self.library_favorite is True)', code)
+        self.assertIn('Gtk.Image.new_from_icon_name("list-add-symbolic")', code)
+        self.assertIn('self.library_add.set_valign(Gtk.Align.CENTER)', code)
+        self.assertIn('self.library_add.set_halign(Gtk.Align.CENTER)', code)
+        self.assertIn('self.library_pending = True', code)
+        self.assertIn('except urllib.error.HTTPError as error:', code)
         for name in ("heart.svg", "heart-filled.svg", "heart-roon.svg", "heart-filled-roon.svg"):
             self.assertTrue((SOURCE.parent / "icons" / name).is_file())
 

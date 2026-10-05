@@ -504,10 +504,13 @@ class Display(Gtk.Application):
         self.controls = Gtk.Box(spacing=14); self.controls.set_halign(Gtk.Align.CENTER); self.controls.add_css_class("transport")
         self.controls.set_margin_top(6); self.controls.set_margin_bottom(16)
         self.library_add = self.button("", self.add_current_album); self.library_add.add_css_class("library-action"); self.library_add.set_tooltip_text("Add album to library"); self.library_add.set_visible(False)
+        self.library_add.set_valign(Gtk.Align.CENTER); self.library_add.set_halign(Gtk.Align.CENTER); self.library_add.set_size_request(50, 50)
+        self.library_pending = False; self.library_album_id = None; self.library_favorite = None
         self.library_status = "unknown"; self.set_library_icon(False)
         self.prev = self.icon_button("media-skip-backward-symbolic", lambda *_: self.control("previous")); self.play = self.icon_button("media-playback-start-symbolic", lambda *_: self.control("playpause"), "play"); self.play.get_child().set_pixel_size(42); self.next = self.icon_button("media-skip-forward-symbolic", lambda *_: self.control("next"))
         self.prev.set_size_request(50, 50); self.prev.set_valign(Gtk.Align.CENTER); self.play.set_size_request(68, 68); self.play.set_valign(Gtk.Align.CENTER); self.next.set_size_request(50, 50); self.next.set_valign(Gtk.Align.CENTER)
         self.controls.append(self.library_add); self.controls.append(self.prev); self.controls.append(self.play); self.controls.append(self.next); centre.append(self.controls)
+        self.library_message = self.label("", "browser-message", .5); self.library_message.set_wrap(True); self.library_message.set_visible(False); centre.append(self.library_message)
         volume_row = Gtk.Box(spacing=10); self.mute = self.button("MUTE", self.toggle_audio_mute, "utility"); self.mute.set_size_request(62, 38); volume_row.append(self.mute); self.volume = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0, 100, 1); self.volume.add_css_class("volume"); self.volume.set_hexpand(True); self.volume.set_draw_value(False); self.volume.connect("value-changed", self.change_volume); volume_row.append(self.volume); self.volume_value = self.label("—", "time", 1); self.volume_value.add_css_class("volume-number"); volume_row.append(self.volume_value); centre.append(volume_row)
         content.append(centre); self.roon_views.add_named(content, "now")
         source = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12); source.add_css_class("source-view"); source.set_halign(Gtk.Align.CENTER); source.set_valign(Gtk.Align.CENTER); source.set_hexpand(True); source.set_vexpand(True)
@@ -624,7 +627,7 @@ class Display(Gtk.Application):
             if value == theme: button.add_css_class("active")
             else: button.remove_css_class("active")
         self.theme_updating = False
-        if hasattr(self, "library_add"): self.set_library_icon(getattr(self, "library_status", "unknown") == "in_library")
+        if hasattr(self, "library_add"): self.set_library_icon(getattr(self, "library_favorite", None) is True)
         self.browser_scrubber.queue_draw()
         for pictures in self.discovery_pictures.values():
             for picture in pictures: picture.queue_draw()
@@ -1779,10 +1782,14 @@ class Display(Gtk.Application):
         self.detail_artist.set_text(details.get("artist") or "")
         self.detail_subtitle.set_text("Loading…" if details.get("status") == "loading" else (details.get("subtitle") or ""))
         self.library_status = details.get("library_status") or "unknown"
+        if self.library_album_id != details.get("album_id") and not self.library_pending: self.library_message.set_visible(False)
+        self.library_album_id = details.get("album_id"); self.library_favorite = details.get("favorite")
+        if details.get("library_error") and not self.library_pending:
+            self.library_message.set_text(details["library_error"]); self.library_message.set_visible(True)
         has_album = bool(details.get("album")) and details.get("status") != "loading"
         self.library_add.set_visible(has_album)
-        self.library_add.set_sensitive(has_album)
-        self.set_library_icon(self.library_status == "in_library")
+        self.library_add.set_sensitive(has_album and self.library_status != "unknown" and not self.library_pending and not details.get("library_busy") and (self.library_status != "in_library" or self.library_favorite is not None))
+        self.set_library_icon(self.library_favorite is True)
         metadata = details.get("metadata") or {}
         writeup = metadata.get("writeup") or ""; self.detail_writeup.set_text(writeup); self.detail_writeup.set_visible(bool(writeup))
         source = metadata.get("writeup_source") or ""; self.detail_source.set_text(f"SOURCE  {source.upper()}" if source else ""); self.detail_source.set_visible(bool(source))
@@ -1984,26 +1991,46 @@ class Display(Gtk.Application):
         if action == "playpause" and (((self.state or {}).get("amplifier") or {}).get("active_input")): action = "resume"
         threading.Thread(target=post_json, args=(ROON + "/api/control", {"action": action}), daemon=True).start()
     def add_current_album(self, *_):
-        if self.library_status == "in_library": return
+        if self.library_pending or self.library_status == "unknown" or not self.library_album_id: return
+        album_id = self.library_album_id
+        favorite_action = self.library_status == "in_library"
+        if favorite_action and self.library_favorite is None: return
+        payload = {"album_id": album_id}
+        if favorite_action: payload["favorite"] = not self.library_favorite
+        self.library_pending = True; self.library_message.set_text("Updating Roon…"); self.library_message.set_visible(True)
         self.library_add.set_sensitive(False)
         def run():
-            result = post_json(ROON + "/api/library/add", {}, timeout=15.0)
+            try:
+                request = urllib.request.Request(ROON + ("/api/library/favorite" if favorite_action else "/api/library/add"), data=json.dumps(payload).encode(), headers={"Content-Type": "application/json"}, method="POST")
+                with urllib.request.urlopen(request, timeout=25.0) as response: result = json.load(response)
+            except urllib.error.HTTPError as error:
+                try: result = json.load(error)
+                except Exception: result = {"error": "Roon did not confirm the change. Check Roon before retrying."}
+            except Exception: result = {"error": "Roon did not confirm the change. Check Roon before retrying."}
             def finish():
-                if result and (result.get("added") or result.get("already_in_library")):
-                    self.library_status = "in_library"; self.set_library_icon(True)
-                self.library_add.set_sensitive(True)
+                self.library_pending = False
+                if album_id == self.library_album_id:
+                    if result.get("library_status"):
+                        self.library_status = result["library_status"]; self.library_favorite = result.get("favorite"); self.set_library_icon(self.library_favorite is True)
+                    self.library_message.set_text(result.get("error") or ""); self.library_message.set_visible(bool(result.get("error")))
+                else: self.library_message.set_visible(False)
+                self.library_add.set_sensitive(self.library_status != "unknown" and (self.library_status != "in_library" or self.library_favorite is not None))
                 return False
             GLib.idle_add(finish)
         threading.Thread(target=run, daemon=True).start()
 
     def set_library_icon(self, filled):
+        if getattr(self, "library_status", "unknown") != "in_library":
+            icon = Gtk.Image.new_from_icon_name("list-add-symbolic"); icon.set_pixel_size(28); icon.set_size_request(28, 28)
+            self.library_add.set_child(icon); self.library_add.set_tooltip_text("Loading library status…" if getattr(self, "library_status", "unknown") == "unknown" else "Add album to library")
+            return
         suffix = "-filled" if filled else ""
         theme = "-roon" if getattr(self, "settings_data", {}).get("display_theme") == "roon" else ""
         icon_path = Path(__file__).with_name("icons") / f"heart{suffix}{theme}.svg"
         icon = Gtk.Image.new_from_gicon(Gio.FileIcon.new(Gio.File.new_for_path(str(icon_path))))
         icon.set_pixel_size(28); icon.set_size_request(28, 28)
         self.library_add.set_child(icon)
-        self.library_add.set_tooltip_text("Album is in your library" if filled else "Add album to library")
+        self.library_add.set_tooltip_text("Unfavourite album" if filled else "Favourite album")
     def toggle_bridge(self, button):
         threading.Thread(target=post_json, args=(BUS + "/api/device/roon-bridge", {"enabled": button.get_active()}), daemon=True).start()
     def toggle_service(self, button, service):

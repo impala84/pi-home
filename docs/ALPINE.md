@@ -13,7 +13,7 @@ replace only Pi Home's application release and preserve Netdata and Roon Bridge.
 Reflashing erases the existing filesystem: choose software again on the new card
 and reconnect the new node to Cloud.
 
-Current version: **1.1.0-beta.36 Alpine Beta**. First-run setup creates an
+Current version: **1.1.0-beta.37 Alpine Beta**. First-run setup creates an
 owner-chosen device/SSH account, and Settings can manage the installed Netdata
 Agent and its Cloud connection without an Alpine shell. This update is available
 on the Alpine branch.
