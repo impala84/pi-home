@@ -166,6 +166,17 @@ class NativeBrowserControlsTests(unittest.TestCase):
         self.assertIn('threading.Thread(target=self._fetch_discovery',source)
         self.assertIn('GLib.timeout_add(600 if data and data.get("status") == "loading" else 1200',source)
 
+    def test_admin_can_request_a_real_native_discover_view(self):
+        source=SOURCE.read_text(encoding="utf-8")
+        self.assertIn('view_request = device.get("display_view_request") or {}', source)
+        self.assertIn('GLib.idle_add(self.apply_display_view_request, dict(view_request))', source)
+        owner=SimpleNamespace(show_roon_now=Mock(),set_mode=Mock(),open_discover=Mock())
+        self.assertFalse(native_method("apply_display_view_request")(owner,{"view":"daily"}))
+        owner.open_discover.assert_called_once_with("daily")
+        self.assertFalse(native_method("apply_display_view_request")(owner,{"view":"now"}))
+        owner.show_roon_now.assert_called_once_with()
+        owner.set_mode.assert_called_once_with("roon")
+
     def test_reboot_confirmation_uses_a_full_overlay_with_a_centred_card(self):
         source=SOURCE.read_text(encoding="utf-8")
         confirm=source[source.index('    def confirm_reboot'):source.index('    def _request_update',source.index('    def confirm_reboot'))]

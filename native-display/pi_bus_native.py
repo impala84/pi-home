@@ -330,6 +330,7 @@ class Display(Gtk.Application):
         self.detail_image_key = None
         self.detail_signature = None
         self.bluos_source_buttons = {}
+        self.last_display_view_id = None
 
     def label(self, text="", css=None, x=0):
         widget = Gtk.Label(label=text, xalign=x)
@@ -689,6 +690,11 @@ class Display(Gtk.Application):
             # screencopy, which can return a valid but black frame while Cage
             # is directly scanning the fullscreen surface out to DRM.
             GLib.idle_add(self.capture_display, capture_id)
+        view_request = device.get("display_view_request") or {}
+        view_id = view_request.get("id")
+        if view_id and view_id != self.last_display_view_id:
+            self.last_display_view_id = view_id
+            GLib.idle_add(self.apply_display_view_request, dict(view_request))
         now = time.monotonic(); config = None; system = None
         if not self.settings_data or now - self.last_config_fetch >= 60:
             config = get_json(BUS + "/api/admin/config") or {}; self.last_config_fetch = now
@@ -733,6 +739,15 @@ class Display(Gtk.Application):
         except (OSError, RuntimeError, TypeError, ValueError):
             data["error"] = "The live display could not be rendered. Ensure the touchscreen application is running and try again."
         post_json(BUS + "/api/device/display-capture", data, timeout=5)
+        return False
+
+    def apply_display_view_request(self, request):
+        view = str(request.get("view", ""))
+        if view == "now":
+            self.show_roon_now()
+            self.set_mode("roon")
+        elif view in {"recent", "daily", "releases", "browse", "surprise"}:
+            self.open_discover(view)
         return False
 
     def apply(self, target, status, roon, config, system, device, image_key, image):

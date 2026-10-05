@@ -29,6 +29,16 @@ class DisplayRotationTests(unittest.TestCase):
         self.assertIn('.system-tabs button[aria-selected="true"]', css)
         self.assertIn('.system-tab-panel>summary{display:none}', css)
 
+    def test_diagnostics_can_select_physical_views_and_theme_the_favicon(self):
+        html = (ROOT / "src/pi_bus_time_display/static/admin.html").read_text()
+        javascript = (ROOT / "src/pi_bus_time_display/static/admin.js").read_text()
+        self.assertIn('data-display-view="recent"', html)
+        self.assertIn('data-display-view="daily"', html)
+        self.assertIn('data-display-view="releases"', html)
+        self.assertIn("view:button.dataset.displayView", javascript)
+        self.assertIn("'/favicon-roon.svg':'/favicon.svg'", javascript)
+        self.assertIn('>Check and install</button>', html)
+
     def test_bus_colours_are_keyed_by_route_not_row_position(self):
         css = (ROOT / "src/pi_bus_time_display/static/bus-refinements.css").read_text()
         self.assertNotIn(".service:nth-child", css)

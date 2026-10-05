@@ -96,7 +96,10 @@ async function post(path, data) {
 
 function render(next) {
   state = next;
-  document.body.dataset.theme = next.labels?.display_theme === 'roon' ? 'roon' : 'fresh-mint';
+  const theme = next.labels?.display_theme === 'roon' ? 'roon' : 'fresh-mint';
+  document.body.dataset.theme = theme;
+  const favicon = document.querySelector('link[rel="icon"]');
+  if (favicon) favicon.href = theme === 'roon' ? '/favicon-roon.svg' : '/favicon.svg';
   const labels = next.labels || {};
   $('roon-link').textContent = labels.display || 'Roon';
   setNavLabel($('now-tab'), labels.now_playing || 'Now Playing');

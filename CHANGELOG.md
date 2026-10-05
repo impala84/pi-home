@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.1.0-beta.22 Alpine Beta — 5 October 2026
+
+- Added authenticated physical-screen view controls to Diagnostics so Recent,
+  Daily, New Releases, Browse and Now Playing can be opened on the actual GTK
+  touchscreen before capturing it for visual verification.
+- Made the Pi Home favicon follow the selected Fresh Mint or Roon theme across
+  Settings, sign-in, Bus Times, Home and the Roon controller.
+- Renamed the global updater action to “Check and install” so its immediate
+  installation behaviour is explicit.
+
 ## 1.1.0-beta.21 Alpine Beta — 5 October 2026
 
 - Render diagnostic screenshots from the live GTK touchscreen tree, including loaded album artwork, so Cage/DRM direct scan-out cannot silently produce a valid but completely black image.

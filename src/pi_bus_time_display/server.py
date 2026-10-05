@@ -41,6 +41,7 @@ class State:
         self.config = config
         self.lock = threading.Lock()
         self.display_capture = None
+        self.display_view_request = None
         self.data: dict = {"status": "starting", "services": []}
         self.last_success: datetime | None = None
         self.last_roon_playing = 0.0
@@ -81,12 +82,20 @@ class State:
     def controls_snapshot(self) -> dict:
         with self.lock:
             capture_id = self.display_capture["id"] if self.display_capture else None
+            view_request = dict(self.display_view_request) if self.display_view_request else None
         return {
             "services": [{"name": service, "enabled": service in self.enabled_services} for service in self.config.services],
             "home": self.home_data,
             "display_brightness": self.display_brightness,
             "capture_request": capture_id,
+            "display_view_request": view_request,
         }
+
+    def request_display_view(self, view: str) -> dict:
+        request = {"id": secrets.token_urlsafe(12), "view": view}
+        with self.lock:
+            self.display_view_request = request
+        return dict(request)
 
     def capture_display(self, timeout: float = 15) -> bytes:
         request = {"id": secrets.token_urlsafe(24), "event": threading.Event(), "image": None, "error": None}
@@ -1102,9 +1111,14 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
                 if self.path == "/api/admin/display-mode":
                     mode = str(data.get("mode", ""))
                     set_display_mode(state, mode_path, mode)
+                    view = str(data.get("view", "")).strip()
+                    if view:
+                        if view not in {"now", "recent", "daily", "releases", "browse", "surprise"}:
+                            raise ValueError("Unknown display view")
+                        state.request_display_view(view)
                     if events:
                         events.emit("display.mode.changed", mode=mode)
-                    self.send_json(200, json.dumps({"ok": True, "display_mode": mode}).encode())
+                    self.send_json(200, json.dumps({"ok": True, "display_mode": mode, "display_view": view or None}).encode())
                     return
                 current = state.config
                 def values(name, fallback):

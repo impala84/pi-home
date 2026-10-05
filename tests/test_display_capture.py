@@ -11,6 +11,14 @@ PNG = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4
 
 
 class DisplayCaptureTests(unittest.TestCase):
+    def test_display_view_request_has_a_fresh_identity(self):
+        state = State(Config())
+        first = state.request_display_view('daily')
+        self.assertEqual(state.controls_snapshot()['display_view_request'], first)
+        second = state.request_display_view('releases')
+        self.assertNotEqual(first['id'], second['id'])
+        self.assertEqual(second['view'], 'releases')
+
     def test_capture_round_trip_is_ephemeral(self):
         state = State(Config())
         def respond(_timeout):

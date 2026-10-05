@@ -295,7 +295,7 @@ function body(request) {
 }
 
 function serveStatic(request, response) {
-  const names = {'/': 'index.html', '/app.js': 'app.js', '/discovery.js': 'discovery.js', '/discovery.css': 'discovery.css', '/style.css': 'style.css', '/refinements.css': 'refinements.css', '/favicon.svg': 'favicon.svg'};
+  const names = {'/': 'index.html', '/app.js': 'app.js', '/discovery.js': 'discovery.js', '/discovery.css': 'discovery.css', '/style.css': 'style.css', '/refinements.css': 'refinements.css', '/favicon.svg': 'favicon.svg', '/favicon-roon.svg': 'favicon-roon.svg'};
   const pathname = new URL(request.url, 'http://localhost').pathname;
   const allowedIcons = new Set(['music','jazz','classical','electronic','rock','stage','avant','folk','country','blues','rap','rb','reggae','latin','world','easy','vocal','ambient','holiday','children','religious','playlist','artist','album','folder']);
   const icon = /^\/icons\/([a-z]+)-symbolic\.svg$/.exec(pathname);
