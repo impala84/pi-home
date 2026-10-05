@@ -392,6 +392,11 @@ class Setup:
         if action == "netdata_official_install":
             if not state.get("complete"): raise ValueError("Finish setup before installing Netdata.")
             token, rooms, claim_url = parse_netdata_connection_command(data.get("command"))
+            if not (self.root / "usr/bin/curl").is_file():
+                operation_status = self.root / "var/lib/pi-home/netdata-operation-status"
+                operation_status.parent.mkdir(parents=True, exist_ok=True)
+                atomic(operation_status, "Installing curl for the official Netdata installer…\n")
+                self.run(["apk", "add", "--no-cache", "curl", "ca-certificates"])
             if not self.netdata_install_lock.acquire(blocking=False):
                 return {"ok": True, "queued": False}
             operation_status = self.root / "var/lib/pi-home/netdata-operation-status"

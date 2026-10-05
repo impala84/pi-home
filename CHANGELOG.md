@@ -4,6 +4,7 @@
 
 - Keeps the three Netdata actions on one responsive desktop/tablet row, with a mobile-only vertical fallback.
 - Gives appliance system tools their own labelled subsection and suppresses stale failed-operation copy after Netdata reports a live Cloud connection.
+- Replaces the legacy packaged-Agent claim guidance with Netdata’s official installation flow and installs curl automatically before launching the validated official installer.
 
 ## 1.1.0-beta.29 Alpine Beta — 5 October 2026
 

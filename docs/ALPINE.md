@@ -1,6 +1,6 @@
 # Alpine Beta appliance
 
-Current version: **1.1.0-beta.20 Alpine Beta**. First-run setup creates an
+Current version: **1.1.0-beta.30 Alpine Beta**. First-run setup creates an
 owner-chosen device/SSH account, and Settings can manage the installed Netdata
 Agent and its Cloud connection without an Alpine shell. This update is available
 on the Alpine branch.
@@ -23,10 +23,13 @@ Do not install it over the working Pi. Use a separate SD card.
 Feature parity follow-up: new images include grim for screenshot capture and
 Netdata/OpenRC packages (monitoring remains opt-in, not boot-enabled by the
 factory). System → Services shows the installed Agent version, running state,
-local dashboard and Cloud claim state. It can connect, reconnect or disconnect
-the existing Agent using that installed version's supported claim mechanism;
-it does not reinstall Netdata. Existing images can use System → Services →
-Install system tools after updating.
+local dashboard and Cloud connection state. For Cloud setup, open System →
+Services → Netdata, choose Connect to Netdata Cloud, then paste the complete
+Linux installation command supplied by Netdata Cloud's Add nodes flow. Pi Home
+validates the official address and claim settings, installs curl if required,
+downloads Netdata's current official installer and passes those settings to it;
+the pasted shell itself is never executed, logged or retained. Existing images
+can use System → Services → Install system tools after updating.
 This explicit action installs fixed screenshot, process diagnostics, network time
 and Netdata packages, without enabling Netdata automatically. Reboot afterwards
 applies the transparent touchscreen cursor theme. Application updates do not

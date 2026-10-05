@@ -248,6 +248,7 @@ class AlpineSetupTests(unittest.TestCase):
         self.assertTrue(result["queued"])
         thread.assert_called_once_with(target=self.setup.install_official_netdata, args=("private-token", "room-1234", "https://app.netdata.cloud"), daemon=True)
         thread.return_value.start.assert_called_once()
+        self.run.assert_any_call(["apk", "add", "--no-cache", "curl", "ca-certificates"])
         self.assertNotIn("private-token", (self.root / "var/lib/pi-home/netdata-operation-status").read_text())
 
     def test_update_requires_completed_setup_and_uses_fixed_updater(self):
