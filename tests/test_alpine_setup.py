@@ -192,12 +192,13 @@ class AlpineSetupTests(unittest.TestCase):
         self.assertNotIn("private-token", self.setup.progress.read_text())
         self.assertEqual(self.run.call_args.args[0], ["rc-service", "netdata", "start"])
 
-    def test_installed_legacy_netdata_claim_helper_is_not_used(self):
+    def test_installed_netdata_claim_helper_receives_only_validated_values(self):
         helper = self.root / "usr/sbin/netdata-claim.sh"; helper.parent.mkdir(parents=True); helper.touch()
-        module.claim_netdata(self.root, "private-token", "room-1234")
-        claim = self.root / "etc/netdata/claim.conf"
-        self.assertTrue(claim.exists())
-        self.assertIn("token = private-token", claim.read_text())
+        completed = Mock(returncode=0)
+        with patch.object(module.subprocess, "run", return_value=completed) as run:
+            self.assertTrue(module.run_netdata_claim_helper(self.root, "private-token", "room-1234"))
+        self.assertEqual(run.call_args.args[0], [str(helper), "-token=private-token", "-url=https://app.netdata.cloud", "-rooms=room-1234"])
+        self.assertIs(run.call_args.kwargs["stdout"], module.subprocess.DEVNULL)
 
     def test_cloud_generated_command_is_parsed_but_never_executed(self):
         command = "bash <(curl -Ss https://get.netdata.cloud/kickstart.sh) --stable-channel --claim-token 'private-token' --claim-rooms room-1234,room-5678 --claim-url https://app.netdata.cloud"

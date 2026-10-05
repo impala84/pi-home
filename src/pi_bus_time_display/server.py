@@ -603,13 +603,21 @@ def netdata_snapshot() -> dict:
         return details
     version = command_output(["netdata", "-v"])
     details["version"] = version.replace("netdata ", "", 1).strip() if version and version != "unknown" else "Installed"
-    aclk = command_output(["netdatacli", "aclk-state"])
-    if aclk and aclk != "unknown":
-        fields = {key.strip().lower(): value.strip() for line in aclk.splitlines() if ":" in line for key, value in [line.split(":", 1)]}
-        claimed = fields.get("claimed", "").lower() in {"yes", "true", "1"}
-        online = fields.get("online", "").lower() in {"yes", "true", "1"}
+    try:
+        with urllib.request.urlopen("http://127.0.0.1:19999/api/v1/aclk", timeout=.8) as response:
+            aclk_json = json.load(response)
+        claimed = bool(aclk_json.get("agent-claimed")); online = bool(aclk_json.get("online"))
         details["cloud_status"] = "online" if claimed and online else "offline" if claimed else "unclaimed"
-        details["claim_id"] = fields.get("claimed id", "")
+        details["claim_id"] = str(aclk_json.get("claimed-id") or "")
+        details["cloud_available"] = bool(aclk_json.get("aclk-available"))
+    except (OSError, ValueError, json.JSONDecodeError):
+        aclk = command_output(["netdatacli", "aclk-state"])
+        if aclk and aclk != "unknown":
+            fields = {key.strip().lower(): value.strip() for line in aclk.splitlines() if ":" in line for key, value in [line.split(":", 1)]}
+            claimed = fields.get("claimed", "").lower() in {"yes", "true", "1"}
+            online = fields.get("online", "").lower() in {"yes", "true", "1"}
+            details["cloud_status"] = "online" if claimed and online else "offline" if claimed else "unclaimed"
+            details["claim_id"] = fields.get("claimed id", "")
     return details
 
 

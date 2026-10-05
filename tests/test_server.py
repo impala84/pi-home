@@ -156,7 +156,7 @@ class DisplayModeTests(unittest.TestCase):
             self.assertEqual(service_state("netdata.service"), "not_installed")
 
     def test_netdata_snapshot_reports_installed_version_and_cloud_state(self):
-        with patch("pi_bus_time_display.server.service_state", return_value="running"), patch("pi_bus_time_display.server.command_output", side_effect=["netdata v2.1.0", "Available: Yes\nClaimed: Yes\nClaimed Id: node-123\nOnline: Yes\n"]):
+        with patch("pi_bus_time_display.server.service_state", return_value="running"), patch("pi_bus_time_display.server.urllib.request.urlopen", side_effect=OSError), patch("pi_bus_time_display.server.command_output", side_effect=["netdata v2.1.0", "Available: Yes\nClaimed: Yes\nClaimed Id: node-123\nOnline: Yes\n"]):
             details = netdata_snapshot()
         self.assertEqual(details["version"], "v2.1.0")
         self.assertEqual(details["cloud_status"], "online")

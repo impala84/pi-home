@@ -122,6 +122,24 @@ def claim_netdata(root, token, rooms, url="https://app.netdata.cloud"):
         pass
 
 
+def run_netdata_claim_helper(root, token, rooms, url="https://app.netdata.cloud"):
+    """Claim Alpine's packaged Agent with its bundled helper.
+
+    Older packaged Agents do not consume claim.conf on restart. Never execute
+    the pasted Cloud command; pass only previously validated values to this
+    fixed local executable.
+    """
+    helper = Path(root) / "usr/sbin/netdata-claim.sh"
+    if not helper.is_file(): return False
+    arguments = [str(helper), f"-token={token}", f"-url={url}"]
+    if rooms: arguments.append(f"-rooms={rooms}")
+    result = subprocess.run(arguments, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                            stderr=subprocess.DEVNULL, timeout=90)
+    if result.returncode:
+        raise ValueError("Netdata rejected the Cloud connection token or Room ID.")
+    return True
+
+
 def display_power(root, powered, brightness_percent=100):
     """Control the backlight without disabling the DSI touch controller."""
     brightness_percent = int(brightness_percent)
@@ -323,7 +341,10 @@ class Setup:
                 if cloud.exists():
                     if cloud.is_symlink() or not cloud.is_dir(): raise ValueError("Netdata Cloud identity needs manual repair.")
                     shutil.rmtree(cloud)
-                if action in {"netdata_claim", "netdata_claim_command"}: claim_netdata(self.root, token, ",".join(room_values), claim_url)
+                if action in {"netdata_claim", "netdata_claim_command"}:
+                    joined_rooms = ",".join(room_values)
+                    claim_netdata(self.root, token, joined_rooms, claim_url)
+                    run_netdata_claim_helper(self.root, token, joined_rooms, claim_url)
             except Exception:
                 # Claim failure must not leave local monitoring unavailable.
                 self.run(["rc-service", "netdata", "start"])
