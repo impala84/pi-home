@@ -66,6 +66,11 @@ class AlpinePrototypeTests(unittest.TestCase):
         payload = json.loads(client.sendall.call_args.args[0])
         self.assertEqual(payload, {"action": "netdata_claim_command", "command": command})
 
+        with patch.dict(os.environ, {"PI_HOME_APPLIANCE_PLATFORM": "alpine-prototype"}), patch("pi_bus_time_display.server.socket.socket", return_value=client):
+            self.assertTrue(write_control_request(Path("/unused"), {"action": "netdata_official_install", "command": command}))
+        payload = json.loads(client.sendall.call_args.args[0])
+        self.assertEqual(payload, {"action": "netdata_official_install", "command": command})
+
     def test_credentials_are_unique_private_and_idempotent(self):
         passwords = []
         for _ in range(2):

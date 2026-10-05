@@ -216,6 +216,16 @@ class AlpineSetupTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "official Netdata Cloud"):
             module.parse_netdata_connection_command("bash <(curl -Ss https://get.netdata.cloud/kickstart.sh) --claim-token private-token --claim-url https://example.com")
 
+    def test_official_agent_install_is_explicit_async_and_does_not_execute_pasted_shell(self):
+        self.setup.save({"complete": True})
+        command = "wget -qO- https://get.netdata.cloud/kickstart.sh | sh -s -- --claim-token private-token --claim-rooms room-1234"
+        with patch.object(module.threading, "Thread") as thread:
+            result = self.setup.handle({"action": "netdata_official_install", "command": command})
+        self.assertTrue(result["queued"])
+        thread.assert_called_once_with(target=self.setup.install_official_netdata, args=("private-token", "room-1234", "https://app.netdata.cloud"), daemon=True)
+        thread.return_value.start.assert_called_once()
+        self.assertNotIn("private-token", (self.root / "var/lib/pi-home/netdata-operation-status").read_text())
+
     def test_update_requires_completed_setup_and_uses_fixed_updater(self):
         with patch.object(module.subprocess, "Popen") as spawn:
             with self.assertRaises(ValueError): self.setup.handle({"action": "update"})

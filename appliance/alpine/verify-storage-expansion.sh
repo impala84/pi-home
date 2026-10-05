@@ -22,5 +22,5 @@ partition_bytes=$(sudo blockdev --getsize64 "${loop}p2")
 filesystem_bytes=$(df -B1 --output=size "$work/root" | tail -1 | tr -d ' ')
 test "$partition_bytes" -gt 3500000000
 test "$filesystem_bytes" -gt 3400000000
-grep -q 'Root storage expansion completed' "$work/root/var/log/pi-home/storage.log"
+sudo grep -q 'Root storage expansion completed' "$work/root/var/log/pi-home/storage.log"
 echo "Fresh-image expansion passed: partition=$partition_bytes filesystem=$filesystem_bytes"

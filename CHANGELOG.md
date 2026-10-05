@@ -10,6 +10,10 @@
   and backend status if expansion fails.
 - Replace the updater's fixed 400 MB free-space gate with a requirement derived
   from the installed application footprint plus a bounded staging reserve.
+- Add an explicit official-Netdata fallback for Cloud connections rejected by
+  Alpine's older packaged Agent. Pi Home downloads only Netdata's fixed HTTPS
+  installer, reconstructs validated arguments instead of executing pasted
+  shell, and reports installation progress or failure in Settings.
 
 ## 1.1.0-beta.23 Alpine Beta — 5 October 2026
 

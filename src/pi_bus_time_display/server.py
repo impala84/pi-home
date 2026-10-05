@@ -661,6 +661,7 @@ def system_snapshot(state_dir: Path, include_diagnostics: bool = False) -> dict:
         "alpine_tools": os.getenv("PI_HOME_APPLIANCE_PLATFORM") == "alpine-prototype",
         "tools_status": (state_dir / "tools-status").read_text().strip() if (state_dir / "tools-status").is_file() else "",
         "storage_status": (state_dir / "storage-status").read_text().strip() if (state_dir / "storage-status").is_file() else "Not yet checked",
+        "netdata_operation_status": (state_dir / "netdata-operation-status").read_text().strip() if (state_dir / "netdata-operation-status").is_file() else "",
     }
     if include_diagnostics:
         snapshot["diagnostics"] = diagnostics_snapshot()
@@ -676,7 +677,7 @@ def write_control_request(state_dir: Path, request: dict) -> bool:
     as display-off immediately followed by display-on.
     """
     if os.getenv("PI_HOME_APPLIANCE_PLATFORM") == "alpine-prototype":
-        if request.get("action") in {"update", "reboot", "netdata_enable", "netdata_disable", "netdata_claim", "netdata_claim_command", "netdata_disconnect", "device_credentials", "install_tools", "display_on", "display_off", "set_brightness"}:
+        if request.get("action") in {"update", "reboot", "netdata_enable", "netdata_disable", "netdata_claim", "netdata_claim_command", "netdata_official_install", "netdata_disconnect", "device_credentials", "install_tools", "display_on", "display_off", "set_brightness"}:
             payload = {"action": request["action"]}
             if request["action"] in {"display_on", "set_brightness"}:
                 brightness = int(request.get("brightness", 100))
@@ -684,7 +685,7 @@ def write_control_request(state_dir: Path, request: dict) -> bool:
                 payload["brightness"] = brightness
             if request["action"] == "netdata_claim":
                 payload.update(token=str(request.get("token", "")), rooms=str(request.get("rooms", "")))
-            if request["action"] == "netdata_claim_command":
+            if request["action"] in {"netdata_claim_command", "netdata_official_install"}:
                 payload["command"] = str(request.get("command", ""))
             if request["action"] == "device_credentials":
                 payload.update(username=str(request.get("username", "")), password=str(request.get("password", "")), confirmation=str(request.get("confirmation", "")))

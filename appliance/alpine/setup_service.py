@@ -12,6 +12,7 @@ import socket
 import struct
 import subprocess
 import threading
+import tempfile
 import urllib.request
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -196,6 +197,7 @@ class Setup:
         self.root = Path(root); self.run = run; self.roon = roon or self.roon_state
         self.login_credentials = login_credentials
         self.tools_lock = threading.Lock()
+        self.netdata_install_lock = threading.Lock()
         self.update_process = None
         self.progress = self.root / "var/lib/pi-home-setup/progress.json"
         self.progress.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
@@ -224,6 +226,41 @@ class Setup:
     def connected(self):
         output = self.run(["nmcli", "-t", "-f", "STATE", "device"])
         return any(line == "connected" for line in output.splitlines())
+
+    def install_official_netdata(self, token, rooms, claim_url):
+        """Replace the Alpine Agent only after an explicit UI request.
+
+        The pasted shell is never run. We fetch the one fixed HTTPS endpoint
+        and reconstruct only the validated claim arguments.
+        """
+        status = self.root / "var/lib/pi-home/netdata-operation-status"
+        installer = None
+        try:
+            request = urllib.request.Request("https://get.netdata.cloud/kickstart.sh", headers={"User-Agent": "Pi-Home-Netdata-Installer"})
+            with urllib.request.urlopen(request, timeout=45) as response, tempfile.NamedTemporaryFile(prefix="pi-home-netdata-", delete=False) as output:
+                installer = Path(output.name)
+                total = 0
+                while chunk := response.read(65536):
+                    total += len(chunk)
+                    if total > 5_000_000: raise ValueError("The official Netdata installer was unexpectedly large.")
+                    output.write(chunk)
+            installer.chmod(0o700)
+            atomic(status, "Installing the current official Netdata Agent…\n")
+            arguments = ["/bin/bash", str(installer), "--non-interactive", "--stable-channel", "--reinstall-clean", "--claim-token", token, "--claim-url", claim_url]
+            if rooms: arguments.extend(["--claim-rooms", rooms])
+            environment = {**os.environ, "DISABLE_TELEMETRY": "1"}
+            result = subprocess.run(arguments, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=environment, timeout=900)
+            if result.returncode: raise ValueError("The official Netdata installer rejected this installation or connection command.")
+            self.run(["rc-update", "add", "netdata", "default"])
+            self.run(["rc-service", "netdata", "restart"])
+            atomic(status, "Official Netdata Agent installed; checking Cloud connection…\n")
+        except Exception as error:
+            message = str(error) if isinstance(error, ValueError) else "The official Netdata installation failed. Check the network and try again."
+            atomic(status, "Failed: " + message + "\n")
+        finally:
+            if installer is not None:
+                installer.unlink(missing_ok=True)
+            self.netdata_install_lock.release()
 
     def handle(self, data):
         state = self.saved(); action = data.get("action")
@@ -291,6 +328,16 @@ class Setup:
             self.run(["rc-update", "add", "netdata", "default"])
             self.run(["rc-service", "netdata", "start"])
             return {"ok": True}
+        if action == "netdata_official_install":
+            if not state.get("complete"): raise ValueError("Finish setup before installing Netdata.")
+            token, rooms, claim_url = parse_netdata_connection_command(data.get("command"))
+            if not self.netdata_install_lock.acquire(blocking=False):
+                return {"ok": True, "queued": False}
+            operation_status = self.root / "var/lib/pi-home/netdata-operation-status"
+            operation_status.parent.mkdir(parents=True, exist_ok=True)
+            atomic(operation_status, "Downloading the official Netdata installer…\n")
+            threading.Thread(target=self.install_official_netdata, args=(token, rooms, claim_url), daemon=True).start()
+            return {"ok": True, "queued": True}
         if action == "device_credentials":
             if not state.get("complete"): raise ValueError("Finish setup before changing device access.")
             username = str(data.get("username", "")).strip(); password = str(data.get("password", ""))
