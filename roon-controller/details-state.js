@@ -250,10 +250,11 @@ async function albumContents(service, zoneId, item, session) {
   const loaded = await request(service, 'load', {hierarchy: 'search', multi_session_key: session, offset: 0, count: 40});
   const items = loaded.items || [];
   const add = items.find(candidate => candidate.item_key && /^\+?\s*add to library$/i.test(String(candidate.title || '').trim()));
+  const remove = items.find(candidate => candidate.item_key && /^remove from library$/i.test(String(candidate.title || '').trim()));
   return {
     tracks: items.filter(candidate => candidate.hint !== 'header' && candidate.title && candidate.hint !== 'action')
       .slice(0, 30).map(candidate => ({title: candidate.title, subtitle: candidate.subtitle || ''})),
-    library_status: add ? 'not_in_library' : 'in_library'
+    library_status: add ? 'not_in_library' : remove ? 'in_library' : 'unknown'
   };
 }
 
@@ -266,7 +267,9 @@ async function addToLibrary(service, zone) {
   await request(service, 'browse', {hierarchy: 'search', item_key: album.item_key, multi_session_key: session, zone_or_output_id: zone.zone_id});
   const loaded = await request(service, 'load', {hierarchy: 'search', multi_session_key: session, offset: 0, count: 40});
   const add = (loaded.items || []).find(candidate => candidate.item_key && /^\+?\s*add to library$/i.test(String(candidate.title || '').trim()));
-  if (!add) return {added: false, already_in_library: true};
+  const remove = (loaded.items || []).find(candidate => candidate.item_key && /^remove from library$/i.test(String(candidate.title || '').trim()));
+  if (!add && remove) return {added: false, already_in_library: true};
+  if (!add) throw new Error('Roon did not expose an Add to Library action for this album');
   const result = await request(service, 'browse', {hierarchy: 'search', item_key: add.item_key, multi_session_key: session, zone_or_output_id: zone.zone_id});
   if (result?.is_error) throw new Error(String(result.message || 'Roon could not add this album'));
   return {added: true, already_in_library: false};

@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.0-beta.29 Alpine Beta — 5 October 2026
+
+- Restores true centred Now Playing title and artist layout on the native touchscreen.
+- Replaces the hidden conditional library plus with an always-visible SVG heart whenever an album is playing. The outline fills immediately after Roon confirms Add to Library, and existing library state is shown only when Roon exposes its real Remove from Library action.
+
 ## 1.1.0-beta.28 Alpine Beta — 5 October 2026
 
 - Install the `openssl` command required by Alpine Netdata's claim helper when

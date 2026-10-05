@@ -59,6 +59,25 @@ test('loadDetails sends search text directly and merges cached external facts', 
   const result = await loadDetails(service, {zone_id: 'zone', now_playing: {three_line: {line1: 'Track one', line2: 'Artist', line3: 'Album'}, image_key: 'current'}}, enrich);
   assert.equal(result.artist_image_key, 'artist-art'); assert.equal(result.album_image_key, 'album-art'); assert.equal(result.subtitle, '1999'); assert.equal(result.tracks[0].title, 'Track one');
   assert.equal(result.metadata.year, '1999'); assert.deepEqual(result.metadata.genres, ['Electronic']);
+  assert.equal(result.library_status, 'unknown');
+});
+
+test('library status is positive only when Roon exposes its remove action', async () => {
+  const sessions = new Map();
+  const service = {
+    browse(options, callback) {
+      const session = sessions.get(options.multi_session_key) || {};
+      if (options.input) session.stage = options.input === 'Artist' ? 'artist-results' : 'album-results';
+      else if (options.item_key === 'album') session.stage = 'album';
+      sessions.set(options.multi_session_key, session); callback(false, {action:'list'});
+    },
+    load(options, callback) {
+      const stage = sessions.get(options.multi_session_key)?.stage;
+      callback(false, {items: stage === 'artist-results' ? [] : stage === 'album-results' ? [{title:'Album', item_key:'album'}]
+        : stage === 'album' ? [{title:'Remove from Library', hint:'action', item_key:'remove'}, {title:'Track one'}] : []});
+    }
+  };
+  const result = await loadDetails(service, {zone_id:'zone', now_playing:{three_line:{line1:'Track one',line2:'Artist',line3:'Album'}}}, async()=>({}));
   assert.equal(result.library_status, 'in_library');
 });
 

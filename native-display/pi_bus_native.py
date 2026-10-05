@@ -454,13 +454,14 @@ class Display(Gtk.Application):
         self.artwork = Gtk.Picture(); self.artwork.add_css_class("artwork"); self.artwork.set_size_request(280, 280); self.artwork.set_valign(Gtk.Align.CENTER); self.artwork.set_content_fit(Gtk.ContentFit.COVER); self.set_browser_placeholder(self.artwork)
         artwork_button = Gtk.Button(); artwork_button.add_css_class("artwork-button"); artwork_button.set_halign(Gtk.Align.CENTER); artwork_button.set_valign(Gtk.Align.CENTER); artwork_button.set_child(self.artwork); artwork_button.connect("clicked", lambda *_: self.set_roon_view("details")); content.append(artwork_button); self.artwork_button = artwork_button
         centre = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=7); centre.set_valign(Gtk.Align.CENTER); centre.set_hexpand(True)
-        self.title = self.label("Waiting for Roon…", "roon-title", .5); self.title.set_wrap(True); self.title.set_lines(2); self.title.set_justify(Gtk.Justification.CENTER)
-        self.artist = self.label("Enable Pi Home Roon Controller in Roon", "roon-artist", .5); self.artist.set_wrap(True); self.artist.set_justify(Gtk.Justification.CENTER); centre.append(self.title); centre.append(self.artist)
+        self.title = self.label("Waiting for Roon…", "roon-title", .5); self.title.set_hexpand(True); self.title.set_halign(Gtk.Align.FILL); self.title.set_wrap(True); self.title.set_lines(2); self.title.set_justify(Gtk.Justification.CENTER)
+        self.artist = self.label("Enable Pi Home Roon Controller in Roon", "roon-artist", .5); self.artist.set_hexpand(True); self.artist.set_halign(Gtk.Align.FILL); self.artist.set_wrap(True); self.artist.set_justify(Gtk.Justification.CENTER); centre.append(self.title); centre.append(self.artist)
         self.progress = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0, 1, 1); self.progress.add_css_class("progress"); self.progress.set_draw_value(False); self.progress.set_sensitive(False); self.progress.connect("value-changed", self.change_seek); centre.append(self.progress)
         times = Gtk.Box(); self.elapsed = self.label("0:00", "time"); self.remaining = self.label("−0:00", "time", 1); self.remaining.set_hexpand(True); times.append(self.elapsed); times.append(self.remaining); centre.append(times); self.roon_times = times
         self.controls = Gtk.Box(spacing=14); self.controls.set_halign(Gtk.Align.CENTER); self.controls.add_css_class("transport")
         self.controls.set_margin_top(6); self.controls.set_margin_bottom(16)
-        self.library_add = self.button("＋", self.add_current_album); self.library_add.set_tooltip_text("Add album to library"); self.library_add.set_visible(False)
+        self.library_add = self.button("", self.add_current_album); self.library_add.add_css_class("library-action"); self.library_add.set_tooltip_text("Add album to library"); self.library_add.set_visible(False)
+        self.library_status = "unknown"; self.set_library_icon(False)
         self.prev = self.icon_button("media-skip-backward-symbolic", lambda *_: self.control("previous")); self.play = self.icon_button("media-playback-start-symbolic", lambda *_: self.control("playpause"), "play"); self.play.get_child().set_pixel_size(42); self.next = self.icon_button("media-skip-forward-symbolic", lambda *_: self.control("next"))
         self.prev.set_size_request(50, 50); self.prev.set_valign(Gtk.Align.CENTER); self.play.set_size_request(68, 68); self.play.set_valign(Gtk.Align.CENTER); self.next.set_size_request(50, 50); self.next.set_valign(Gtk.Align.CENTER)
         self.controls.append(self.library_add); self.controls.append(self.prev); self.controls.append(self.play); self.controls.append(self.next); centre.append(self.controls)
@@ -579,6 +580,7 @@ class Display(Gtk.Application):
             if value == theme: button.add_css_class("active")
             else: button.remove_css_class("active")
         self.theme_updating = False
+        if hasattr(self, "library_add"): self.set_library_icon(getattr(self, "library_status", "unknown") == "in_library")
         self.browser_scrubber.queue_draw()
         for pictures in self.discovery_pictures.values():
             for picture in pictures: picture.queue_draw()
@@ -1732,8 +1734,11 @@ class Display(Gtk.Application):
         self.detail_title.set_text(details.get("album") or details.get("track") or "Nothing playing")
         self.detail_artist.set_text(details.get("artist") or "")
         self.detail_subtitle.set_text("Loading…" if details.get("status") == "loading" else (details.get("subtitle") or ""))
-        self.library_add.set_visible(details.get("library_status") == "not_in_library")
-        self.library_add.set_sensitive(True)
+        self.library_status = details.get("library_status") or "unknown"
+        has_album = bool(details.get("album")) and details.get("status") != "loading"
+        self.library_add.set_visible(has_album)
+        self.library_add.set_sensitive(has_album)
+        self.set_library_icon(self.library_status == "in_library")
         metadata = details.get("metadata") or {}
         writeup = metadata.get("writeup") or ""; self.detail_writeup.set_text(writeup); self.detail_writeup.set_visible(bool(writeup))
         source = metadata.get("writeup_source") or ""; self.detail_source.set_text(f"SOURCE  {source.upper()}" if source else ""); self.detail_source.set_visible(bool(source))
@@ -1935,12 +1940,26 @@ class Display(Gtk.Application):
         if action == "playpause" and (((self.state or {}).get("amplifier") or {}).get("active_input")): action = "resume"
         threading.Thread(target=post_json, args=(ROON + "/api/control", {"action": action}), daemon=True).start()
     def add_current_album(self, *_):
+        if self.library_status == "in_library": return
         self.library_add.set_sensitive(False)
         def run():
             result = post_json(ROON + "/api/library/add", {}, timeout=15.0)
-            GLib.idle_add(self.library_add.set_visible, not bool(result))
-            GLib.idle_add(self.library_add.set_sensitive, True)
+            def finish():
+                if result and (result.get("added") or result.get("already_in_library")):
+                    self.library_status = "in_library"; self.set_library_icon(True)
+                self.library_add.set_sensitive(True)
+                return False
+            GLib.idle_add(finish)
         threading.Thread(target=run, daemon=True).start()
+
+    def set_library_icon(self, filled):
+        suffix = "-filled" if filled else ""
+        theme = "-roon" if getattr(self, "settings_data", {}).get("display_theme") == "roon" else ""
+        icon_path = Path(__file__).with_name("icons") / f"heart{suffix}{theme}.svg"
+        icon = Gtk.Image.new_from_gicon(Gio.FileIcon.new(Gio.File.new_for_path(str(icon_path))))
+        icon.set_pixel_size(28); icon.set_size_request(28, 28)
+        self.library_add.set_child(icon)
+        self.library_add.set_tooltip_text("Album is in your library" if filled else "Add album to library")
     def toggle_bridge(self, button):
         threading.Thread(target=post_json, args=(BUS + "/api/device/roon-bridge", {"enabled": button.get_active()}), daemon=True).start()
     def toggle_service(self, button, service):

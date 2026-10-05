@@ -52,6 +52,19 @@ LAYOUT_GTK = SimpleNamespace(Box=LayoutWidget, Picture=LayoutWidget, ScrolledWin
 
 
 class NativeBrowserControlsTests(unittest.TestCase):
+    def test_now_playing_library_control_is_a_bundled_heart_and_remains_visible_for_an_album(self):
+        code = SOURCE.read_text(encoding="utf-8")
+        self.assertIn('self.library_add = self.button("", self.add_current_album)', code)
+        self.assertIn('self.library_add.set_visible(has_album)', code)
+        self.assertIn('self.set_library_icon(self.library_status == "in_library")', code)
+        for name in ("heart.svg", "heart-filled.svg", "heart-roon.svg", "heart-filled-roon.svg"):
+            self.assertTrue((SOURCE.parent / "icons" / name).is_file())
+
+    def test_now_playing_title_and_artist_fill_their_column_before_centering(self):
+        code = SOURCE.read_text(encoding="utf-8")
+        self.assertIn('self.title.set_hexpand(True); self.title.set_halign(Gtk.Align.FILL)', code)
+        self.assertIn('self.artist.set_hexpand(True); self.artist.set_halign(Gtk.Align.FILL)', code)
+
     def test_display_runtime_publishes_the_resolved_source_revision(self):
         import tempfile
         with tempfile.TemporaryDirectory() as folder:

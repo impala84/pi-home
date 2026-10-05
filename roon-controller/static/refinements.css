@@ -36,6 +36,8 @@ h1 {
   stroke-linecap: round;
   stroke-linejoin: round;
 }
+.transport .library-action svg { fill: transparent; stroke: currentColor; stroke-width: 2.2; }
+.transport .library-action.filled svg { fill: var(--mint); stroke: var(--mint); }
 
 .transport .play svg {
   width: 42px;
