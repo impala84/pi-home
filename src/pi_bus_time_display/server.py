@@ -33,10 +33,10 @@ ALPINE_SYSTEM_ACTIONS = {
     "update", "reboot", "netdata_enable", "netdata_disable", "netdata_claim",
     "netdata_claim_command", "netdata_official_install", "netdata_disconnect",
     "device_credentials", "install_tools", "display_on", "display_off",
-    "set_brightness",
+    "set_brightness", "roon_start", "roon_stop", "roon_restart",
 }
 SYSTEM_ACTIONS = ALPINE_SYSTEM_ACTIONS | {
-    "roon_start", "roon_stop", "roon_restart", "leds_enable", "leds_disable",
+    "leds_enable", "leds_disable",
     "set_hostname", "set_wifi", "set_rotation", "set_display",
 }
 
@@ -622,12 +622,17 @@ def netdata_snapshot() -> dict:
 
 
 def system_snapshot(state_dir: Path, include_diagnostics: bool = False) -> dict:
-    roon_service = "unknown"
-    for name in ("roonbridge.service", "RoonBridge.service"):
-        status = command_output(["systemctl", "is-active", name])
-        if status and status != "unknown":
-            roon_service = status
-            break
+    if os.getenv("PI_HOME_APPLIANCE_PLATFORM") == "alpine-prototype":
+        roon_service = service_state("roonbridge")
+        if roon_service == "not_installed" and Path("/opt/RoonBridge/start.sh").is_file():
+            roon_service = "stopped"
+    else:
+        roon_service = "unknown"
+        for name in ("roonbridge.service", "RoonBridge.service"):
+            status = command_output(["systemctl", "is-active", name])
+            if status and status != "unknown":
+                roon_service = status
+                break
     active_wifi = active_wifi_ssid()
     try:
         update_status = (state_dir / "update-status").read_text(encoding="utf-8").strip()

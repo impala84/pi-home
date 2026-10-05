@@ -21,6 +21,7 @@ class AlpinePrototypeTests(unittest.TestCase):
     def test_every_alpine_helper_action_is_accepted_by_the_http_api(self):
         self.assertLessEqual(ALPINE_SYSTEM_ACTIONS, SYSTEM_ACTIONS)
         self.assertIn("netdata_official_install", SYSTEM_ACTIONS)
+        self.assertIn("roon_start", ALPINE_SYSTEM_ACTIONS)
 
     def test_export_sanitizer_removes_container_identity_and_resets_network_identity(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -46,7 +47,7 @@ class AlpinePrototypeTests(unittest.TestCase):
     def test_unsupported_privileged_actions_fail_without_queuing(self):
         with tempfile.TemporaryDirectory() as folder, patch.dict(os.environ, {"PI_HOME_APPLIANCE_PLATFORM": "alpine-prototype"}):
             state = Path(folder)
-            for action in ("set_wifi", "set_display", "roon_start"):
+            for action in ("set_wifi", "set_display"):
                 with self.assertRaisesRegex(ValueError, "unavailable in Alpine Beta"):
                     write_control_request(state, {"action": action})
             self.assertEqual(list(state.iterdir()), [])
@@ -60,6 +61,13 @@ class AlpinePrototypeTests(unittest.TestCase):
         with patch.dict(os.environ, {"PI_HOME_APPLIANCE_PLATFORM": "alpine-prototype"}):
             with self.assertRaisesRegex(ValueError, "between 10 and 100"):
                 write_control_request(Path("/unused"), {"action": "set_brightness", "brightness": 0})
+
+    def test_roon_bridge_actions_are_forwarded_to_the_alpine_helper(self):
+        client = Mock(); client.__enter__ = Mock(return_value=client); client.__exit__ = Mock(return_value=False)
+        client.makefile.return_value.readline.return_value = b'{"ok":true}\n'
+        with patch.dict(os.environ, {"PI_HOME_APPLIANCE_PLATFORM": "alpine-prototype"}), patch("pi_bus_time_display.server.socket.socket", return_value=client):
+            self.assertTrue(write_control_request(Path("/unused"), {"action": "roon_start"}))
+        self.assertEqual(json.loads(client.sendall.call_args.args[0]), {"action": "roon_start"})
 
     def test_netdata_generated_command_is_forwarded_only_to_the_local_helper(self):
         command = "bash <(curl -Ss https://get.netdata.cloud/kickstart.sh) --claim-token private-token --claim-rooms room-1234"

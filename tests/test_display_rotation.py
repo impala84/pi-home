@@ -206,6 +206,12 @@ class DisplayRotationTests(unittest.TestCase):
         self.assertIn("function openSystemSection(id)", javascript)
         self.assertIn("details[open]>summary::before", css)
 
+    def test_admin_reports_and_disables_an_absent_roon_bridge(self):
+        javascript = (ROOT / "src" / "pi_bus_time_display" / "static" / "admin.js").read_text(encoding="utf-8")
+        self.assertIn("data.roon_bridge!=='not_installed'", javascript)
+        self.assertIn("'[data-action^=\"roon_\"]'", javascript)
+        self.assertIn("'Not installed'", javascript)
+
     def test_long_now_playing_copy_pauses_and_scrolls_without_polling(self):
         app = (ROOT / "roon-controller" / "static" / "app.js").read_text(encoding="utf-8")
         css = (ROOT / "roon-controller" / "static" / "refinements.css").read_text(encoding="utf-8")

@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.0-beta.31 Alpine Beta — 5 October 2026
+
+- Routes Roon Bridge Start, Stop and Restart through Alpine's privileged OpenRC helper instead of rejecting them as Raspberry Pi OS-only controls.
+- Reports the real Alpine Bridge state and creates a native OpenRC service around an existing official `/opt/RoonBridge/start.sh` installation; absent Bridge files now report as not installed rather than unknown.
+
 ## 1.1.0-beta.30 Alpine Beta — 5 October 2026
 
 - Keeps the three Netdata actions on one responsive desktop/tablet row, with a mobile-only vertical fallback.

@@ -168,6 +168,29 @@ def run_netdata_claim_helper(root, token, rooms, url="https://app.netdata.cloud"
     return True
 
 
+def ensure_roon_bridge_service(root):
+    root = Path(root)
+    start = root / "opt/RoonBridge/start.sh"
+    if not start.is_file():
+        raise ValueError("Roon Bridge is not installed on this appliance.")
+    service = root / "etc/init.d/roonbridge"
+    if not service.exists():
+        service.parent.mkdir(parents=True, exist_ok=True)
+        atomic(service, """#!/sbin/openrc-run
+description=\"Roon Bridge audio endpoint\"
+supervisor=supervise-daemon
+command=/opt/RoonBridge/start.sh
+directory=/opt/RoonBridge
+respawn_delay=5
+respawn_max=0
+output_log=/var/log/pi-home/roonbridge.log
+error_log=/var/log/pi-home/roonbridge-error.log
+export ROON_DATAROOT=/var/roon
+depend() { need localmount; after networkmanager; }
+""", 0o755)
+    return service
+
+
 def display_power(root, powered, brightness_percent=100):
     """Control the backlight without disabling the DSI touch controller."""
     brightness_percent = int(brightness_percent)
@@ -342,6 +365,18 @@ class Setup:
             else:
                 self.run(["rc-service", "netdata", "stop"])
                 self.run(["rc-update", "del", "netdata", "default"])
+            return {"ok": True}
+        if action in {"roon_start", "roon_stop", "roon_restart"}:
+            if not state.get("complete"): raise ValueError("Finish setup before changing services.")
+            ensure_roon_bridge_service(self.root)
+            if action == "roon_start":
+                self.run(["rc-update", "add", "roonbridge", "default"])
+                self.run(["rc-service", "roonbridge", "start"])
+            elif action == "roon_stop":
+                self.run(["rc-service", "roonbridge", "stop"])
+                self.run(["rc-update", "del", "roonbridge", "default"])
+            else:
+                self.run(["rc-service", "roonbridge", "restart"])
             return {"ok": True}
         if action in {"netdata_claim", "netdata_claim_command", "netdata_disconnect"}:
             if not state.get("complete"): raise ValueError("Finish setup before changing Netdata Cloud.")

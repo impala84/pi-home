@@ -303,6 +303,24 @@ class AlpineSetupTests(unittest.TestCase):
         self.setup.handle({"action": "netdata_disable"})
         self.assertEqual(self.run.call_args.args[0], ["rc-update", "del", "netdata", "default"])
 
+    def test_roon_bridge_controls_create_and_use_only_the_openrc_service(self):
+        self.setup.save({"complete": True})
+        start = self.root / "opt/RoonBridge/start.sh"; start.parent.mkdir(parents=True); start.touch()
+        self.setup.handle({"action": "roon_start"})
+        service = self.root / "etc/init.d/roonbridge"
+        self.assertTrue(service.is_file())
+        self.assertIn("command=/opt/RoonBridge/start.sh", service.read_text())
+        self.assertEqual(service.stat().st_mode & 0o777, 0o755)
+        self.run.assert_any_call(["rc-update", "add", "roonbridge", "default"])
+        self.run.assert_any_call(["rc-service", "roonbridge", "start"])
+        self.setup.handle({"action": "roon_restart"})
+        self.run.assert_any_call(["rc-service", "roonbridge", "restart"])
+
+    def test_roon_bridge_start_reports_when_the_official_files_are_absent(self):
+        self.setup.save({"complete": True})
+        with self.assertRaisesRegex(ValueError, "not installed"):
+            self.setup.handle({"action": "roon_start"})
+
     def test_sleep_extinguishes_backlight_and_wake_restores_saved_brightness(self):
         backlight = self.root / "sys/class/backlight/rpi_backlight"; backlight.mkdir(parents=True)
         (backlight / "brightness").write_text("255"); (backlight / "max_brightness").write_text("255"); (backlight / "bl_power").write_text("0")
