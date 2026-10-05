@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.0-beta.25 Alpine Beta — 5 October 2026
+
+- Increase only the New Releases four-column gap so its final tile aligns with
+  the header clock boundary while retaining the larger artwork size.
+- Give Browse's alphabet scrubber its own 14 px physical-edge inset without
+  restoring the right padding that previously broke Daily's edge bleed.
+
 ## 1.1.0-beta.24 Alpine Beta — 5 October 2026
 
 - Expand the flashed root partition and ext4 filesystem to the available SD-card

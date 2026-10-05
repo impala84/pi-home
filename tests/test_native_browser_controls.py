@@ -145,6 +145,7 @@ class NativeBrowserControlsTests(unittest.TestCase):
         self.assertEqual(metrics(SimpleNamespace(),"releases"),(4,266))
         source=SOURCE.read_text(encoding="utf-8")
         self.assertIn('columns, size = self.discovery_grid_metrics(self.discovery_section)',source)
+        self.assertIn('36 if self.discovery_section == "releases" else 24',source)
         self.assertIn('size = min(212, size)',source)
         self.assertNotIn('MORE RECOMMENDATIONS',source)
 
@@ -277,6 +278,7 @@ class NativeBrowserControlsTests(unittest.TestCase):
         self.assertIn('shell.set_min_content_width(size)',code)
         self.assertIn('shell.set_max_content_width(size)',code)
         self.assertIn('.touch-landscape .roon-page .browser-view { padding-right: 0; }',code)
+        self.assertIn('self.browser_scrubber.set_margin_end(14)',code)
 
     def test_now_playing_uses_local_placeholder_before_artwork_arrives(self):
         code=SOURCE.read_text(encoding='utf-8')
