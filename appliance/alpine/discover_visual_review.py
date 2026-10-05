@@ -177,9 +177,13 @@ if screen_height > screen_width:
 
 display.set_roon_view("now")
 display.title.set_text("Solarium"); display.artist.set_text("Emancipator")
+display.library_status = "in_library"; display.library_add.set_visible(True); display.set_library_icon(False)
 display.artwork.set_filename(str(fixture_art("now-playing", "NOW PLAYING")))
 display.render_bluos_inputs({"inputs": [{"id": "tv", "name": "Watch TV"}, {"id": "rega", "name": "Rega P3"}]}, True)
 capture("now-playing")
+assert window.get_width() == screen_width and window.get_height() == screen_height, (window.get_width(), window.get_height(), screen_width, screen_height)
+footer_bounds = page.get_last_child().compute_bounds(page)[1]
+assert footer_bounds.get_y() + footer_bounds.get_height() <= screen_height - 4
 
 bus = display.build_bus(); window.set_child(bus)
 display.render_bus({"status": "ok", "stop_name": "Flamingo Valley", "stop_code": "83249", "services": [{"service": number, "arrivals": [{"minutes": value, "monitored": True} for value in (1, 14, 28)]} for number in ("40", "42")]})
@@ -188,6 +192,7 @@ if screen_height > screen_width:
     assert display.services.get_first_child().get_orientation() == Gtk.Orientation.VERTICAL
 
 home = display.build_home(); window.set_child(home)
+display.settings_data["display_theme"] = "roon"
 display.render_home({"status": "ok", "entities": [{"entity_id": f"{domain}.fixture{index}", "domain": domain, "name": name, "state": "on", "supports_level": domain in ("fan", "light"), "percentage": 50} for index, (domain, name) in enumerate((("fan", "Living Room Fan"), ("light", "Living Room"), ("switch", "Pi-Hole Master"), ("switch", "Pi-Hole Slave")))]})
 capture("home")
 if screen_height > screen_width:

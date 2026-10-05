@@ -291,7 +291,8 @@ CSS += b"""
 .portrait .roon-subnav button.active { border-bottom-color: #5bcbd6; }
 .portrait.theme-roon .roon-subnav button.active { border-bottom-color: #817aeb; }
 .portrait .browser-sidebar { min-width: 0; }
-.portrait .service-no { min-width: 0; font-size: 86px; }
+.portrait .service-no { min-width: 0; font-size: 108px; }
+.portrait .arrival { font-size: 96px; }
 .portrait .service.compact .service-no, .portrait .service.dense .service-no { font-size: 58px; }
 .portrait .service.compact .arrival, .portrait .service.dense .arrival { font-size: 58px; }
 .portrait .home-level { min-height: 24px; min-width: 0; }
@@ -483,7 +484,7 @@ class Display(Gtk.Application):
         self.discovery_body.set_orientation(Gtk.Orientation.VERTICAL if portrait else Gtk.Orientation.HORIZONTAL)
         self.discovery_sidebar.set_orientation(Gtk.Orientation.HORIZONTAL if portrait else Gtk.Orientation.VERTICAL)
         self.detail_panel.set_orientation(Gtk.Orientation.VERTICAL if portrait else Gtk.Orientation.HORIZONTAL)
-        artwork_size = min(width - 64, max(200, height - (520 if width >= 600 else 440))) if portrait else (324 if width >= 1200 else min(280, max(220, height - 190)))
+        artwork_size = min(width - 64, max(200, height - 540)) if portrait else (324 if width >= 1200 else min(280, max(220, height - 190)))
         self.artwork.set_size_request(artwork_size, artwork_size); self.artwork_button.set_size_request(artwork_size, artwork_size)
         detail_size = max(240, min(width - 56, int(height * .42))) if portrait else max(240, min(width, height) - 60)
         self.detail_artwork.set_size_request(detail_size, detail_size)
@@ -1081,7 +1082,7 @@ class Display(Gtk.Application):
             number = self.label(str(service.get("service", "")), "service-no"); number.set_size_request((150 if len(visible) > 2 else 188) if self.window.has_css_class("high-resolution") else (100 if len(visible) > 2 else 125), -1); number.set_valign(Gtk.Align.CENTER); row.append(number)
             arrivals = Gtk.Box(spacing=8); arrivals.set_hexpand(True)
             if self.window.has_css_class("portrait"):
-                number.set_xalign(.5); number.set_size_request(-1, -1); arrivals.set_vexpand(True)
+                number.set_xalign(.5); number.set_size_request(-1, -1); number.set_vexpand(True); number.set_valign(Gtk.Align.END); arrivals.set_vexpand(True)
             for arrival in service.get("arrivals", [])[:3]:
                 col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL); col.set_valign(Gtk.Align.CENTER); minutes = arrival.get("minutes"); col.append(self.label("Due" if minutes == 0 else str(minutes), "arrival", .5)); col.append(self.label("MIN · LIVE" if arrival.get("monitored") else "MIN · AFTER", "arrival-sub", .5)); col.set_hexpand(True); arrivals.append(col)
             row.append(arrivals); self.services.append(row)
