@@ -386,9 +386,9 @@ body[data-theme="roon"] .browser-art.action-icon { background: #292929; }
 }
 .genre-grid .browser-card.tiles .browser-card-copy { text-align: center; padding-bottom: 18px; }
 .browser-scrubber { min-width: 0; }
-.browser-scrubber::before { right: 6.5px; }
-.browser-scrub-dot { right: 0; }
-.browser-scrubber output { right: 23px; }
+.browser-scrubber::before { right: 10.5px; }
+.browser-scrub-dot { right: 4px; }
+.browser-scrubber output { right: 27px; }
 .missing-artwork { width: 48%; height: 48%; fill: none; stroke: #777; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
 .artist-profile-art { width: 100%; aspect-ratio: 1; display: grid; place-items: center; overflow: hidden; border-radius: 10px; background: var(--panel); }
 .artist-profile-art img { width: 100%; height: 100%; object-fit: cover; }

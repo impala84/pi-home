@@ -278,7 +278,7 @@ class NativeBrowserControlsTests(unittest.TestCase):
         self.assertIn('shell.set_min_content_width(size)',code)
         self.assertIn('shell.set_max_content_width(size)',code)
         self.assertIn('.touch-landscape .roon-page .browser-view { padding-right: 0; }',code)
-        self.assertIn('self.browser_scrubber.set_margin_end(14)',code)
+        self.assertIn('self.browser_scrubber.set_margin_end(18)',code)
 
     def test_now_playing_uses_local_placeholder_before_artwork_arrives(self):
         code=SOURCE.read_text(encoding='utf-8')

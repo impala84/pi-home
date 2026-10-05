@@ -501,7 +501,7 @@ class Display(Gtk.Application):
         # Independent result scrollers must not be nested in the ordinary
         # browser viewport: that viewport measures them at minimum height.
         self.browser_search_columns = Gtk.Box(spacing=18); self.browser_search_columns.set_homogeneous(True); self.browser_search_columns.set_hexpand(True); self.browser_search_columns.set_vexpand(True); self.browser_search_columns.set_visible(False); content.append(self.browser_search_columns)
-        self.browser_scrubber = Gtk.DrawingArea(); self.browser_scrubber.add_css_class("browser-scrubber"); self.browser_scrubber.set_size_request(74, -1); self.browser_scrubber.set_margin_end(14); self.browser_scrubber.set_vexpand(True); self.browser_scrubber.set_visible(False); self.browser_scrubber.set_draw_func(self.draw_browser_scrubber)
+        self.browser_scrubber = Gtk.DrawingArea(); self.browser_scrubber.add_css_class("browser-scrubber"); self.browser_scrubber.set_size_request(74, -1); self.browser_scrubber.set_margin_end(18); self.browser_scrubber.set_vexpand(True); self.browser_scrubber.set_visible(False); self.browser_scrubber.set_draw_func(self.draw_browser_scrubber)
         self.browser_scrub_scale = Gtk.Adjustment(value=0, lower=0, upper=25, step_increment=1); self.browser_scrub_scale.connect("value-changed", self.browser_scrub_changed)
         scrub_gesture = Gtk.GestureDrag.new(); scrub_gesture.connect("drag-begin", self.browser_scrub_begin); scrub_gesture.connect("drag-update", self.browser_scrub_drag); scrub_gesture.connect("drag-end", self.browser_scrub_end); self.browser_scrubber.add_controller(scrub_gesture)
         content.append(self.browser_scrubber); browser_main.append(content); browser_body.append(browser_main)

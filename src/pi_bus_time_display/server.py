@@ -29,6 +29,16 @@ from .releases import ReleaseChecker
 
 
 CONTROL_REQUEST_LOCK = threading.Lock()
+ALPINE_SYSTEM_ACTIONS = {
+    "update", "reboot", "netdata_enable", "netdata_disable", "netdata_claim",
+    "netdata_claim_command", "netdata_official_install", "netdata_disconnect",
+    "device_credentials", "install_tools", "display_on", "display_off",
+    "set_brightness",
+}
+SYSTEM_ACTIONS = ALPINE_SYSTEM_ACTIONS | {
+    "roon_start", "roon_stop", "roon_restart", "leds_enable", "leds_disable",
+    "set_hostname", "set_wifi", "set_rotation", "set_display",
+}
 
 
 def display_version():
@@ -677,7 +687,7 @@ def write_control_request(state_dir: Path, request: dict) -> bool:
     as display-off immediately followed by display-on.
     """
     if os.getenv("PI_HOME_APPLIANCE_PLATFORM") == "alpine-prototype":
-        if request.get("action") in {"update", "reboot", "netdata_enable", "netdata_disable", "netdata_claim", "netdata_claim_command", "netdata_official_install", "netdata_disconnect", "device_credentials", "install_tools", "display_on", "display_off", "set_brightness"}:
+        if request.get("action") in ALPINE_SYSTEM_ACTIONS:
             payload = {"action": request["action"]}
             if request["action"] in {"display_on", "set_brightness"}:
                 brightness = int(request.get("brightness", 100))
@@ -1084,8 +1094,7 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
                     return
                 if self.path == "/api/admin/system-action":
                     action = str(data.get("action", ""))
-                    allowed = {"update", "reboot", "roon_start", "roon_stop", "roon_restart", "netdata_enable", "netdata_disable", "netdata_claim", "netdata_claim_command", "netdata_disconnect", "device_credentials", "install_tools", "leds_enable", "leds_disable", "set_hostname", "set_wifi", "set_rotation", "set_display"}
-                    if action not in allowed:
+                    if action not in SYSTEM_ACTIONS:
                         raise ValueError("Unknown system action")
                     request = {"action": action}
                     if action == "set_hostname":
@@ -1095,7 +1104,7 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
                         request["password"] = str(data.get("password", ""))
                     if action == "netdata_claim":
                         request.update(token=str(data.get("token", "")), rooms=str(data.get("rooms", "")))
-                    if action == "netdata_claim_command":
+                    if action in {"netdata_claim_command", "netdata_official_install"}:
                         request["command"] = str(data.get("command", ""))
                     if action == "device_credentials":
                         request.update(username=str(data.get("username", "")).strip(), password=str(data.get("password", "")), confirmation=str(data.get("confirmation", "")))

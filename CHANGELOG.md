@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.1.0-beta.26 Alpine Beta — 5 October 2026
+
+- Fix the Netdata official-Agent button being rejected as an unknown system
+  action by using one shared API/helper action allowlist and forwarding its
+  validated Cloud connection command correctly.
+- Report progress when applying Cloud settings to the existing Agent instead
+  of leaving the connection attempt visually silent.
+- Move Browse's alphabet scrubber another 4 px left on both the physical GTK
+  display and browser interface.
+
 ## 1.1.0-beta.25 Alpine Beta — 5 October 2026
 
 - Increase only the New Releases four-column gap so its final tile aligns with

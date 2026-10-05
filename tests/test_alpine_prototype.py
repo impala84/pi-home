@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from unittest.mock import Mock, patch
 
-from pi_bus_time_display.server import write_control_request
+from pi_bus_time_display.server import ALPINE_SYSTEM_ACTIONS, SYSTEM_ACTIONS, write_control_request
 
 ROOT = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location("alpine_firstboot", ROOT / "appliance/alpine/firstboot.py")
@@ -18,6 +18,10 @@ prepare_spec.loader.exec_module(prepare_rootfs)
 
 
 class AlpinePrototypeTests(unittest.TestCase):
+    def test_every_alpine_helper_action_is_accepted_by_the_http_api(self):
+        self.assertLessEqual(ALPINE_SYSTEM_ACTIONS, SYSTEM_ACTIONS)
+        self.assertIn("netdata_official_install", SYSTEM_ACTIONS)
+
     def test_export_sanitizer_removes_container_identity_and_resets_network_identity(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)

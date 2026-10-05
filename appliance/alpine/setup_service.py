@@ -311,6 +311,9 @@ class Setup:
                 room_values = [value.strip() for value in rooms.split(",") if value.strip()]
                 if any(not re.fullmatch(r"[A-Za-z0-9._:-]{4,128}", value) for value in room_values):
                     raise ValueError("Enter valid Netdata Room IDs, separated by commas.")
+            operation_status = self.root / "var/lib/pi-home/netdata-operation-status"
+            operation_status.parent.mkdir(parents=True, exist_ok=True)
+            atomic(operation_status, "Applying Netdata Cloud connection settings…\n")
             self.run(["rc-service", "netdata", "stop"])
             try:
                 if action == "netdata_disconnect":
@@ -324,9 +327,11 @@ class Setup:
             except Exception:
                 # Claim failure must not leave local monitoring unavailable.
                 self.run(["rc-service", "netdata", "start"])
+                atomic(operation_status, "Netdata Cloud connection failed. The local Agent is still running.\n")
                 raise
             self.run(["rc-update", "add", "netdata", "default"])
             self.run(["rc-service", "netdata", "start"])
+            atomic(operation_status, "Netdata Cloud settings applied. Waiting for the Agent to connect…\n")
             return {"ok": True}
         if action == "netdata_official_install":
             if not state.get("complete"): raise ValueError("Finish setup before installing Netdata.")
