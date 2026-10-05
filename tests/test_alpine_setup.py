@@ -197,8 +197,21 @@ class AlpineSetupTests(unittest.TestCase):
         completed = Mock(returncode=0)
         with patch.object(module.subprocess, "run", return_value=completed) as run:
             self.assertTrue(module.run_netdata_claim_helper(self.root, "private-token", "room-1234"))
-        self.assertEqual(run.call_args.args[0], [str(helper), "-token=private-token", "-url=https://app.netdata.cloud", "-rooms=room-1234"])
+        self.assertEqual(run.call_args.args[0], [str(helper), "-token=private-token", "-url=https://app.netdata.cloud", "-daemon-not-running", "-rooms=room-1234"])
         self.assertIs(run.call_args.kwargs["stdout"], module.subprocess.DEVNULL)
+
+    def test_duplicate_netdata_identity_retries_once_with_fresh_node_id(self):
+        helper = self.root / "usr/sbin/netdata-claim.sh"; helper.parent.mkdir(parents=True); helper.touch()
+        with patch.object(module.subprocess, "run", side_effect=[Mock(returncode=13), Mock(returncode=0)]) as run, patch.object(module.uuid, "uuid4", return_value="fresh-node-id"):
+            self.assertTrue(module.run_netdata_claim_helper(self.root, "private-token", "room-1234"))
+        self.assertEqual(run.call_count, 2)
+        self.assertIn("-id=fresh-node-id", run.call_args.args[0])
+
+    def test_netdata_claim_reports_expired_token_accurately(self):
+        helper = self.root / "usr/sbin/netdata-claim.sh"; helper.parent.mkdir(parents=True); helper.touch()
+        with patch.object(module.subprocess, "run", return_value=Mock(returncode=12)):
+            with self.assertRaisesRegex(ValueError, "expired or invalid"):
+                module.run_netdata_claim_helper(self.root, "private-token", "room-1234")
 
     def test_cloud_generated_command_is_parsed_but_never_executed(self):
         command = "bash <(curl -Ss https://get.netdata.cloud/kickstart.sh) --stable-channel --claim-token 'private-token' --claim-rooms room-1234,room-5678 --claim-url https://app.netdata.cloud"

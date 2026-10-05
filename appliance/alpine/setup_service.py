@@ -14,6 +14,7 @@ import subprocess
 import threading
 import tempfile
 import urllib.request
+import uuid
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 SOCKET = "/run/pi-home-setup.sock"
@@ -131,12 +132,39 @@ def run_netdata_claim_helper(root, token, rooms, url="https://app.netdata.cloud"
     """
     helper = Path(root) / "usr/sbin/netdata-claim.sh"
     if not helper.is_file(): return False
-    arguments = [str(helper), f"-token={token}", f"-url={url}"]
+    arguments = [str(helper), f"-token={token}", f"-url={url}", "-daemon-not-running"]
     if rooms: arguments.append(f"-rooms={rooms}")
     result = subprocess.run(arguments, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-                            stderr=subprocess.DEVNULL, timeout=90)
+                            stderr=subprocess.PIPE, text=True, timeout=90)
+    # A previous interrupted claim may have registered the machine GUID
+    # remotely without retaining its local identity. Retry that one case with
+    # a fresh node ID while preserving Netdata's stable machine GUID.
+    if result.returncode == 13:
+        arguments.append(f"-id={uuid.uuid4()}")
+        result = subprocess.run(arguments, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                                stderr=subprocess.PIPE, text=True, timeout=90)
+    errors = {
+        1: "The installed Netdata claim helper did not understand this request.",
+        2: "Netdata could not create its private Cloud identity files.",
+        3: "The installed Netdata Agent is missing a Cloud dependency.",
+        4: "Netdata could not reach Netdata Cloud. Check the network and clock.",
+        5: "Netdata could not notify its local Agent about the Cloud connection.",
+        6: "Netdata refused the account used to create its Cloud identity.",
+        7: "Netdata Cloud returned an unexpected response.",
+        8: "Netdata Cloud rejected the generated node identity.",
+        9: "Netdata Cloud rejected this device name.",
+        10: "Netdata Cloud rejected the Room ID in the connection command.",
+        11: "Netdata Cloud rejected the Agent's public key.",
+        12: "The Netdata Cloud claim token is expired or invalid. Generate a new command.",
+        13: "This Netdata node identity is already registered in Cloud.",
+        14: "Netdata Cloud is still processing this claim. Try again shortly.",
+        15: "Netdata Cloud encountered an internal error.",
+        16: "Netdata Cloud timed out while processing the claim.",
+        17: "Netdata Cloud is temporarily unavailable.",
+        18: "Netdata could not generate a unique node identity.",
+    }
     if result.returncode:
-        raise ValueError("Netdata rejected the Cloud connection token or Room ID.")
+        raise ValueError(errors.get(result.returncode, "Netdata Cloud connection failed for an unknown reason."))
     return True
 
 

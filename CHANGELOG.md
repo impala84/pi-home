@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.1.0-beta.27 Alpine Beta — 5 October 2026
+
+- Add an asynchronous Now Playing library button backed by Roon's own library
+  state and Add to Library action, without a separate Pi Home favourites store.
+- Fix Netdata Cloud connection on Alpine by invoking the version-matched claim
+  helper bundled with the installed Agent and reading its actual ACLK state.
+- Report Netdata's precise claim failure, run the helper in stopped-daemon mode,
+  and recover once from a stale node identity left by an interrupted claim.
+- Remove the misleading official-Agent replacement path, which could report
+  success while Alpine's packaged Agent remained installed.
+- Brighten the Roon-theme favicon accent without changing the interface palette.
+
 ## 1.1.0-beta.26 Alpine Beta — 5 October 2026
 
 - Fix the Netdata official-Agent button being rejected as an unknown system
