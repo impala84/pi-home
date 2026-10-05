@@ -174,7 +174,7 @@ class DisplayRotationTests(unittest.TestCase):
         display = (ROOT / "native-display" / "pi_bus_native.py").read_text(encoding="utf-8")
         web_html = (ROOT / "roon-controller" / "static" / "index.html").read_text(encoding="utf-8")
         web_js = (ROOT / "roon-controller" / "static" / "app.js").read_text(encoding="utf-8")
-        self.assertIn("artwork_size = min(width - 56", display)
+        self.assertIn("artwork_size = min(width - 64", display)
         self.assertIn("self.artwork.set_size_request(artwork_size, artwork_size)", display)
         self.assertIn("self.artwork_button.set_size_request(artwork_size, artwork_size)", display)
         self.assertIn('detail_artwork_button.connect("clicked", lambda *_: self.set_roon_view("now"))', display)

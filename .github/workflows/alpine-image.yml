@@ -52,6 +52,7 @@ jobs:
           path: dist/alpine/
           retention-days: 14
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: pi-home-alpine-ui-review
           path: dist/alpine-ui-review/

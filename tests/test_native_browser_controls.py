@@ -140,6 +140,8 @@ class NativeBrowserControlsTests(unittest.TestCase):
 
     def test_loading_lives_in_right_content_without_replacing_sidebar(self):
         owner=SimpleNamespace(discovery_request=1,discovery_active=True,roon_views=SimpleNamespace(get_visible_child_name=lambda:"discover"),discovery_signature=None,discovery_list=LayoutWidget(),sync_discovery_sidebar=Mock(),label=lambda text,style:LayoutWidget(text=text,style=style))
+        owner.discovery_body = LayoutWidget()
+        owner.window = SimpleNamespace(has_css_class=lambda _: False)
         native_method("render_discover",{"json":__import__("json")})(owner,1,{"status":"loading"})
         self.assertEqual(owner.discovery_list.children[0].properties,{"text":"Loading…","style":"loading-notice"})
         owner.sync_discovery_sidebar.assert_called_once()

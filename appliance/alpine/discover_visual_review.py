@@ -193,4 +193,12 @@ capture("home")
 if screen_height > screen_width:
     assert display.home_grid.get_first_child().get_orientation() == Gtk.Orientation.HORIZONTAL
 
+window.set_child(None)
+display.root_overlay = Gtk.Overlay(); display.root_overlay.set_child(home); window.set_child(display.root_overlay)
+display.confirm_reboot()
+capture("reboot-confirmation")
+card = display.reboot_confirmation.get_last_child()
+bounds = card.compute_bounds(display.root_overlay)[1]
+assert bounds.get_y() + bounds.get_height() / 2 < screen_height / 2 - 10
+
 print(f"Wrote native Alpine visual review frames to {OUTPUT}")
