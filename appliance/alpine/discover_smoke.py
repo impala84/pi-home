@@ -1,5 +1,6 @@
 """Exercise the real native Discover widgets under Alpine GTK/Xvfb."""
 import importlib.util
+import time
 from pathlib import Path
 import gi
 
@@ -22,6 +23,7 @@ window.set_child(page); window.present()
 context = native.GLib.MainContext.default()
 for _ in range(20):
     while context.pending(): context.iteration(False)
+    time.sleep(.01)
 
 assert display.discover_tabs["daily"].get_label() == "DAILY"
 horizontal, vertical = display.discovery_scroll.get_policy()
@@ -40,6 +42,7 @@ groups = [{"reason":"recent","seed":{"title":"Sad Wings of Destiny (50th Anniver
 assert display.render_discover(1, {"status": "ready", "items": items, "groups": groups}) is False
 for _ in range(20):
     while context.pending(): context.iteration(False)
+    time.sleep(.01)
 scroller = display.discovery_list.get_first_child()
 assert isinstance(scroller, Gtk.ScrolledWindow)
 track = scroller.get_child()
