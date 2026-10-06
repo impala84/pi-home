@@ -294,6 +294,7 @@ CSS += b"""
 .portrait .recommendation-heading { margin-left: 4px; }
 .portrait .stop, .portrait .stop-code { font-size: 26px; }
 .portrait .service { padding: 18px 12px; }
+.portrait .service.compact, .portrait .service.dense { padding: 12px; }
 .portrait .roon-subnav button.active { border-bottom-color: #5bcbd6; }
 .portrait.theme-roon .roon-subnav button.active { border-bottom-color: #817aeb; }
 .portrait .browser-sidebar { min-width: 0; }
@@ -554,7 +555,7 @@ class Display(Gtk.Application):
         self.bus_clock = self.label("--:--", "clock", 1); self.stop = self.label("Connecting…", "stop"); self.stop_code = self.label("", "stop-code")
         stop_heading = Gtk.Box(spacing=14); stop_heading.append(self.stop); stop_heading.append(self.stop_code); page.append(self.header(stop_heading, self.bus_clock))
         self.services = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14); self.services.set_vexpand(True)
-        self.bus_scroll = Gtk.ScrolledWindow(); self.bus_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.NEVER); self.bus_scroll.set_propagate_natural_height(False); self.bus_scroll.set_propagate_natural_width(False); self.bus_scroll.set_min_content_height(1); self.bus_scroll.set_vexpand(True); self.bus_scroll.set_child(self.services); page.append(self.bus_scroll)
+        self.bus_scroll = Gtk.ScrolledWindow(); self.bus_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.NEVER); self.bus_scroll.set_propagate_natural_height(False); self.bus_scroll.set_propagate_natural_width(False); self.bus_scroll.set_min_content_height(1); self.bus_scroll.set_size_request(-1, 1); self.bus_scroll.set_vexpand(True); self.bus_scroll.set_child(self.services); page.append(self.bus_scroll)
         footer = Gtk.Box(); footer.add_css_class("bus-footer"); self.bus_status = self.label("Starting", "muted"); self.updated = self.label("", "muted", 1); self.updated.set_hexpand(True); footer.append(self.bus_status); footer.append(self.updated); page.append(footer)
         page.append(self.navigation("bus")); return page
 
@@ -1122,12 +1123,14 @@ class Display(Gtk.Application):
             arrivals = Gtk.Box(spacing=8); arrivals.set_hexpand(True)
             if portrait:
                 number.set_xalign(.5); number.set_size_request(-1, -1); number.set_valign(Gtk.Align.CENTER)
-                route_size = min(216, round((getattr(self, "viewport_height", self.window.get_height()) - 220) / max(1, len(visible)) * .42))
-                attrs = Pango.AttrList(); attrs.insert(Pango.attr_size_new_absolute(max(64, route_size) * Pango.SCALE)); number.set_attributes(attrs)
+                count = max(1, len(visible))
+                card_budget = (getattr(self, "viewport_height", self.window.get_height()) - 240 - (count - 1) * 24) / count
+                route_size = min(216, max(40, round((card_budget - 80) / 1.85)))
+                attrs = Pango.AttrList(); attrs.insert(Pango.attr_size_new_absolute(route_size * Pango.SCALE)); number.set_attributes(attrs)
             for arrival in service.get("arrivals", [])[:3]:
                 col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL); col.set_valign(Gtk.Align.CENTER); minutes = arrival.get("minutes"); value = self.label("Due" if minutes == 0 else str(minutes), "arrival", .5)
                 if portrait:
-                    attrs = Pango.AttrList(); attrs.insert(Pango.attr_size_new_absolute(min(80, max(32, round(route_size * .48))) * Pango.SCALE)); value.set_attributes(attrs)
+                    attrs = Pango.AttrList(); attrs.insert(Pango.attr_size_new_absolute(min(80, max(24, round(route_size * .48))) * Pango.SCALE)); value.set_attributes(attrs)
                 col.append(value); col.append(self.label("MIN · LIVE" if arrival.get("monitored") else "MIN · AFTER", "arrival-sub", .5)); col.set_hexpand(True); arrivals.append(col)
             row.append(arrivals); self.services.append(row)
         self.bus_status.set_text("Live from LTA DataMall" if data.get("status") == "ok" and not data.get("stale") else "Offline / last known arrivals")

@@ -232,6 +232,8 @@ if screen_height > screen_width:
 assert window.get_width() == screen_width and window.get_height() == screen_height, (window.get_width(), window.get_height(), screen_width, screen_height)
 display.render_bus({"status": "ok", "stop_name": "Flamingo Valley", "stop_code": "83249", "services": [{"service": number, "arrivals": [{"minutes": value} for value in (1, 14, 28)]} for number in ("40", "42", "401", "14")]})
 capture("bus-times-four-routes")
+if window.get_height() != screen_height:
+    print("Bus height diagnostic:", tuple(display.bus_scroll.measure(Gtk.Orientation.VERTICAL, screen_width)), tuple(display.services.measure(Gtk.Orientation.VERTICAL, screen_width)), flush=True)
 assert window.get_width() == screen_width and window.get_height() == screen_height, (window.get_width(), window.get_height(), screen_width, screen_height)
 
 home = display.build_home(); window.set_child(home)
