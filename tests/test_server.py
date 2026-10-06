@@ -11,6 +11,36 @@ from pi_bus_time_display.server import State, active_wifi_ssid, automatic_displa
 
 
 class DisplayModeTests(unittest.TestCase):
+    def test_portrait_discovery_columns_persist_and_validate(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "config.toml"
+            for columns in (2, 3):
+                write_config(path, Config(portrait_discovery_columns=columns))
+                self.assertEqual(load_config(path).portrait_discovery_columns, columns)
+            write_config(path, Config(portrait_discovery_columns=4))
+            with self.assertRaises(ValueError): load_config(path)
+
+    def test_saved_theme_is_in_initial_html_before_scripts_run(self):
+        import io
+        from unittest.mock import Mock
+        from pi_bus_time_display.server import make_handler
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory)
+            state = State(Config(display_theme="roon"), path)
+            Handler = make_handler(state, path / "config.toml", path / "env", path / "mode")
+            for page in ("/admin.html", "/admin.html?test=1", "/", "/home.html"):
+                handler = Handler.__new__(Handler); handler.path = page
+                handler.wfile = io.BytesIO(); handler.is_authorised = Mock(return_value=True); handler.authorised = Mock(return_value=True)
+                handler.send_response = Mock(); handler.send_header = Mock(); handler.end_headers = Mock()
+                handler.do_GET()
+                html = handler.wfile.getvalue().decode()
+                self.assertIn('<body data-theme="roon"', html)
+                self.assertNotIn('href="/favicon.svg"', html)
+                state.config = Config(display_theme="fresh-mint")
+                handler.wfile = io.BytesIO(); handler.do_GET()
+                self.assertIn('<body data-theme="fresh-mint"', handler.wfile.getvalue().decode())
+                state.config = Config(display_theme="roon")
+
     def test_touchscreen_bridge_reaches_alpine_helper_and_rejects_remote_requests(self):
         import io
         from unittest.mock import Mock

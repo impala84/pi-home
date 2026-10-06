@@ -292,6 +292,7 @@ CSS += b"""
 .portrait .roon-subnav button { border-top: 0; border-bottom: 3px solid transparent; min-height: 32px; padding: 2px 2px; letter-spacing: .6px; font-size: 16px; }
 .portrait .browser-view .queue-scroll { margin-right: 0; }
 .portrait .daily-track { padding-left: 0; }
+.bus-footer .muted { color: #888; }
 .portrait .recommendation-heading { margin-left: 4px; }
 .portrait .stop, .portrait .stop-code { font-size: 26px; }
 .portrait .service { padding: 18px 12px; }
@@ -918,7 +919,11 @@ class Display(Gtk.Application):
     def apply(self, target, status, roon, config, system, device, image_key, image):
         if status and "display_theme" in status and config is None: self.apply_theme(status["display_theme"])
         if config is not None:
+            grid_changed = self.settings_data.get("portrait_discovery_columns", 2) != config.get("portrait_discovery_columns", 2)
             self.settings_data = config
+            if grid_changed and getattr(self, "responsive_portrait", False) and hasattr(self, "discovery_data"):
+                self.discovery_signature = None
+                self.render_discover(self.discovery_request, self.discovery_data)
             self.apply_theme(config.get("display_theme"))
             for button in self.bus_nav_buttons: button.set_visible(config.get("bus_enabled", True))
             for button in self.roon_nav_buttons: button.set_label("Now Playing")
@@ -1294,15 +1299,17 @@ class Display(Gtk.Application):
     def render_discover(self, request, data):
         if request != self.discovery_request or not self.discovery_active or self.roon_views.get_visible_child_name() != "discover": return False
         data = data or {"status": "unavailable", "message": "Discover is unavailable. Normal Roon controls are unaffected."}
-        signature = json.dumps(data, sort_keys=True)
+        portrait_grid = getattr(self, "responsive_portrait", False)
+        signature = json.dumps([data, portrait_grid, self.settings_data.get("portrait_discovery_columns", 2), getattr(self, "discovery_daily_tab", "mixes")], sort_keys=True)
         if signature == self.discovery_signature: return False
         self.discovery_signature = signature
+        self.discovery_data = data
         while child := self.discovery_list.get_first_child(): self.discovery_list.remove(child)
         self.discovery_pictures = {}
         self.discovery_cards = []
         self.discovery_card_scrollers = {}
         self.sync_discovery_sidebar()
-        self.discovery_body.set_margin_end(24 if getattr(self, "responsive_portrait", False) and self.discovery_section != "daily" else 0)
+        self.discovery_body.set_margin_end(24 if portrait_grid else 0)
         if data.get("status") != "ready":
             self.discovery_list.append(self.label("Loading…" if data.get("status") == "loading" else data.get("message", "Discover is unavailable."), "loading-notice" if data.get("status") == "loading" else "browser-message")); return False
         if self.discovery_mix:
@@ -1313,9 +1320,8 @@ class Display(Gtk.Application):
                 control = self.button(label, lambda _button, value=action: self.request_mix_action(value, controls), "artist-play" if action == "play" else "browser-back")
                 controls.append(control)
             self.discovery_list.append(controls)
-        if self.discovery_section == "daily":
+        if self.discovery_section == "daily" and not portrait_grid:
             columns, size = self.browser_grid_metrics(); size = min(212, size)
-            if getattr(self, "responsive_portrait", False): size = max(120, round((self.viewport_width - 64) / 2.35))
         else:
             columns, size = self.discovery_grid_metrics(self.discovery_section)
         content = self.discovery_list
@@ -1329,9 +1335,9 @@ class Display(Gtk.Application):
                 return
             daily = self.discovery_section == "daily"
             visible_items = ([dict(seed, _context_seed=True)] if daily and seed else []) + list(items)
-            column_spacing = 18 if daily else 36 if self.discovery_section == "releases" else 24
+            column_spacing = 24 if portrait_grid else 18 if daily else 36 if self.discovery_section == "releases" else 24
             grid = Gtk.Grid(column_spacing=column_spacing, row_spacing=18 if daily else 20); grid.set_column_homogeneous(False); grid.set_halign(Gtk.Align.START); grid.set_hexpand(True)
-            track = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=18) if daily else None
+            track = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=18) if daily and not portrait_grid else None
             section_cards = []
             if track: track.add_css_class("daily-track"); track.set_margin_end(0)
             for index, item in enumerate(visible_items):
@@ -1354,7 +1360,7 @@ class Display(Gtk.Application):
                 shell = Gtk.ScrolledWindow(); shell.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.NEVER); shell.set_propagate_natural_width(False); shell.set_propagate_natural_height(False); shell.set_min_content_width(size); shell.set_max_content_width(size); shell.set_min_content_height(card_height); shell.set_max_content_height(card_height); shell.set_size_request(size, card_height); shell.set_child(body)
                 card.set_child(shell); card.connect("clicked", lambda _button, value=item: self.open_discover("daily", value.get("id", "")) if value.get("kind") == "mix" else self.open_discovery_item(value.get("key")))
                 card.set_size_request(size + 8, card_height + 8)
-                if daily:
+                if track is not None:
                     track.append(card)
                 else: grid.attach(card, index % columns, index // columns, 1, 1)
                 if key := item.get("artwork_key"):
@@ -1362,24 +1368,30 @@ class Display(Gtk.Application):
                     self.discovery_cards.append((card, key))
                     section_cards.append(card)
                     if cached := self.queue_thumbnail_cache.get(key): picture.set_paintable(cached)
-            if daily:
+            if track is not None:
                 scroller = Gtk.ScrolledWindow(); scroller.add_css_class("daily-scroll"); scroller.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.NEVER); scroller.set_kinetic_scrolling(True); scroller.set_overlay_scrolling(True); scroller.set_propagate_natural_width(False); scroller.set_hexpand(True); scroller.set_margin_end(0); scroller.set_child(track)
                 scroller.get_hadjustment().connect("value-changed", self.load_visible_discovery_artwork)
                 for card in section_cards: self.discovery_card_scrollers[id(card)] = scroller
                 content.append(scroller)
                 if section_key: self.discovery_daily_sections.setdefault(section_key, scroller)
-            else: content.append(grid)
-        if self.discovery_section == "daily" and not self.discovery_mix and not data.get("items"):
+            else:
+                content.append(grid)
+                if section_key: self.discovery_daily_sections.setdefault(section_key, grid)
+        show_mixes = not (portrait_grid and self.discovery_section == "daily" and not self.discovery_mix and getattr(self, "discovery_daily_tab", "mixes") == "recommendations")
+        show_recommendations = not (portrait_grid and self.discovery_section == "daily" and not self.discovery_mix and getattr(self, "discovery_daily_tab", "mixes") == "mixes")
+        if show_mixes and self.discovery_section == "daily" and not self.discovery_mix and not data.get("items"):
             mixes = data.get("mixes_status", "ready")
             message = "Loading mixes…" if mixes == "loading" else data.get("mixes_message") or "No daily mixes available from Roon."
             notice = self.label(message, "browser-message"); notice.set_wrap(True); content.append(notice)
             self.discovery_daily_sections["mixes"] = notice
-        else: group(None, data.get("items", []), "mixes")
-        for recommendation in data.get("groups", []):
+        elif show_mixes: group(None, data.get("items", []), "mixes")
+        for recommendation in data.get("groups", []) if show_recommendations else []:
             seed = recommendation.get("seed") or {}
             reason = {"recent": "BECAUSE YOU LISTENED TO…", "added": "BECAUSE YOU ADDED…"}.get(recommendation.get("reason"), "INSPIRED BY…")
             group(reason, recommendation.get("items", []), "recommendations", seed if seed.get("title") else None)
         if not data.get("items") and not data.get("groups"): self.discovery_list.append(self.label("Nothing available here yet.", "browser-message"))
+        elif not show_mixes and not data.get("groups"):
+            self.discovery_list.append(self.label("Loading recommendations…" if data.get("recommendations_status") == "loading" else "No recommendations available yet.", "browser-message"))
         if self.discovery_mix and data.get("total", 0) > len(data.get("items", [])):
             content.append(self.label("Track preview · the mix buttons request the whole mix.", "browser-message"))
         GLib.timeout_add(100, self.load_visible_discovery_artwork)
@@ -1390,6 +1402,7 @@ class Display(Gtk.Application):
 
     def discovery_scrolled(self, adjustment):
         self.load_visible_discovery_artwork()
+        if getattr(self, "responsive_portrait", False): return
         if self.discovery_section != "daily" or not getattr(self, "discovery_daily_sections", None): return
         marker = self.discovery_daily_sections.get("recommendations")
         active = "recommendations" if marker and adjustment.get_value() >= max(0, marker.get_allocation().y - 30) else "mixes"
@@ -1401,11 +1414,16 @@ class Display(Gtk.Application):
         if self.discovery_section == "recent":
             return (("added", "ADDED"), ("listened", "LISTENED")), self.discovery_recent_mode
         if self.discovery_section == "daily":
-            return (("mixes", "MIXES"), ("recommendations", "FOR YOU")), "mixes"
+            return (("mixes", "MIXES"), ("recommendations", "FOR YOU")), getattr(self, "discovery_daily_tab", "mixes") if getattr(self, "responsive_portrait", False) else "mixes"
         return (), ""
 
     def select_discovery_secondary(self, value):
         if self.discovery_section == "recent": self.open_recent(value)
+        elif getattr(self, "responsive_portrait", False) and value in {"mixes", "recommendations"}:
+            self.discovery_daily_tab = value
+            self.discovery_signature = None
+            self.render_discover(self.discovery_request, getattr(self, "discovery_data", {}))
+            self.discovery_scroll.get_vadjustment().set_value(0)
         else:
             marker = getattr(self, "discovery_daily_sections", {}).get(value)
             if marker:
@@ -1597,8 +1615,10 @@ class Display(Gtk.Application):
         if getattr(self, "responsive_portrait", False):
             width = min(self.window.get_width() or width, width)
             available = max(200, width - 64)
-            gap = 36 if section == "releases" else 24
-            return 2, max(64, (available - gap) // 2 - 8)
+            columns = int(self.settings_data.get("portrait_discovery_columns", 2))
+            columns = columns if columns in {2, 3} else 2
+            gap = 24
+            return columns, max(64, (available - gap * (columns - 1)) // columns - 8)
         sidebar = section == "recent"
         available = max(300, width - (170 if sidebar else 30))
         columns = 4 if width >= 1000 else 2

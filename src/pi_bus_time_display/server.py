@@ -298,6 +298,7 @@ def write_config(path: Path, config: Config) -> None:
         f"roon_zone_name = {json.dumps(config.roon_zone_name)}",
         f"roon_display_name = {json.dumps(config.roon_display_name)}",
         f"display_theme = {json.dumps(config.display_theme)}",
+        f"portrait_discovery_columns = {config.portrait_discovery_columns}",
         f"bus_enabled = {str(config.bus_enabled).lower()}",
         f"roon_now_playing_name = {json.dumps(config.roon_now_playing_name)}",
         f"roon_queue_name = {json.dumps(config.roon_queue_name)}",
@@ -876,6 +877,7 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
                     "roon_zone_name": config.roon_zone_name,
                     "roon_display_name": config.roon_display_name,
                     "display_theme": config.display_theme,
+                    "portrait_discovery_columns": config.portrait_discovery_columns,
                     "bus_enabled": config.bus_enabled,
                     "roon_now_playing_name": config.roon_now_playing_name,
                     "roon_queue_name": config.roon_queue_name,
@@ -949,6 +951,16 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
                 if any(self.headers.get(name) for name in ("X-Forwarded-For", "Forwarded", "X-Real-IP")):
                     controls["capture_request"] = None
                 self.send_json(200, json.dumps(controls).encode())
+                return
+            path = self.path.split("?", 1)[0]
+            if path in {"/", "/index.html", "/home.html", "/admin.html"}:
+                if path == "/admin.html" and not self.authorised(): return
+                theme = "roon" if state.config.display_theme == "roon" else "fresh-mint"
+                body = (static / ("index.html" if path == "/" else path[1:])).read_text(encoding="utf-8")
+                body = body.replace("<body", f'<body data-theme="{theme}"', 1)
+                if theme == "roon": body = body.replace("/favicon.svg", "/favicon-roon.svg")
+                encoded = body.encode("utf-8")
+                self.send_response(200); self.send_header("Content-Type", "text/html; charset=utf-8"); self.send_header("Content-Length", str(len(encoded))); self.send_header("Cache-Control", "no-store"); self.end_headers(); self.wfile.write(encoded)
                 return
             super().do_GET()
 
@@ -1243,6 +1255,7 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
                     roon_zone_name=str(data.get("roon_zone_name", current.roon_zone_name)).strip(),
                     roon_display_name=str(data.get("roon_display_name", current.roon_display_name)).strip() or "Roon",
                     display_theme=str(data.get("display_theme", current.display_theme)),
+                    portrait_discovery_columns=int(data.get("portrait_discovery_columns", current.portrait_discovery_columns)),
                     bus_enabled=bool(data.get("bus_enabled", current.bus_enabled)),
                     roon_now_playing_name=str(data.get("roon_now_playing_name", current.roon_now_playing_name)).strip() or "Now Playing",
                     roon_queue_name=str(data.get("roon_queue_name", current.roon_queue_name)).strip() or "Queue",
@@ -1274,6 +1287,8 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
                     raise ValueError("Bus stop code must be five digits")
                 if candidate.display_theme not in {"fresh-mint", "roon"}:
                     raise ValueError("Choose Fresh Mint or Roon for the display style")
+                if candidate.portrait_discovery_columns not in {2, 3}:
+                    raise ValueError("Choose 2 or 3 portrait Discover columns")
                 if candidate.release_channel not in {"stable", "beta"}:
                     raise ValueError("Choose Stable or Beta for the release channel")
                 if len(candidate.roon_display_name) > 16:

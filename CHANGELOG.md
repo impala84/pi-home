@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.0-beta.45 Alpine Beta — 6 October 2026
+
+- Adds a persisted 2/3-column portrait Discover grid setting in backend Display → Appearance, shared by Recent, Daily and New Releases.
+- Portrait Daily uses separate Mixes and For You grids with vertical scrolling; landscape keeps horizontal swipe tracks.
+- Applies the saved web theme before first paint, avoiding the Mint flash on Settings, Bus Times and Home.
+- Makes bus live/update footer text a slightly darker grey.
+
 ## 1.1.0-beta.44 Alpine Beta — 6 October 2026
 
 - Adds consistent space below portrait music navigation and asymmetric breathing room around Now Playing artwork.

@@ -30,7 +30,7 @@
 
 main { grid-template-rows: auto minmax(0, 1fr); padding-bottom: 100px; }
 .bus-results { min-height: 0; display: flex; flex-direction: column; justify-content: center; gap: 12px; }
-.bus-results footer { flex-shrink: 0; }
+.bus-results footer { flex-shrink: 0; color: #888; }
 .bus-results .services { min-height: 0; max-height: calc(100% - 30px); grid-auto-rows: minmax(0, 1fr); }
 .service { border-width: 2px; }
 .settings-cog, .web-nav, body[data-theme="roon"] .settings-cog, body[data-theme="roon"] .web-nav { background: transparent; }

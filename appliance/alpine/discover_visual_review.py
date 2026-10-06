@@ -149,13 +149,30 @@ daily = {
 }
 render("daily", daily)
 capture("daily-mixes")
-for_you = display.discovery_daily_sections["recommendations"]
-vertical = display.discovery_scroll.get_vadjustment()
-vertical.set_value(max(vertical.get_lower(), min(vertical.get_upper() - vertical.get_page_size(), for_you.get_allocation().y - 42)))
-capture("daily-for-you")
-horizontal = for_you.get_hadjustment()
-horizontal.set_value(min(horizontal.get_upper() - horizontal.get_page_size(), 240))
-capture("daily-for-you-scrolled")
+if screen_height > screen_width:
+    assert "recommendations" not in display.discovery_daily_sections
+    display.select_discovery_secondary("recommendations")
+    capture("daily-for-you")
+    assert "mixes" not in display.discovery_daily_sections
+    assert isinstance(display.discovery_daily_sections["recommendations"], Gtk.Grid)
+    display.settings_data["portrait_discovery_columns"] = 3
+    display.discovery_signature = None
+    render("daily", daily)
+    capture("daily-for-you-three-columns")
+    assert display.discovery_grid_metrics("daily")[0] == 3
+    display.select_discovery_secondary("mixes")
+    capture("daily-mixes-three-columns")
+    display.settings_data["portrait_discovery_columns"] = 2
+    display.discovery_signature = None
+    render("daily", daily)
+else:
+    for_you = display.discovery_daily_sections["recommendations"]
+    vertical = display.discovery_scroll.get_vadjustment()
+    vertical.set_value(max(vertical.get_lower(), min(vertical.get_upper() - vertical.get_page_size(), for_you.get_allocation().y - 42)))
+    capture("daily-for-you")
+    horizontal = for_you.get_hadjustment()
+    horizontal.set_value(min(horizontal.get_upper() - horizontal.get_page_size(), 240))
+    capture("daily-for-you-scrolled")
 
 # Check actual allocated portrait geometry, not just requested widget sizes.
 if screen_height > screen_width:

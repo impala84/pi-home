@@ -141,6 +141,7 @@ class NativeBrowserControlsTests(unittest.TestCase):
     def test_loading_lives_in_right_content_without_replacing_sidebar(self):
         owner=SimpleNamespace(discovery_request=1,discovery_active=True,roon_views=SimpleNamespace(get_visible_child_name=lambda:"discover"),discovery_signature=None,discovery_list=LayoutWidget(),sync_discovery_sidebar=Mock(),label=lambda text,style:LayoutWidget(text=text,style=style))
         owner.discovery_body = LayoutWidget()
+        owner.settings_data = {}
         owner.window = SimpleNamespace(has_css_class=lambda _: False)
         native_method("render_discover",{"json":__import__("json")})(owner,1,{"status":"loading"})
         self.assertEqual(owner.discovery_list.children[0].properties,{"text":"Loading…","style":"loading-notice"})
@@ -179,12 +180,15 @@ class NativeBrowserControlsTests(unittest.TestCase):
         monitor = SimpleNamespace(get_geometry=lambda: SimpleNamespace(width=720))
         monitors = SimpleNamespace(get_n_items=lambda: 1, get_item=lambda _: monitor)
         gdk = SimpleNamespace(Display=SimpleNamespace(get_default=lambda: SimpleNamespace(get_monitors=lambda: monitors)))
-        owner = SimpleNamespace(responsive_portrait=True, window=SimpleNamespace(get_width=lambda: 720))
+        owner = SimpleNamespace(responsive_portrait=True, settings_data={}, window=SimpleNamespace(get_width=lambda: 720))
         self.assertEqual(native_method("browser_grid_metrics", {"Gdk": gdk})(owner)[0], 3)
         for section in ("recent", "releases"):
             columns, size = native_method("discovery_grid_metrics", {"Gdk": gdk})(owner, section)
             self.assertEqual(columns, 2)
             self.assertGreater(size, 300)
+        owner.settings_data["portrait_discovery_columns"] = 3
+        for section in ("recent", "daily", "releases"):
+            self.assertEqual(native_method("discovery_grid_metrics", {"Gdk": gdk})(owner, section), (3, 194))
         self.assertIn('self.discovery_recent_mode = "added"', SOURCE.read_text())
 
     def test_new_release_detail_uses_discover_back_rail_not_browse_search(self):
