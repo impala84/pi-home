@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.1-beta.6 — 7 October 2026
+
+- Standardises portrait outer margins and artwork column gaps at 30px; lowers the primary underline by 2px and makes playlists full-width.
+- Matches the revised Surprise composition, keeps drill-down Back at the right, and adds breathing room between artist albums.
+- Docks the portrait search keyboard below one scrollable results column, adds debounced search while typing and limits artist previews to three plus View All.
+- Outlines route numbers and enlarges portrait arrival times: two arrivals in portrait, three in landscape.
+- Adds native search, playlist and arrival-count checks. This is a source-only beta; no disk image is rebuilt.
+
 ## 1.1.1-beta.5 — 7 October 2026
 
 - Refines portrait margins, menu spacing, Browse/genre grids and the search keyboard; keeps the current navigation hierarchy.

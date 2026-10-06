@@ -36,6 +36,31 @@ class Entry:
     def set_position(self, position): self.position = position
 
 
+class PortraitRefinementTests(unittest.TestCase):
+    def test_grid_margins_and_gaps_are_thirty_pixels(self):
+        monitor = SimpleNamespace(get_geometry=lambda: SimpleNamespace(width=720))
+        monitors = SimpleNamespace(get_n_items=lambda: 1, get_item=lambda _: monitor)
+        gdk = SimpleNamespace(Display=SimpleNamespace(get_default=lambda: SimpleNamespace(get_monitors=lambda: monitors)))
+        owner = SimpleNamespace(responsive_portrait=True, settings_data={"portrait_discovery_columns": 3}, window=SimpleNamespace(get_width=lambda: 720))
+        self.assertEqual(native_method("discovery_grid_metrics", {"Gdk": gdk})(owner), (3, 200))
+        self.assertEqual(native_method("browser_grid_metrics", {"Gdk": gdk})(owner, True), (3, 200))
+
+    def test_portrait_search_stays_with_keyboard(self):
+        owner = SimpleNamespace(responsive_portrait=True, browser_search_entry=SimpleNamespace(get_text=lambda: "Oasis"), set_roon_view=Mock(), request_browser=Mock())
+        native_method("submit_browser_search")(owner)
+        owner.set_roon_view.assert_called_once_with("search")
+        owner.request_browser.assert_called_once_with("search", query="Oasis", source="all")
+
+    def test_bus_count_matches_orientation_and_route_is_stroked(self):
+        source = SOURCE.read_text()
+        self.assertIn('[:2 if portrait else 3]', source)
+        self.assertIn('context.text_path(text)', source)
+        self.assertIn('context.stroke()', source)
+
+    def test_portrait_back_spacer_expands(self):
+        source = SOURCE.read_text()
+        self.assertIn('spacer.set_hexpand(portrait)', source)
+        self.assertIn('back.set_halign(Gtk.Align.END if portrait else Gtk.Align.START)', source)
 class LayoutWidget:
     """Record widget construction without pretending to allocate a GTK screen."""
     def __init__(self, **kwargs):
