@@ -263,6 +263,10 @@ display.artwork.set_filename(str(fixture_art("now-playing", "NOW PLAYING")))
 display.adapt_display()
 display.render_bluos_inputs({"inputs": [{"id": "tv", "name": "Watch TV"}, {"id": "rega", "name": "Rega P3"}]}, True)
 capture("now-playing")
+capture_results = []
+native.post_json = lambda url, data, **kwargs: capture_results.append(data)
+display.capture_display("native-capture-check")
+assert capture_results and "image" in capture_results[-1], capture_results
 if screen_height > screen_width:
     for button in display.bluos_source_buttons.values():
         assert button.get_hexpand(), "Late-loaded source tabs must expand like existing tabs"

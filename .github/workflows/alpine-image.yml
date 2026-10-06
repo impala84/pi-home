@@ -1,11 +1,50 @@
-name: Alpine Beta
+name: Alpine verification
 on:
   push:
     # Keep the old branch as a one-release bridge for beta.14 and older devices.
     branches: [alpine-beta, alpine-appliance-prototype]
   workflow_dispatch:
+    inputs:
+      build_image:
+        description: Build a downloadable image for a stable release or explicit image test
+        type: boolean
+        default: false
 jobs:
+  verify:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Verify backend, update safety and controller
+        run: |
+          python -m pip install .
+          PYTHONPATH=src python -m unittest discover -s tests -v
+          npm --prefix roon-controller ci --omit=dev --no-audit --no-fund
+          npm --prefix roon-controller test
+      - name: Verify native layouts without building a disk image
+        run: |
+          mkdir -p dist/beta-review
+          docker run --rm -v "$PWD:/opt/pi-home:ro" -v "$PWD/dist/beta-review:/screenshots" -w /opt/pi-home alpine:3.24.2 sh -ec '
+            apk add --no-cache python3 py3-gobject3 py3-cairo gtk4.0 font-inter dbus adwaita-icon-theme librsvg xvfb-run imagemagick
+            for dimensions in 720x1280 480x800 1200x1920 1280x720; do
+              width=${dimensions%x*}; height=${dimensions#*x}
+              GDK_BACKEND=x11 GSK_RENDERER=cairo PI_HOME_SCREEN_WIDTH=$width PI_HOME_SCREEN_HEIGHT=$height PI_HOME_SCREENSHOT_DIR=/screenshots/$dimensions dbus-run-session xvfb-run -a -s "-screen 0 ${dimensions}x24" python3 appliance/alpine/discover_visual_review.py
+            done'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: beta-native-review
+          path: dist/beta-review/
+          retention-days: 14
   image:
+    if: github.event_name == 'workflow_dispatch' && inputs.build_image
+    needs: verify
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 30
     permissions:

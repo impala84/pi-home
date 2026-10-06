@@ -330,6 +330,14 @@ CSS += b"""
 .theme-roon .loading-dots { color: #817aeb; }
 .portrait.large-portrait .roon-page { padding-left: 38px; padding-top: 24px; }
 .portrait.large-portrait .discover-toolbar .roon-subnav button { font-size: 24px; min-height: 52px; }
+.portrait .discover-toolbar .roon-subnav button { min-height: 30px; padding-bottom: 1px; }
+.portrait .browser-view { padding-left: 0; padding-right: 0; }
+.portrait .browser-main { padding-left: 0; }
+.portrait .browser-cover-grid { padding: 0 0 18px; }
+.portrait.large-portrait .browser-cover-grid { padding-left: 0; }
+.portrait .browser-search-panel { padding: 14px 0; }
+.portrait .artist-profile { padding: 8px 0 24px; }
+.portrait .recommendation-album { color: #fff; font-size: 18px; }
 .portrait.large-portrait .browser-filter { font-size: 24px; min-height: 52px; }
 .portrait.large-portrait .browser-cover-grid { padding-left: 12px; }
 .portrait.large-portrait .nav button { font-size: 26px; min-height: 72px; }
@@ -575,12 +583,12 @@ class Display(Gtk.Application):
                 child.set_hexpand(portrait); child = child.get_next_sibling()
         exploring = self.discovery_active and self.roon_views.get_visible_child_name() in {"discover", "browse", "search"}
         self.discover_toolbar.set_visible(portrait)
-        self.discover_toolbar.set_margin_end(38 if portrait and width >= 1000 else 24)
+        self.discover_toolbar.set_margin_end(0)
         self.music_header_overlay.set_visible(not portrait)
         self.portrait_music_tabs.set_visible(False)
         self.portrait_music_tabs.set_margin_end(24 if portrait else 0)
         self.portrait_music_tabs.set_margin_bottom((16 if width < 600 else 24) if portrait else 0)
-        self.browser_body.set_margin_end(18 if portrait else 0)
+        self.browser_body.set_margin_end(0)
         self.browser_scrubber.set_size_request(52 if portrait else 74, -1)
         self.browser_scrubber.set_margin_end(0 if portrait else 18)
         self.browser_search_columns.set_orientation(Gtk.Orientation.VERTICAL if portrait and width < 700 else Gtk.Orientation.HORIZONTAL)
@@ -660,7 +668,7 @@ class Display(Gtk.Application):
         header_overlay.add_overlay(self.discover_subnav); self.discover_subnav.set_visible(False); self.browser_tab.set_visible(False)
         self.portrait_music_tabs = Gtk.Box(orientation=Gtk.Orientation.VERTICAL); self.portrait_music_tabs.set_visible(False); page.append(self.portrait_music_tabs)
         self.discover_toolbar = Gtk.Box(spacing=12); self.discover_toolbar.add_css_class("discover-toolbar")
-        self.discover_toolbar.set_margin_end(24); self.discover_toolbar.set_margin_bottom(18)
+        self.discover_toolbar.set_margin_end(0); self.discover_toolbar.set_margin_bottom(14)
         settings = self.icon_button("emblem-system-symbolic", lambda *_: self.open_settings(), "discover-utility")
         settings.set_child(self.discover_utility_icon())
         settings.set_tooltip_text("Settings"); self.discover_toolbar.append(settings)
@@ -1411,7 +1419,8 @@ class Display(Gtk.Application):
         self.discovery_cards = []
         self.discovery_card_scrollers = {}
         self.sync_discovery_sidebar()
-        self.discovery_body.set_margin_end(24 if portrait_grid else 0)
+        self.discovery_body.set_margin_end(0)
+        self.discovery_list.set_margin_top(5 if portrait_grid and self.discovery_section == "releases" else 0)
         if data.get("status") != "ready":
             self.discovery_list.append(self.loading_notice() if data.get("status") == "loading" else self.label(data.get("message", "Discover is unavailable."), "browser-message")); return False
         if self.discovery_mix:
@@ -1436,7 +1445,11 @@ class Display(Gtk.Application):
                 for item in items: content.append(self.discovery_track_row(item))
                 return
             daily = self.discovery_section == "daily"
-            visible_items = ([dict(seed, _context_seed=True)] if daily and seed else []) + list(items)
+            if daily and seed and portrait_grid:
+                context = self.label(seed.get("title", "").upper(), "recommendation-album")
+                context.set_wrap(True); context.set_halign(Gtk.Align.FILL)
+                context.set_margin_bottom(14); content.append(context)
+            visible_items = ([dict(seed, _context_seed=True)] if daily and seed and not portrait_grid else []) + list(items)
             column_spacing = 24 if portrait_grid else 18 if daily else 36 if self.discovery_section == "releases" else 24
             grid = Gtk.Grid(column_spacing=column_spacing, row_spacing=18 if daily else 20); grid.set_column_homogeneous(False); grid.set_halign(Gtk.Align.START); grid.set_hexpand(True); grid.set_valign(Gtk.Align.START); grid.set_vexpand(False)
             track = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=18) if daily and not portrait_grid else None
@@ -1639,7 +1652,17 @@ class Display(Gtk.Application):
         panel.set_visible(bool(profile))
         self.browser_artist_scroll.set_visible(bool(profile))
         if not profile: return
-        panel.set_size_request(260, -1)
+        portrait = getattr(self, "responsive_portrait", False)
+        panel.set_size_request(-1 if portrait else 260, -1)
+        if portrait:
+            panel.set_orientation(Gtk.Orientation.HORIZONTAL)
+            panel.set_spacing(28)
+            self.browser_artist_scroll.set_propagate_natural_height(True)
+            self.browser_artist_scroll.set_min_content_height(240)
+        else:
+            panel.set_orientation(Gtk.Orientation.VERTICAL)
+            self.browser_artist_scroll.set_propagate_natural_height(False)
+            self.browser_artist_scroll.set_min_content_height(1)
         picture = Gtk.Picture(); picture.set_can_shrink(True); picture.set_content_fit(Gtk.ContentFit.COVER)
         self.set_browser_placeholder(picture, artist=True)
         square = Gtk.AspectFrame(xalign=.5, yalign=.5, ratio=1, obey_child=False); square.set_size_request(200, 200); square.set_halign(Gtk.Align.CENTER); square.set_child(picture); panel.append(square)
@@ -1649,10 +1672,14 @@ class Display(Gtk.Application):
             cached = self.queue_thumbnail_cache.get(key)
             if cached: picture.set_paintable(cached)
         name = profile.get("name", "")
-        title = self.label(name, "artist-name", .5); title.set_wrap(True); title.set_max_width_chars(20); panel.append(title)
+        details = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        details.set_valign(Gtk.Align.CENTER)
+        details.set_hexpand(True)
+        panel.append(details)
+        title = self.label(name, "artist-name", 0 if portrait else .5); title.set_wrap(True); title.set_max_width_chars(20); details.append(title)
         if play_action:
             play = self.button("▶  Play Artist", lambda *_: self.open_browser_item(None, play_action.get("item_key")), "artist-play")
-            play.set_halign(Gtk.Align.CENTER); panel.append(play)
+            play.set_halign(Gtk.Align.START if portrait else Gtk.Align.CENTER); details.append(play)
 
     def request_browser(self, action, **payload):
         if action == "search":
@@ -1705,7 +1732,9 @@ class Display(Gtk.Application):
             width = min(self.window.get_width() or width, width)
             # Includes outer margins, the alphabet rail, queue-list padding
             # and each button's CSS padding; none may depend on image size.
-            return 3, max(48, round(width * (.20 if width < 600 else .233)))
+            available = width - 48 - (0 if genres else 64)
+            gap = round(width * .025)
+            return 3, max(48, (available - gap * 2) // 3)
         available = max(140, width - 266)
         columns = min(5 if genres else 4, max(1, available // 140))
         size = max(64, min(212, (available - 16 * (columns - 1)) // columns - 12))
@@ -1858,8 +1887,12 @@ class Display(Gtk.Application):
 
     def browser_svg_icon(self, name, size=54):
         path = Path(__file__).resolve().parents[1] / "roon-controller/static/icons" / (name + "-symbolic.svg")
-        icon = Gtk.Image.new_from_gicon(Gio.FileIcon.new(Gio.File.new_for_path(str(path))))
-        icon.set_pixel_size(size); icon.add_css_class("browser-tile-icon")
+        # Symbolic icon loading treats SVG strokes as filled masks. Render the
+        # original vector as a picture so the keyline artwork stays outlined.
+        icon = Gtk.Picture.new_for_filename(str(path))
+        icon.set_can_shrink(True); icon.set_size_request(size, size)
+        icon.set_halign(Gtk.Align.CENTER); icon.set_valign(Gtk.Align.CENTER)
+        icon.add_css_class("browser-tile-icon")
         return icon
 
     def browser_menu_card(self, item, compact=False):
@@ -1935,6 +1968,8 @@ class Display(Gtk.Application):
             heading = self.label("ARTIST ALBUMS", "browser-section"); heading.add_css_class("artist-albums-heading"); self.browser_list.append(heading)
             items = [item for item in items if item is not artist_play]
         self.browser_list.set_valign(Gtk.Align.START if data.get("layout") == "list" else Gtk.Align.FILL)
+        browser_content = self.browser_artist_scroll.get_parent()
+        browser_content.set_orientation(Gtk.Orientation.VERTICAL if data.get("artist_profile") and getattr(self, "responsive_portrait", False) else Gtk.Orientation.HORIZONTAL)
         if not items:
             self.browser_list.append(self.label("Roon Browse is unavailable." if data.get("status") == "unavailable" else "Nothing is available here.", "queue-empty", .5))
         layout = data.get("layout") or "list"
@@ -1948,9 +1983,12 @@ class Display(Gtk.Application):
             picture = Gtk.Picture(); picture.set_can_shrink(True); picture.set_content_fit(Gtk.ContentFit.COVER)
             square = Gtk.ScrolledWindow(); square.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.NEVER); square.set_propagate_natural_width(False); square.set_propagate_natural_height(False); square.set_min_content_width(size); square.set_max_content_width(size); square.set_min_content_height(size); square.set_max_content_height(size); square.set_size_request(size, size); square.set_halign(Gtk.Align.CENTER); square.set_child(picture)
             stage = Gtk.Box(orientation=Gtk.Orientation.VERTICAL if portrait else Gtk.Orientation.HORIZONTAL, spacing=18 if portrait else 40); stage.set_halign(Gtk.Align.CENTER); stage.set_valign(Gtk.Align.CENTER)
-            for caption, icon, action in (("Surprise Me", "view-refresh-symbolic", "surprise"), ("Play Now", "media-playback-start-symbolic", "surprise_play")):
+            play_controls = None
+            for caption, icon, action in (("Surprise Again" if portrait else "Surprise Me", "view-refresh-symbolic", "surprise"), ("Play Now", "media-playback-start-symbolic", "surprise_play")):
                 controls = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10); controls.set_size_request(120, -1); controls.set_valign(Gtk.Align.CENTER); controls.set_halign(Gtk.Align.CENTER)
-                button = self.icon_button(icon, lambda _button, value=action: self.request_browser(value), "surprise-action"); button.set_tooltip_text(caption); button.set_halign(Gtk.Align.CENTER); controls.append(button); controls.append(self.label(caption, "surprise-caption", .5)); stage.append(controls)
+                button = self.icon_button(icon, lambda _button, value=action: self.request_browser(value), "surprise-action"); button.set_tooltip_text(caption); button.set_halign(Gtk.Align.CENTER); controls.append(button); controls.append(self.label(caption, "surprise-caption", .5))
+                if portrait and action == "surprise_play": play_controls = controls
+                else: stage.append(controls)
                 if action == "surprise": stage.append(square)
             preview.append(stage)
             key = album.get("image_key"); self.browser_artwork_keys.append(key)
@@ -1961,6 +1999,8 @@ class Display(Gtk.Application):
             else: square.set_child(self.browser_svg_icon("music"))
             title = self.label(album.get("title") or "Untitled", "surprise-title", .5); title.set_wrap(True); title.set_lines(2); title.set_max_width_chars(40); title.set_ellipsize(Pango.EllipsizeMode.END); title.set_justify(Gtk.Justification.CENTER); preview.append(title)
             artist = self.label(album.get("subtitle") or "", "surprise-artist", .5); artist.set_ellipsize(Pango.EllipsizeMode.END); artist.set_max_width_chars(40); preview.append(artist)
+            if play_controls:
+                play_controls.set_margin_top(12); preview.append(play_controls)
             self.browser_list.append(preview)
         elif items and layout in {"home", "menu"}:
             grid = Gtk.Grid(column_spacing=12, row_spacing=12); grid.add_css_class("browser-home-grid"); grid.set_column_homogeneous(True); grid.set_row_homogeneous(True); columns = 4
@@ -1970,8 +2010,8 @@ class Display(Gtk.Application):
             portrait = getattr(self, "responsive_portrait", False)
             grid = Gtk.Grid(column_spacing=24 if portrait else 16, row_spacing=18 if portrait else 24); grid.add_css_class("browser-cover-grid"); grid.set_column_homogeneous(True); grid.set_halign(Gtk.Align.FILL); grid.set_hexpand(True); columns = 5 if layout == "tiles" and active_section == "genres" else 4
             if portrait:
-                grid.set_column_spacing(round(self.viewport_width * .044))
-                grid.set_row_spacing(round(self.viewport_width * .019))
+                grid.set_column_spacing(round(self.viewport_width * .025))
+                grid.set_row_spacing(round(self.viewport_width * .025))
                 grid.set_halign(Gtk.Align.START); grid.set_hexpand(False)
             columns, self.browser_tile_size = self.browser_grid_metrics(layout == "tiles" and active_section == "genres")
             tile_kind = active_section if layout == "tiles" else None
