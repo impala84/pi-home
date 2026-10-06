@@ -1,0 +1,20 @@
+'use strict';
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const source = fs.readFileSync(require('node:path').join(__dirname, 'server.js'), 'utf8');
+const start = source.indexOf('function mergeZones(');
+const end = source.indexOf('\nfunction ensureDetails', start);
+test('closing a zone subscription without data does not crash the controller', () => {
+  let updates = 0;
+  const context = vm.createContext({zones: new Map(), ensureQueueSubscription() {}, ensureDetails() {}, broadcast() { updates++; }});
+  vm.runInContext(source.slice(start, end), context);
+  for (const data of [undefined, null]) context.mergeZones('Unsubscribed', data);
+  assert.equal(updates, 0);
+  context.mergeZones('Subscribed', {zones: [{zone_id: 'one'}]});
+  assert.equal(context.zones.size, 1);
+  context.mergeZones('Changed', {zones_removed: ['one']});
+  assert.equal(context.zones.size, 0);
+  assert.equal(updates, 2);
+});
