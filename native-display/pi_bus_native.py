@@ -163,6 +163,7 @@ CSS += b"""
 .compact-landscape .bus-page .service.compact .arrival, .compact-landscape .bus-page .service.compact .service-no { font-size: 59px; }
 .compact-landscape .bus-page .service.dense .arrival, .compact-landscape .bus-page .service.dense .service-no { font-size: 36px; }
 .compact-landscape .bus-page .service.compact, .compact-landscape .bus-page .service.dense { padding-top: 3px; padding-bottom: 3px; }
+.display-landscape.high-resolution .bus-page .service.dense .arrival, .display-landscape.high-resolution .bus-page .service.dense .service-no { font-size: 64px; }
 .surprise-title { font-size: 30px; font-weight: 750; }.surprise-artist { font-size: 23px; color: #b6c0bc; }.surprise-caption { font-size: 17px; color: #b6c0bc; }
 .touch-landscape .surprise-title { font-size: 34px; }.touch-landscape .surprise-artist { font-size: 25px; }
 .artist-profile { padding: 12px 22px 8px 12px; }.artist-name { font-size: 27px; font-weight: 750; }.artist-bio { color: #b6c0bc; font-size: 17px; }.artist-source { color: #78837f; font-size: 11px; }
