@@ -160,6 +160,9 @@ CSS += b"""
 .bus-page .service.compact .arrival, .bus-page .service.compact .service-no { font-size: 76px; }
 .touch-landscape .bus-page .service.compact .arrival, .touch-landscape .bus-page .service.compact .service-no { font-size: 99px; }
 .bus-page .header-title { transform: none; }
+.compact-landscape .bus-page .service.compact .arrival, .compact-landscape .bus-page .service.compact .service-no { font-size: 59px; }
+.compact-landscape .bus-page .service.dense .arrival, .compact-landscape .bus-page .service.dense .service-no { font-size: 36px; }
+.compact-landscape .bus-page .service.compact, .compact-landscape .bus-page .service.dense { padding-top: 3px; padding-bottom: 3px; }
 .surprise-title { font-size: 30px; font-weight: 750; }.surprise-artist { font-size: 23px; color: #b6c0bc; }.surprise-caption { font-size: 17px; color: #b6c0bc; }
 .touch-landscape .surprise-title { font-size: 34px; }.touch-landscape .surprise-artist { font-size: 25px; }
 .artist-profile { padding: 12px 22px 8px 12px; }.artist-name { font-size: 27px; font-weight: 750; }.artist-bio { color: #b6c0bc; font-size: 17px; }.artist-source { color: #78837f; font-size: 11px; }
@@ -467,7 +470,7 @@ class Display(Gtk.Application):
         previous = getattr(self, "responsive_portrait", None)
         self.responsive_portrait = portrait
         self.viewport_width, self.viewport_height = width, height
-        for css_class, enabled in (("portrait", portrait), ("display-landscape", not portrait), ("compact-portrait", portrait and width < 600), ("high-resolution", max(width, height) >= 1200), ("touch-landscape", width >= 1200 and not portrait)):
+        for css_class, enabled in (("portrait", portrait), ("display-landscape", not portrait), ("compact-portrait", portrait and width < 600), ("compact-landscape", not portrait and height < 600), ("high-resolution", max(width, height) >= 1200), ("touch-landscape", width >= 1200 and not portrait)):
             (self.window.add_css_class if enabled else self.window.remove_css_class)(css_class)
         self.now_playing_content.set_orientation(Gtk.Orientation.VERTICAL if portrait else Gtk.Orientation.HORIZONTAL)
         self.now_playing_content.set_spacing(24 if portrait else 26)
@@ -1119,7 +1122,7 @@ class Display(Gtk.Application):
         while child := self.services.get_first_child(): self.services.remove(child)
         visible = data.get("services", [])[:4]
         portrait = self.window.has_css_class("portrait")
-        self.services.set_spacing(24 if portrait else 14)
+        self.services.set_spacing(24 if portrait else 10 if self.window.has_css_class("compact-landscape") else 14)
         self.services.set_valign(Gtk.Align.START if portrait else Gtk.Align.FILL)
         self.services.set_vexpand(not portrait)
         self.bus_content.set_valign(Gtk.Align.START if portrait else Gtk.Align.FILL)
