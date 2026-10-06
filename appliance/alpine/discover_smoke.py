@@ -98,7 +98,14 @@ display.set_mode = lambda _mode: None
 display.open_discover("surprise")
 assert requests == ["surprise"]
 assert not display.browser_sidebar.get_visible()
-assert display.browser_list.get_first_child().get_text() == "Loading…"
+loading = display.browser_list.get_first_child()
+assert isinstance(loading, Gtk.Box)
+assert loading.get_last_child().get_text() == "Loading…"
+dot = loading.get_first_child().get_first_child()
+for _ in range(3):
+    assert dot.has_css_class("loading-dots")
+    dot = dot.get_next_sibling()
+assert dot is None
 display.root_overlay = Gtk.Overlay(); display.root_overlay.set_child(Gtk.Box())
 display.device_status = display.label("")
 display.confirm_reboot()
