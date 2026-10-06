@@ -464,7 +464,7 @@ class Display(Gtk.Application):
     def icon_button(self, icon, callback, css=""):
         widget = Gtk.Button()
         if css:
-            widget.add_css_class(css)
+            for name in css.split(): widget.add_css_class(name)
         image = Gtk.Image.new_from_icon_name(icon); image.set_pixel_size(34); widget.set_child(image)
         widget.connect("clicked", callback)
         return widget
@@ -586,13 +586,14 @@ class Display(Gtk.Application):
             tabs.set_halign(Gtk.Align.FILL if portrait else Gtk.Align.CENTER)
             # Equal cells multiply the longest label's minimum width by five.
             # Share the spare space instead, keeping every full label readable.
-            tabs.set_homogeneous(False); tabs.set_spacing(8)
+            tabs.set_homogeneous(False); tabs.set_spacing(6 if portrait and width < 600 else 8)
             child = tabs.get_first_child()
             while child:
                 child.set_hexpand(portrait); child = child.get_next_sibling()
         exploring = self.discovery_active and self.roon_views.get_visible_child_name() in {"discover", "browse", "search"}
         self.discover_toolbar.set_visible(portrait)
         self.discover_toolbar.set_margin_end(0)
+        self.discover_toolbar.set_spacing(8 if portrait and width < 600 else 12)
         self.music_header_overlay.set_visible(not portrait)
         self.portrait_music_tabs.set_visible(False)
         self.portrait_music_tabs.set_margin_end(24 if portrait else 0)

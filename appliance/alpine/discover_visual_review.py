@@ -203,7 +203,8 @@ def browse_fixture(section, labels):
         for picture in pictures: picture.set_filename(str(fixture_art(key, "LOADED COVER")))
     settle()
     if window.get_width() != screen_width:
-        for name in ("music_header_overlay", "discover_subnav", "browser_body", "browser_sidebar", "browser_scroll", "browser_scrubber", "browser_list"):
+        print("Page width diagnostic:", tuple(page.measure(Gtk.Orientation.HORIZONTAL, -1)), flush=True)
+        for name in ("music_header_overlay", "discover_toolbar", "discover_toolbar_tabs", "discover_subnav", "roon_views", "browser_body", "browser_sidebar", "browser_scroll", "browser_scrubber", "browser_list"):
             widget = getattr(display, name)
             print("Width diagnostic:", name, widget.get_width(), tuple(widget.measure(Gtk.Orientation.HORIZONTAL, -1)), flush=True)
         capture("browse-overflow")
