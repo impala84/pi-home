@@ -433,7 +433,7 @@ class Display(Gtk.Application):
     def label(self, text="", css=None, x=0):
         widget = Gtk.Label(label=text, xalign=x)
         if css:
-            widget.add_css_class(css)
+            for name in css.split(): widget.add_css_class(name)
         return widget
 
     def button(self, text, callback, css="utility"):
@@ -632,10 +632,14 @@ class Display(Gtk.Application):
         self.portrait_music_tabs = Gtk.Box(orientation=Gtk.Orientation.VERTICAL); self.portrait_music_tabs.set_visible(False); page.append(self.portrait_music_tabs)
         self.discover_toolbar = Gtk.Box(spacing=12); self.discover_toolbar.add_css_class("discover-toolbar")
         self.discover_toolbar.set_margin_end(24); self.discover_toolbar.set_margin_bottom(18)
-        self.discover_toolbar.append(self.icon_button("emblem-system-symbolic", lambda *_: self.open_settings(), "discover-utility"))
+        settings = self.icon_button("emblem-system-symbolic", lambda *_: self.open_settings(), "discover-utility")
+        settings_icon = self.browser_svg_icon("settings", 34); settings_icon.remove_css_class("browser-tile-icon"); settings.set_child(settings_icon)
+        settings.set_tooltip_text("Settings"); self.discover_toolbar.append(settings)
         self.discover_toolbar_tabs = Gtk.Box(); self.discover_toolbar_tabs.set_hexpand(True)
         self.discover_toolbar.append(self.discover_toolbar_tabs)
-        self.discover_toolbar.append(self.icon_button("preferences-system-time-symbolic", lambda *_: self.sleep(), "discover-utility discover-sleep"))
+        sleep = self.icon_button("preferences-system-time-symbolic", lambda *_: self.sleep(), "discover-utility discover-sleep")
+        sleep_icon = self.browser_svg_icon("clock", 30); sleep_icon.remove_css_class("browser-tile-icon"); sleep.set_child(sleep_icon)
+        sleep.set_tooltip_text("Sleep"); self.discover_toolbar.append(sleep)
         self.discover_toolbar.set_visible(False); page.append(self.discover_toolbar)
         self.roon_views = Gtk.Stack(transition_type=Gtk.StackTransitionType.NONE, transition_duration=0); self.roon_views.set_vexpand(True)
         self.roon_views.set_hhomogeneous(False); self.roon_views.set_vhomogeneous(False)
@@ -1554,12 +1558,13 @@ class Display(Gtk.Application):
         child = controls.get_first_child()
         while child:
             child.set_sensitive(False); child = child.get_next_sibling()
-        message = self.loading_notice(); self.discovery_list.append(message)
+        message = self.label("", "browser-message"); loading = self.loading_notice(); self.discovery_list.append(loading)
         def load():
             result = post_json(ROON + "/api/discovery/mix-action", {"id": mix, "action": action, "nonce": str(uuid.uuid4())}, timeout=25.0)
             GLib.idle_add(finish, result)
         def finish(result):
             if request != self.discovery_request or not self.discovery_active: return False
+            self.discovery_list.remove(loading); self.discovery_list.append(message)
             message.set_text(f"{'Play requested for' if action == 'play' else 'Queued'} {result.get('count', 0)} mix selections." if result and result.get("accepted") else (result or {}).get("error") or "Roon did not confirm the request. Check its queue before trying again.")
             child = controls.get_first_child()
             while child:
@@ -1583,6 +1588,7 @@ class Display(Gtk.Application):
     def apply_discovery_item(self, request, data):
         if request != self.discovery_request or not self.discovery_active: return False
         if not data or data.get("error"):
+            while child := self.discovery_list.get_first_child(): self.discovery_list.remove(child)
             self.discovery_list.append(self.label((data or {}).get("error") or "This item could not be opened. Try again from Discover.", "browser-message")); return False
         self.discovery_opening = False
         self.set_roon_view("browse"); self.render_browser(data)
