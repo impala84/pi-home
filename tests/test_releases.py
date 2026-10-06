@@ -102,6 +102,7 @@ class ReleaseTests(unittest.TestCase):
         self.assertNotIn('checkout -B main origin/main', script)
         self.assertLess(script.index('if [[ -z ${release_tag} ]]'), script.index('stash push'))
         self.assertIn('|| -z ${PI_HOME_UPDATE_TARGET:-}', script)
+        self.assertIn('${PI_HOME_UPDATE_TARGET:-} == *-alpine', script)
 
 
 if __name__ == '__main__': unittest.main()

@@ -60,7 +60,7 @@ if [[ ${PI_HOME_UPDATE_REEXECUTED:-0} != 1 || -z ${PI_HOME_UPDATE_TARGET:-} ]]; 
   fi
   export PI_HOME_UPDATE_TARGET="${release_tag}"
 fi
-if [[ ! ${PI_HOME_UPDATE_TARGET:-} =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]; then
+if [[ ${PI_HOME_UPDATE_TARGET:-} == *-alpine || ! ${PI_HOME_UPDATE_TARGET:-} =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]; then
   echo "Invalid published release target."
   exit 1
 fi
