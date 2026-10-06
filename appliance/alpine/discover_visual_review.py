@@ -280,7 +280,7 @@ if screen_height > screen_width:
     results_bounds = display.search_results_scroll.compute_bounds(page)[1]
     entry_bounds = display.browser_search_entry.compute_bounds(page)[1]
     assert results_bounds.get_y() + results_bounds.get_height() <= entry_bounds.get_y()
-    assert entry_bounds.get_y() > screen_height * .4
+    assert entry_bounds.get_y() > screen_height * (.25 if screen_width < 600 else .4)
     assert window.get_width() == screen_width and window.get_height() == screen_height
     display.set_roon_view("browse")
     assert display.browser_list.get_ancestor(Gtk.ScrolledWindow) is display.browser_scroll

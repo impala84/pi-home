@@ -348,6 +348,8 @@ CSS += b"""
 .portrait .discovery-card { padding: 0; }
 .portrait .recommendation-heading { margin-left: 0; margin-right: 0; }
 .portrait .browser-section, .portrait .browser-row, .portrait .browser-filter { padding-left: 0; padding-right: 0; }
+.portrait.compact-portrait .browser-key { min-width: 0; min-height: 32px; padding: 4px; font-size: 14px; }
+.portrait.compact-portrait .browser-search-entry { min-width: 0; min-height: 44px; font-size: 20px; }
 .portrait.large-portrait .browser-filter { font-size: 24px; min-height: 52px; }
 .portrait.large-portrait .browser-cover-grid { padding-left: 0; }
 .portrait.large-portrait .nav button { font-size: 26px; min-height: 72px; }
@@ -774,6 +776,7 @@ class Display(Gtk.Application):
         search_submit = self.button("SEARCH", self.submit_browser_search, "browser-key"); search_submit.add_css_class("browser-search-submit"); keyboard_actions.append(search_submit); search_panel.append(keyboard_actions); self.roon_views.add_named(search_panel, "search")
         detail_panel = Gtk.Box(spacing=24); detail_panel.add_css_class("detail-panel"); detail_panel.set_hexpand(True); detail_panel.set_vexpand(True); self.detail_panel = detail_panel
         self.browser_search_entry.connect("changed", self.schedule_browser_search)
+        self.browser_search_entry.set_width_chars(1)
         self.detail_artwork = Gtk.Picture(); self.detail_artwork.add_css_class("detail-artwork"); self.detail_artwork.set_size_request(420, 420); self.detail_artwork.set_content_fit(Gtk.ContentFit.COVER); self.detail_artwork.set_valign(Gtk.Align.CENTER)
         detail_artwork_button = Gtk.Button(); detail_artwork_button.add_css_class("detail-artwork-button"); detail_artwork_button.set_halign(Gtk.Align.CENTER); detail_artwork_button.set_valign(Gtk.Align.CENTER); detail_artwork_button.set_child(self.detail_artwork); detail_artwork_button.connect("clicked", lambda *_: self.set_roon_view("now")); detail_panel.append(detail_artwork_button)
         detail_copy = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6); detail_copy.set_hexpand(True); detail_copy.set_vexpand(True); detail_copy.set_valign(Gtk.Align.FILL)
