@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.1-beta.2 — 6 October 2026
+
+- Applies the sketch-aligned portrait header consistently across Now Playing, Queue, sources and Discover: Settings, contextual menu and Sleep clock on one row.
+- Makes the analogue clock show the live local time, redrawing only when the minute changes.
+- Corrects the displayed application version and release-availability comparison. Adds automated checks keeping displayed, Python and controller versions in sync.
+
 ## 1.1.1-beta.1 — 6 October 2026
 
 - Matches the portrait Discover sketch: Settings and Sleep icons flank the primary tabs on one row; subsections remain directly below, with larger three-column Browse artwork and a compact alphabet rail.

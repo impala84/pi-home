@@ -489,7 +489,9 @@ class Display(Gtk.Application):
             cr.set_source_rgb(*colour); cr.set_line_width(2); cr.set_line_join(1); cr.set_line_cap(1)
             if clock:
                 cr.arc(0, 0, 12.5, 0, math.tau); cr.stroke()
-                cr.move_to(0, -8); cr.line_to(0, 0); cr.line_to(6, 4); cr.stroke()
+                current = datetime.now(TZ)
+                for angle, length in ((math.tau * current.minute / 60 - math.pi / 2, 9), (math.tau * ((current.hour % 12) + current.minute / 60) / 12 - math.pi / 2, 6)):
+                    cr.move_to(0, 0); cr.line_to(math.cos(angle) * length, math.sin(angle) * length); cr.stroke()
             else:
                 for point in range(32):
                     angle = math.tau * point / 32
@@ -499,7 +501,9 @@ class Display(Gtk.Application):
                     else: cr.move_to(x, y)
                 cr.close_path(); cr.stroke(); cr.arc(0, 0, 5, 0, math.tau); cr.stroke()
             cr.restore()
-        icon.set_draw_func(draw); return icon
+        icon.set_draw_func(draw)
+        if clock: self.music_clock_icon = icon
+        return icon
 
     def do_activate(self):
         provider = Gtk.CssProvider(); provider.load_from_data(CSS)
@@ -560,7 +564,7 @@ class Display(Gtk.Application):
         # Portrait tabs are a real second row, not an overlay on the clock.
         for tabs in (self.roon_subnav, self.discover_subnav):
             parent = tabs.get_parent()
-            target = self.discover_toolbar_tabs if portrait and tabs is self.discover_subnav else (self.portrait_music_tabs if portrait else self.music_header_overlay)
+            target = self.discover_toolbar_tabs if portrait else self.music_header_overlay
             if parent is not target:
                 if parent is self.music_header_overlay: parent.remove_overlay(tabs)
                 else: parent.remove(tabs)
@@ -574,10 +578,10 @@ class Display(Gtk.Application):
             while child:
                 child.set_hexpand(portrait); child = child.get_next_sibling()
         exploring = self.discovery_active and self.roon_views.get_visible_child_name() in {"discover", "browse", "search"}
-        self.discover_toolbar.set_visible(portrait and exploring)
+        self.discover_toolbar.set_visible(portrait)
         self.discover_toolbar.set_margin_end(38 if portrait and width >= 1000 else 24)
-        self.music_header_overlay.set_visible(not (portrait and exploring))
-        self.portrait_music_tabs.set_visible(portrait and not exploring)
+        self.music_header_overlay.set_visible(not portrait)
+        self.portrait_music_tabs.set_visible(False)
         self.portrait_music_tabs.set_margin_end(24 if portrait else 0)
         self.portrait_music_tabs.set_margin_bottom((16 if width < 600 else 24) if portrait else 0)
         self.browser_body.set_margin_end(18 if portrait else 0)
@@ -589,7 +593,7 @@ class Display(Gtk.Application):
         self.detail_panel.set_orientation(Gtk.Orientation.VERTICAL if portrait else Gtk.Orientation.HORIZONTAL)
         # Ask GTK how much height the actual text and controls need. Long
         # titles must shrink the artwork instead of expanding the window.
-        reserved = max(560, 120 + sum(widget.measure(Gtk.Orientation.VERTICAL, max(1, width - 64))[0] for widget in (self.music_header_overlay, self.portrait_music_tabs, self.now_playing_centre, self.music_navigation))) if portrait else 0
+        reserved = max(560, 120 + sum(widget.measure(Gtk.Orientation.VERTICAL, max(1, width - 64))[0] for widget in (self.discover_toolbar, self.now_playing_centre, self.music_navigation))) if portrait else 0
         artwork_size = round(min(width - 64, max(160, height - reserved)) * .8) if portrait else (324 if width >= 1200 else min(280, max(220, height - 190)))
         self.artwork.set_size_request(artwork_size, artwork_size); self.artwork_button.set_size_request(artwork_size, artwork_size)
         if portrait:
@@ -924,7 +928,11 @@ class Display(Gtk.Application):
     def tick(self):
         current = datetime.now(TZ)
         now = current.strftime("%H:%M") if current.year >= 2024 else "--:--"
-        self.bus_clock.set_text(now); self.roon_clock.set_text(now); self.home_clock.set_text(now); self.sleep_clock.set_text(now); return True
+        self.bus_clock.set_text(now); self.roon_clock.set_text(now); self.home_clock.set_text(now); self.sleep_clock.set_text(now)
+        if now != getattr(self, "last_clock_time", None):
+            self.last_clock_time = now
+            if icon := getattr(self, "music_clock_icon", None): icon.queue_draw()
+        return True
 
     def log_renderer(self):
         renderer = self.window.get_renderer()
@@ -1307,9 +1315,9 @@ class Display(Gtk.Application):
         self.roon_subnav.set_visible(not exploring); self.discover_subnav.set_visible(exploring)
         self.browser_tab.set_visible(False)
         portrait = getattr(self, "responsive_portrait", False)
-        self.discover_toolbar.set_visible(portrait and exploring)
-        self.music_header_overlay.set_visible(not (portrait and exploring))
-        self.portrait_music_tabs.set_visible(portrait and not exploring)
+        self.discover_toolbar.set_visible(portrait)
+        self.music_header_overlay.set_visible(not portrait)
+        self.portrait_music_tabs.set_visible(False)
 
     def set_roon_view(self, name):
         if name in {"now", "queue", "browse", "source", "discover"}: self.requested_audio_view = name

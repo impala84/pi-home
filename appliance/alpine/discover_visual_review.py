@@ -268,9 +268,10 @@ footer_bounds = page.get_last_child().compute_bounds(page)[1]
 assert footer_bounds.get_y() + footer_bounds.get_height() <= screen_height - 4
 if screen_height > screen_width:
     assert display.artwork.get_width() == display.artwork.get_height()
-    assert display.portrait_music_tabs.get_margin_bottom() >= 16
+    assert display.discover_toolbar.get_visible()
+    assert not display.music_header_overlay.get_visible()
     artwork_bounds = display.artwork_button.compute_bounds(page)[1]
-    menu_bounds = display.portrait_music_tabs.compute_bounds(page)[1]
+    menu_bounds = display.discover_toolbar.compute_bounds(page)[1]
     metadata_bounds = display.now_playing_centre.compute_bounds(page)[1]
     above = artwork_bounds.get_y() - menu_bounds.get_y() - menu_bounds.get_height()
     below = metadata_bounds.get_y() - artwork_bounds.get_y() - artwork_bounds.get_height()
