@@ -1604,7 +1604,11 @@ class Display(Gtk.Application):
             # and each button's CSS padding; none may depend on image size.
             available = max(180, width - 184)
             return 3, max(48, (available - 32) // 3 - 12)
-        available = max(140, width - 266)
+        # GTK/theme versions give the rails different minimum widths. Reserve
+        # their measured size plus page, grid and list padding, not a fixed
+        # rail estimate that can force an 800px viewport wider than its panel.
+        rails = sum(widget.measure(Gtk.Orientation.HORIZONTAL, -1)[0] for widget in (self.browser_sidebar, self.browser_discovery_sidebar, self.browser_scrubber) if widget.get_visible())
+        available = max(140, width - rails - 74)
         columns = min(5 if genres else 4, max(1, available // 140))
         size = max(64, min(212, (available - 16 * (columns - 1)) // columns - 12))
         return columns, size
