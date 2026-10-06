@@ -490,7 +490,12 @@ class Display(Gtk.Application):
                 if portrait: target.append(tabs)
                 else: target.add_overlay(tabs)
             tabs.set_halign(Gtk.Align.FILL if portrait else Gtk.Align.CENTER)
-            tabs.set_homogeneous(portrait); tabs.set_spacing(0 if portrait else 8)
+            # Equal cells multiply the longest label's minimum width by five.
+            # Share the spare space instead, keeping every full label readable.
+            tabs.set_homogeneous(False); tabs.set_spacing(0 if portrait else 8)
+            child = tabs.get_first_child()
+            while child:
+                child.set_hexpand(portrait); child = child.get_next_sibling()
         self.portrait_music_tabs.set_visible(portrait)
         self.portrait_music_tabs.set_margin_end(24 if portrait else 0)
         self.browser_body.set_margin_end(24 if portrait else 0)
@@ -1570,7 +1575,7 @@ class Display(Gtk.Application):
             width = min(self.window.get_width() or width, width)
             # Includes outer margins, the alphabet rail, queue-list padding
             # and each button's CSS padding; none may depend on image size.
-            available = max(180, width - 168)
+            available = max(180, width - 184)
             return 3, max(48, (available - 32) // 3 - 12)
         available = max(140, width - 266)
         columns = min(5 if genres else 4, max(1, available // 140))
