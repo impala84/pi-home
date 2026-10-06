@@ -208,9 +208,28 @@ def browse_fixture(section, labels):
     assert clock.get_x() + clock.get_width() <= screen_width
     scrub = display.browser_scrubber.compute_bounds(page)[1]
     assert scrub.get_x() >= 0 and scrub.get_x() + scrub.get_width() <= screen_width - 4
+    if screen_height > screen_width:
+        assert display.discover_toolbar.get_visible()
+        assert not display.music_header_overlay.get_visible()
+        toolbar = display.discover_toolbar.compute_bounds(page)[1]
+        subsection = display.browser_sidebar.compute_bounds(page)[1]
+        assert toolbar.get_y() + toolbar.get_height() <= subsection.get_y()
+        child = display.discover_toolbar.get_first_child()
+        previous_right = 0
+        while child:
+            bounds = child.compute_bounds(page)[1]
+            assert bounds.get_x() >= previous_right
+            previous_right = bounds.get_x() + bounds.get_width()
+            child = child.get_next_sibling()
+        assert previous_right <= screen_width - 4
 browse_fixture("albums", False)
 settle()
 capture("browse")
+while child := display.browser_list.get_first_child(): display.browser_list.remove(child)
+display.browser_list.append(display.loading_notice())
+capture("browse-loading")
+browse_fixture("albums", False)
+settle()
 if screen_height > screen_width:
     assert display.browser_sidebar.get_height() < 100
     assert display.browser_scroll.get_height() > screen_height * .6

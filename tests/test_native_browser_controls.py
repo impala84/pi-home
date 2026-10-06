@@ -52,6 +52,32 @@ LAYOUT_GTK = SimpleNamespace(Box=LayoutWidget, Picture=LayoutWidget, ScrolledWin
 
 
 class NativeBrowserControlsTests(unittest.TestCase):
+    def test_loading_animation_stops_when_unmapped_and_restarts_once(self):
+        callbacks = {}; removed = []
+        glib = SimpleNamespace(timeout_add=lambda delay, fn: callbacks.setdefault("pulse", (delay, fn)) and 7, source_remove=removed.append)
+        owner = SimpleNamespace(label=lambda *args: LayoutWidget())
+        panel = native_method("loading_notice", {"Gtk": LAYOUT_GTK, "GLib": glib, "time": __import__("time"), "math": __import__("math")})(owner)
+        panel.properties["map"](); panel.properties["map"]()
+        self.assertEqual(callbacks["pulse"][0], 80)
+        self.assertTrue(callbacks["pulse"][1]())
+        for dot in panel.children[0].children:
+            self.assertTrue(.25 <= dot.properties["opacity"][0] <= 1)
+        panel.properties["unmap"](); panel.properties["unmap"]()
+        self.assertEqual(removed, [7])
+        panel.properties["map"](); panel.properties["unmap"]()
+        self.assertEqual(removed, [7, 7])
+
+    def test_portrait_discover_uses_one_toolbar_not_zone_and_clock_row(self):
+        owner = SimpleNamespace(responsive_portrait=True, discovery_active=True, roon_views=SimpleNamespace(get_visible_child_name=lambda: "browse"), roon_subnav=Mock(), discover_subnav=Mock(), browser_tab=Mock(), discover_toolbar=Mock(), music_header_overlay=Mock(), portrait_music_tabs=Mock())
+        native_method("sync_music_navigation")(owner)
+        owner.discover_toolbar.set_visible.assert_called_with(True)
+        owner.music_header_overlay.set_visible.assert_called_with(False)
+        owner.portrait_music_tabs.set_visible.assert_called_with(False)
+        owner.discovery_active = False
+        native_method("sync_music_navigation")(owner, "now")
+        owner.discover_toolbar.set_visible.assert_called_with(False)
+        owner.music_header_overlay.set_visible.assert_called_with(True)
+
     def test_now_playing_library_control_is_a_bundled_heart_and_remains_visible_for_an_album(self):
         code = SOURCE.read_text(encoding="utf-8")
         self.assertIn('self.library_add = self.button("", self.add_current_album)', code)
@@ -143,6 +169,7 @@ class NativeBrowserControlsTests(unittest.TestCase):
         owner.discovery_body = LayoutWidget()
         owner.settings_data = {}
         owner.window = SimpleNamespace(has_css_class=lambda _: False)
+        owner.loading_notice = lambda: LayoutWidget(text="Loading…", style="loading-notice")
         native_method("render_discover",{"json":__import__("json")})(owner,1,{"status":"loading"})
         self.assertEqual(owner.discovery_list.children[0].properties,{"text":"Loading…","style":"loading-notice"})
         owner.sync_discovery_sidebar.assert_called_once()
@@ -290,6 +317,7 @@ class NativeBrowserControlsTests(unittest.TestCase):
         for active, view in ((True,'discover'),(True,'browse'),(True,'search'),(False,'now'),(False,'queue')):
             music, discover, browse = Mock(), Mock(), Mock()
             owner = SimpleNamespace(discovery_active=active,roon_views=SimpleNamespace(get_visible_child_name=lambda:view),roon_subnav=music,discover_subnav=discover,browser_tab=browse)
+            owner.discover_toolbar = Mock(); owner.music_header_overlay = Mock(); owner.portrait_music_tabs = Mock()
             for _ in range(3): sync(owner)
             music.set_visible.assert_called_with(not active)
             discover.set_visible.assert_called_with(active)
@@ -332,6 +360,7 @@ class NativeBrowserControlsTests(unittest.TestCase):
         message = Mock(); posts = Mock(return_value={"accepted":True,"count":22})
         callbacks = []
         owner = SimpleNamespace(discovery_request=4,discovery_mix="aabb",discovery_active=True,label=Mock(return_value=message),discovery_list=Mock())
+        owner.loading_notice = Mock(return_value=message)
         class Thread:
             def __init__(self,target,daemon): self.target=target
             def start(self): self.target()

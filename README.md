@@ -1,5 +1,7 @@
 # Pi Home
 
+The next testing release is **1.1.1-beta.1**: sketch-aligned portrait Discover navigation and lightweight animated loading. Select Beta in System → Software to receive it; Stable remains on 1.1.0.
+
 Pi Home is an independent Raspberry Pi touchscreen interface for Roon, with optional Singapore bus arrivals and Home Assistant controls. It runs a native GTK4 display in Cage/Wayland, alongside a phone/desktop web interface. Chromium is not required.
 
 The Raspberry Pi OS stable baseline remains **v1.0.0**. **Pi Home 1.1.0 Alpine** is the first separately published Alpine release (`v1.1.0-alpine`), with first-run setup, optional Roon Bridge/Netdata installation, shared display settings and responsive GTK layouts. Existing Alpine devices retain their verified updater, while Raspberry Pi OS devices stay on their own distribution. Native discovery uses bounded artwork cards and configurable two/three-column portrait grids; Diagnostics captures the live GTK touchscreen, including artwork. Automated release checks do not replace testing on the physical display.

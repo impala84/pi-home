@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 import base64
 import subprocess
 import os
@@ -310,6 +311,23 @@ CSS += b"""
 .portrait .home-state { font-size: 14px; }
 .portrait.compact-portrait .roon-subnav button { font-size: 12px; min-height: 32px; letter-spacing: .4px; }
 .portrait.compact-portrait .browser-filter { font-size: 12px; min-height: 40px; padding: 4px 6px; }
+.portrait .discover-toolbar { padding: 4px 0 0; }
+.discover-utility { background: transparent; border: 0; padding: 0; min-width: 36px; min-height: 42px; color: #817aeb; }
+.discover-sleep { color: #888; }
+.portrait .discover-toolbar .roon-subnav button { font-weight: 500; letter-spacing: 0; padding: 4px 0; min-height: 38px; }
+.portrait .discover-toolbar .roon-subnav button.active { color: #fff; }
+.portrait .browser-sidebar { padding: 0 0 14px; }
+.portrait .browser-filter { font-weight: 500; font-size: 16px; padding: 4px 6px; min-height: 38px; }
+.portrait .browser-cover-card { min-height: 0; padding: 0; }
+.portrait .browser-cover-art { min-width: 0; min-height: 0; }
+.portrait .browser-cover-grid { padding: 0 8px 12px; }
+.portrait .queue-list { padding: 0; }
+.portrait .nav button { font-weight: 500; }
+.portrait.compact-portrait .discover-toolbar .roon-subnav button { font-size: 11px; }
+.portrait.compact-portrait .browser-filter { font-size: 12px; }
+.loading-notice { font-size: 19px; color: #aaa; }
+.loading-dots { color: #6ed9ae; font-size: 34px; }
+.theme-roon .loading-dots { color: #817aeb; }
 """
 
 
@@ -429,6 +447,30 @@ class Display(Gtk.Application):
         widget.connect("clicked", callback)
         return widget
 
+    def loading_notice(self):
+        """Animate only while mapped; remove the timer when this view leaves."""
+        panel = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        panel.set_halign(Gtk.Align.CENTER); panel.set_valign(Gtk.Align.CENTER)
+        panel.set_hexpand(True); panel.set_vexpand(True)
+        panel.set_margin_top(48); panel.set_margin_bottom(48)
+        dots = Gtk.Box(spacing=12); dots.set_halign(Gtk.Align.CENTER)
+        labels = [self.label("●", "loading-dots") for _ in range(3)]
+        for label in labels: dots.append(label)
+        panel.append(dots); panel.append(self.label("Loading…", "loading-notice", .5))
+        timer = [None]; started = [0.0]
+        def pulse():
+            elapsed = time.monotonic() - started[0]
+            for index, label in enumerate(labels):
+                label.set_opacity(.25 + .75 * (1 + math.sin(elapsed * 5 - index * 1.1)) / 2)
+            return True
+        def start(*_):
+            if timer[0] is None:
+                started[0] = time.monotonic(); pulse(); timer[0] = GLib.timeout_add(80, pulse)
+        def stop(*_):
+            if timer[0] is not None: GLib.source_remove(timer[0]); timer[0] = None
+        panel.connect("map", start); panel.connect("unmap", stop)
+        return panel
+
     def do_activate(self):
         provider = Gtk.CssProvider(); provider.load_from_data(CSS)
         Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
@@ -486,7 +528,7 @@ class Display(Gtk.Application):
         # Portrait tabs are a real second row, not an overlay on the clock.
         for tabs in (self.roon_subnav, self.discover_subnav):
             parent = tabs.get_parent()
-            target = self.portrait_music_tabs if portrait else self.music_header_overlay
+            target = self.discover_toolbar_tabs if portrait and tabs is self.discover_subnav else (self.portrait_music_tabs if portrait else self.music_header_overlay)
             if parent is not target:
                 if parent is self.music_header_overlay: parent.remove_overlay(tabs)
                 else: parent.remove(tabs)
@@ -499,10 +541,15 @@ class Display(Gtk.Application):
             child = tabs.get_first_child()
             while child:
                 child.set_hexpand(portrait); child = child.get_next_sibling()
-        self.portrait_music_tabs.set_visible(portrait)
+        exploring = self.discovery_active and self.roon_views.get_visible_child_name() in {"discover", "browse", "search"}
+        self.discover_toolbar.set_visible(portrait and exploring)
+        self.music_header_overlay.set_visible(not (portrait and exploring))
+        self.portrait_music_tabs.set_visible(portrait and not exploring)
         self.portrait_music_tabs.set_margin_end(24 if portrait else 0)
         self.portrait_music_tabs.set_margin_bottom((16 if width < 600 else 24) if portrait else 0)
-        self.browser_body.set_margin_end(24 if portrait else 0)
+        self.browser_body.set_margin_end(18 if portrait else 0)
+        self.browser_scrubber.set_size_request(52 if portrait else 74, -1)
+        self.browser_scrubber.set_margin_end(0 if portrait else 18)
         self.browser_search_columns.set_orientation(Gtk.Orientation.VERTICAL if portrait and width < 700 else Gtk.Orientation.HORIZONTAL)
         self.discovery_body.set_orientation(Gtk.Orientation.VERTICAL if portrait else Gtk.Orientation.HORIZONTAL)
         self.discovery_sidebar.set_orientation(Gtk.Orientation.HORIZONTAL if portrait else Gtk.Orientation.VERTICAL)
@@ -579,6 +626,13 @@ class Display(Gtk.Application):
             self.discover_tabs[section] = button; self.discover_subnav.append(button)
         header_overlay.add_overlay(self.discover_subnav); self.discover_subnav.set_visible(False); self.browser_tab.set_visible(False)
         self.portrait_music_tabs = Gtk.Box(orientation=Gtk.Orientation.VERTICAL); self.portrait_music_tabs.set_visible(False); page.append(self.portrait_music_tabs)
+        self.discover_toolbar = Gtk.Box(spacing=12); self.discover_toolbar.add_css_class("discover-toolbar")
+        self.discover_toolbar.set_margin_end(24); self.discover_toolbar.set_margin_bottom(18)
+        self.discover_toolbar.append(self.icon_button("emblem-system-symbolic", lambda *_: self.open_settings(), "discover-utility"))
+        self.discover_toolbar_tabs = Gtk.Box(); self.discover_toolbar_tabs.set_hexpand(True)
+        self.discover_toolbar.append(self.discover_toolbar_tabs)
+        self.discover_toolbar.append(self.icon_button("preferences-system-time-symbolic", lambda *_: self.sleep(), "discover-utility discover-sleep"))
+        self.discover_toolbar.set_visible(False); page.append(self.discover_toolbar)
         self.roon_views = Gtk.Stack(transition_type=Gtk.StackTransitionType.NONE, transition_duration=0); self.roon_views.set_vexpand(True)
         self.roon_views.set_hhomogeneous(False); self.roon_views.set_vhomogeneous(False)
         self.discovery_list = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18)
@@ -1215,6 +1269,10 @@ class Display(Gtk.Application):
         exploring = self.discovery_active and name in {"discover", "browse", "search"}
         self.roon_subnav.set_visible(not exploring); self.discover_subnav.set_visible(exploring)
         self.browser_tab.set_visible(False)
+        portrait = getattr(self, "responsive_portrait", False)
+        self.discover_toolbar.set_visible(portrait and exploring)
+        self.music_header_overlay.set_visible(not (portrait and exploring))
+        self.portrait_music_tabs.set_visible(portrait and not exploring)
 
     def set_roon_view(self, name):
         if name in {"now", "queue", "browse", "source", "discover"}: self.requested_audio_view = name
@@ -1268,13 +1326,13 @@ class Display(Gtk.Application):
             self.browser_scroll.set_visible(True); self.browser_message.set_visible(False)
             while child := self.browser_list.get_first_child(): self.browser_list.remove(child)
             self.browser_list.set_orientation(Gtk.Orientation.VERTICAL)
-            self.browser_list.append(self.label("Loading…", "loading-notice"))
+            self.browser_list.append(self.loading_notice())
             self.request_browser("surprise")
         else:
             self.sync_discovery_sidebar()
             while child := self.discovery_list.get_first_child(): self.discovery_list.remove(child)
             self.discovery_pictures = {}; self.discovery_cards = []
-            self.discovery_list.append(self.label("Loading…", "loading-notice"))
+            self.discovery_list.append(self.loading_notice())
             self.discovery_scroll.get_vadjustment().set_value(0)
             self.request_discovery()
 
@@ -1312,7 +1370,7 @@ class Display(Gtk.Application):
         self.sync_discovery_sidebar()
         self.discovery_body.set_margin_end(24 if portrait_grid else 0)
         if data.get("status") != "ready":
-            self.discovery_list.append(self.label("Loading…" if data.get("status") == "loading" else data.get("message", "Discover is unavailable."), "loading-notice" if data.get("status") == "loading" else "browser-message")); return False
+            self.discovery_list.append(self.loading_notice() if data.get("status") == "loading" else self.label(data.get("message", "Discover is unavailable."), "browser-message")); return False
         if self.discovery_mix:
             title = self.label((data.get("mix") or {}).get("title", "Your Daily Mix"), "queue-title")
             self.discovery_list.append(title)
@@ -1492,7 +1550,7 @@ class Display(Gtk.Application):
         child = controls.get_first_child()
         while child:
             child.set_sensitive(False); child = child.get_next_sibling()
-        message = self.label("Loading…", "loading-notice"); self.discovery_list.append(message)
+        message = self.loading_notice(); self.discovery_list.append(message)
         def load():
             result = post_json(ROON + "/api/discovery/mix-action", {"id": mix, "action": action, "nonce": str(uuid.uuid4())}, timeout=25.0)
             GLib.idle_add(finish, result)
@@ -1512,7 +1570,7 @@ class Display(Gtk.Application):
         request = self.discovery_request = self.discovery_request + 1
         self.discovery_signature = None
         while child := self.discovery_list.get_first_child(): self.discovery_list.remove(child)
-        self.discovery_list.append(self.label("Loading…", "loading-notice"))
+        self.discovery_list.append(self.loading_notice())
         def load():
             result = post_json(ROON + "/api/discovery/open", {"session": "touch", "key": key}, timeout=20.0)
             GLib.idle_add(self.apply_discovery_item, request, result)
@@ -1556,7 +1614,7 @@ class Display(Gtk.Application):
             self.browser_search_columns.set_visible(False); self.browser_scroll.set_visible(True)
             while child := self.browser_list.get_first_child(): self.browser_list.remove(child)
             self.browser_list.set_orientation(Gtk.Orientation.VERTICAL)
-            self.browser_list.append(self.label("Loading…", "loading-notice"))
+            self.browser_list.append(self.loading_notice())
             self.browser_artist_scroll.set_visible(False); self.browser_scrubber.set_visible(False)
             self.browser_search_button.add_css_class("active")
             for button in self.browser_section_buttons.values(): button.remove_css_class("active")
@@ -1602,8 +1660,8 @@ class Display(Gtk.Application):
             width = min(self.window.get_width() or width, width)
             # Includes outer margins, the alphabet rail, queue-list padding
             # and each button's CSS padding; none may depend on image size.
-            available = max(180, width - 184)
-            return 3, max(48, (available - 32) // 3 - 12)
+            available = max(180, width - 128)
+            return 3, max(48, (available - 48) // 3)
         available = max(140, width - 266)
         columns = min(5 if genres else 4, max(1, available // 140))
         size = max(64, min(212, (available - 16 * (columns - 1)) // columns - 12))
@@ -1865,7 +1923,8 @@ class Display(Gtk.Application):
             for index, item in enumerate(item for item in items if item.get("hint") != "header"): grid.attach(self.browser_menu_card(item, layout == "menu"), index % columns, index // columns, 1, 1)
             self.browser_list.append(grid)
         elif items and layout in {"covers", "tiles"}:
-            grid = Gtk.Grid(column_spacing=16, row_spacing=24); grid.add_css_class("browser-cover-grid"); grid.set_column_homogeneous(True); grid.set_halign(Gtk.Align.FILL); grid.set_hexpand(True); columns = 5 if layout == "tiles" and active_section == "genres" else 4
+            portrait = getattr(self, "responsive_portrait", False)
+            grid = Gtk.Grid(column_spacing=24 if portrait else 16, row_spacing=18 if portrait else 24); grid.add_css_class("browser-cover-grid"); grid.set_column_homogeneous(True); grid.set_halign(Gtk.Align.FILL); grid.set_hexpand(True); columns = 5 if layout == "tiles" and active_section == "genres" else 4
             columns, self.browser_tile_size = self.browser_grid_metrics(layout == "tiles" and active_section == "genres")
             tile_kind = active_section if layout == "tiles" else None
             for index, item in enumerate(item for item in items if item.get("hint") != "header"):
