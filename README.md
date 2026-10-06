@@ -1,6 +1,8 @@
 # Pi Home
 
-The next testing release is **1.1.1-beta.3**: consistent portrait music navigation, a live analogue clock, accurate release labels and lightweight animated loading. Select Beta in System → Software to receive it; Stable remains on 1.1.0.
+The next testing release is **1.1.1-beta.4**: refined portrait spacing, artist browsing, genre outlines and recommendation context. Select Beta in System → Software to receive it; Stable remains on 1.1.0.
+
+Beta updates are source-only releases: automated backend, controller, update-safety and native layout checks still run, but no downloadable disk image is built. For stable releases or explicit fresh-install testing, run the Alpine verification workflow on the release branch with **build_image** enabled, verify the image, then attach it to the release. The existing Alpine updater continues to require a successful verification run for the exact release commit.
 
 Pi Home is an independent Raspberry Pi touchscreen interface for Roon, with optional Singapore bus arrivals and Home Assistant controls. It runs a native GTK4 display in Cage/Wayland, alongside a phone/desktop web interface. Chromium is not required.
 

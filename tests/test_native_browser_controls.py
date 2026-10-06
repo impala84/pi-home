@@ -253,7 +253,7 @@ class NativeBrowserControlsTests(unittest.TestCase):
             self.assertGreater(size, 300)
         owner.settings_data["portrait_discovery_columns"] = 3
         for section in ("recent", "daily", "releases"):
-            self.assertEqual(native_method("discovery_grid_metrics", {"Gdk": gdk})(owner, section), (3, 194))
+            self.assertEqual(native_method("discovery_grid_metrics", {"Gdk": gdk})(owner, section), (3, 200))
         self.assertIn('self.discovery_recent_mode = "added"', SOURCE.read_text())
 
     def test_new_release_detail_uses_discover_back_rail_not_browse_search(self):
@@ -500,11 +500,13 @@ class NativeBrowserControlsTests(unittest.TestCase):
         snapshot = SimpleNamespace(to_node=lambda:node)
         paintable = SimpleNamespace(snapshot=Mock())
         gtk = SimpleNamespace(WidgetPaintable=SimpleNamespace(new=Mock(return_value=paintable)),Snapshot=Mock(return_value=snapshot))
-        window = SimpleNamespace(get_width=lambda:800,get_height=lambda:480,get_renderer=lambda:SimpleNamespace(render_texture=Mock(return_value=texture)))
+        page = object()
+        window = SimpleNamespace(get_child=lambda:page,get_width=lambda:800,get_height=lambda:480,get_renderer=lambda:SimpleNamespace(render_texture=Mock(return_value=texture)))
         posted = Mock()
         method = native_method('capture_display', {'Gtk':gtk,'base64':base64,'BUS':'http://127.0.0.1:8765','post_json':posted})
         result = method(SimpleNamespace(window=window), 'ticket')
         paintable.snapshot.assert_called_once_with(snapshot, 800.0, 480.0)
+        gtk.WidgetPaintable.new.assert_called_once_with(page)
         self.assertEqual(base64.b64decode(posted.call_args.args[1]['image']), image)
         self.assertEqual(posted.call_args.args[1]['id'], 'ticket')
         self.assertFalse(result)
@@ -513,7 +515,7 @@ class NativeBrowserControlsTests(unittest.TestCase):
         gtk = SimpleNamespace(WidgetPaintable=SimpleNamespace(new=Mock(side_effect=RuntimeError())))
         posted = Mock()
         method = native_method('capture_display', {'Gtk':gtk,'base64':base64,'BUS':'http://127.0.0.1:8765','post_json':posted})
-        method(SimpleNamespace(window=SimpleNamespace(get_width=lambda:800,get_height=lambda:480)), 'ticket')
+        method(SimpleNamespace(window=SimpleNamespace(get_child=lambda:object(),get_width=lambda:800,get_height=lambda:480)), 'ticket')
         self.assertIn('could not be rendered', posted.call_args.args[1]['error'])
         self.assertNotIn('image', posted.call_args.args[1])
 

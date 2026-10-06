@@ -994,7 +994,13 @@ class Display(Gtk.Application):
             width, height = self.window.get_width(), self.window.get_height()
             if width <= 0 or height <= 0:
                 raise ValueError("Display has no drawable size")
-            paintable = Gtk.WidgetPaintable.new(self.window)
+            # Snapshot the visible client page, not the native window surface.
+            # A fullscreen Wayland window can expose only its black backing
+            # surface to WidgetPaintable while the child contains the live UI.
+            target = self.window.get_child()
+            if target is None:
+                raise ValueError("Display has no visible page")
+            paintable = Gtk.WidgetPaintable.new(target)
             snapshot = Gtk.Snapshot()
             paintable.snapshot(snapshot, float(width), float(height))
             node = snapshot.to_node()
@@ -1892,7 +1898,7 @@ class Display(Gtk.Application):
         path = Path(__file__).resolve().parents[1] / "roon-controller/static/icons" / (name + "-symbolic.svg")
         # Symbolic icon loading treats SVG strokes as filled masks. Render the
         # original vector as a picture so the keyline artwork stays outlined.
-        colour = "#817aeb" if self.settings_data.get("theme") == "roon" else "#6ed9ae"
+        colour = "#817aeb" if self.settings_data.get("display_theme") == "roon" else "#6ed9ae"
         svg = path.read_bytes().replace(b"#2e3436", colour.encode("ascii"))
         texture = Gdk.Texture.new_from_bytes(GLib.Bytes.new(svg))
         icon = Gtk.Picture.new_for_paintable(texture)

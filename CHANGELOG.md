@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.1-beta.4 — 7 October 2026
+
+- Refines portrait margins, menu spacing, Browse/genre grids and the search keyboard; keeps the current navigation hierarchy.
+- Moves artist information beside its image with albums below, reorders Surprise Again/artwork/metadata/Play Now, and replaces portrait recommendation seed artwork with a text heading.
+- Preserves genre SVG keyline detail instead of loading outlines as solid symbolic masks. Removes the duplicate diagnostics divider.
+- Adds real GTK capture coverage and useful capture-failure logging.
+- Beta commits run backend, controller, update-safety and native layout checks without creating a disk image. Full image construction is an explicit workflow option for stable releases or image testing; existing updater verification remains compatible.
+
 ## 1.1.1-beta.3 — 6 October 2026
 
 - Fixes portrait source-menu labels touching when amplifier inputs arrive after the screen layout. Source buttons now use the same expanding slots as existing tabs, with a consistent minimum gap.
