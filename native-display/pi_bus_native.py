@@ -243,7 +243,8 @@ CSS += b"""
 .portrait .page { padding: 22px 24px 16px; }
 .portrait .roon-page { padding-right: 0; }
 .portrait .roon-header, .portrait .roon-page .nav, .portrait .now-playing-content, .portrait .queue-scroll, .portrait .source-view { margin-right: 24px; }
-.portrait .now-playing-content { margin: 8px 24px 8px 0; }
+.portrait .now-playing-content { margin: 32px 24px 8px 0; }
+.portrait.compact-portrait .now-playing-content { margin-top: 24px; }
 .portrait .browser-view { padding-right: 0; }
 .portrait .artwork { min-width: 0; min-height: 0; }
 .portrait .roon-title { font-size: 40px; }
@@ -468,7 +469,7 @@ class Display(Gtk.Application):
         for css_class, enabled in (("portrait", portrait), ("display-landscape", not portrait), ("compact-portrait", portrait and width < 600), ("high-resolution", max(width, height) >= 1200), ("touch-landscape", width >= 1200 and not portrait)):
             (self.window.add_css_class if enabled else self.window.remove_css_class)(css_class)
         self.now_playing_content.set_orientation(Gtk.Orientation.VERTICAL if portrait else Gtk.Orientation.HORIZONTAL)
-        self.now_playing_content.set_spacing(18 if portrait else 26)
+        self.now_playing_content.set_spacing(24 if portrait else 26)
         self.now_playing_centre.set_valign(Gtk.Align.START if portrait else Gtk.Align.CENTER)
         self.zone.set_valign(Gtk.Align.START if portrait else Gtk.Align.CENTER)
         self.zone.set_margin_top(8 if portrait else 0)
@@ -499,6 +500,7 @@ class Display(Gtk.Application):
                 child.set_hexpand(portrait); child = child.get_next_sibling()
         self.portrait_music_tabs.set_visible(portrait)
         self.portrait_music_tabs.set_margin_end(24 if portrait else 0)
+        self.portrait_music_tabs.set_margin_bottom((16 if width < 600 else 24) if portrait else 0)
         self.browser_body.set_margin_end(24 if portrait else 0)
         self.browser_search_columns.set_orientation(Gtk.Orientation.VERTICAL if portrait and width < 700 else Gtk.Orientation.HORIZONTAL)
         self.discovery_body.set_orientation(Gtk.Orientation.VERTICAL if portrait else Gtk.Orientation.HORIZONTAL)
@@ -555,8 +557,9 @@ class Display(Gtk.Application):
         self.bus_clock = self.label("--:--", "clock", 1); self.stop = self.label("Connecting…", "stop"); self.stop_code = self.label("", "stop-code")
         stop_heading = Gtk.Box(spacing=14); stop_heading.append(self.stop); stop_heading.append(self.stop_code); page.append(self.header(stop_heading, self.bus_clock))
         self.services = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14); self.services.set_vexpand(True)
-        self.bus_scroll = Gtk.ScrolledWindow(); self.bus_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.NEVER); self.bus_scroll.set_propagate_natural_height(False); self.bus_scroll.set_propagate_natural_width(False); self.bus_scroll.set_min_content_height(1); self.bus_scroll.set_size_request(-1, 1); self.bus_scroll.set_vexpand(True); self.bus_scroll.set_child(self.services); page.append(self.bus_scroll)
-        footer = Gtk.Box(); footer.add_css_class("bus-footer"); self.bus_status = self.label("Starting", "muted"); self.updated = self.label("", "muted", 1); self.updated.set_hexpand(True); footer.append(self.bus_status); footer.append(self.updated); page.append(footer)
+        self.bus_content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8); self.bus_content.append(self.services)
+        self.bus_scroll = Gtk.ScrolledWindow(); self.bus_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.NEVER); self.bus_scroll.set_propagate_natural_height(False); self.bus_scroll.set_propagate_natural_width(False); self.bus_scroll.set_min_content_height(1); self.bus_scroll.set_size_request(-1, 1); self.bus_scroll.set_vexpand(True); self.bus_scroll.set_child(self.bus_content); page.append(self.bus_scroll)
+        footer = Gtk.Box(); footer.add_css_class("bus-footer"); self.bus_status = self.label("Starting", "muted"); self.updated = self.label("", "muted", 1); self.updated.set_hexpand(True); footer.append(self.bus_status); footer.append(self.updated); self.bus_content.append(footer)
         page.append(self.navigation("bus")); return page
 
     def build_roon(self):
@@ -1112,6 +1115,8 @@ class Display(Gtk.Application):
         portrait = self.window.has_css_class("portrait")
         self.services.set_spacing(24 if portrait else 14)
         self.services.set_valign(Gtk.Align.START if portrait else Gtk.Align.FILL)
+        self.services.set_vexpand(not portrait)
+        self.bus_content.set_valign(Gtk.Align.START if portrait else Gtk.Align.FILL)
         self.services.set_margin_top(16 if portrait else 0)
         for index, service in enumerate(visible):
             row = Gtk.Box(spacing=12); row.add_css_class("service"); row.add_css_class("service-" + (service.get("colour") or {"40": "blue", "42": "green", "401": "violet"}.get(str(service.get("service")), "amber"))); row.set_vexpand(True)

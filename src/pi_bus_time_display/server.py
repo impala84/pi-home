@@ -482,7 +482,7 @@ def command_output(command: list[str]) -> str:
         return ""
 
 
-def diagnostics_snapshot() -> dict:
+def diagnostics_snapshot(config: Config | None = None) -> dict:
     memory: dict[str, int] = {}
     try:
         for line in Path("/proc/meminfo").read_text(encoding="ascii").splitlines():
@@ -533,6 +533,17 @@ def diagnostics_snapshot() -> dict:
         groups[group]["active"] = service_state(service) == "running" or groups[group]["active"]
     if not alpine:
         groups["bridge"]["active"] = service_state("RoonBridge.service") == "running" or groups["bridge"]["active"]
+    visible = set(groups)
+    if config is not None:
+        if not config.roon_zone_name.strip():
+            visible.discard("controller")
+        if not config.bus_enabled:
+            groups["api"]["label"] = "Pi Home backend"
+        # Optional tools are shown when running, or enabled at boot so failures
+        # remain diagnosable. A deliberately stopped endpoint is not an idle row.
+        bridge_enabled = Path("/etc/runlevels/default/roonbridge").exists() if alpine else command_output(["systemctl", "is-enabled", "roonbridge.service"]) == "enabled" or command_output(["systemctl", "is-enabled", "RoonBridge.service"]) == "enabled"
+        if not groups["bridge"]["active"] and not bridge_enabled:
+            visible.discard("bridge")
     try:
         uptime = float(Path("/proc/uptime").read_text(encoding="ascii").split()[0])
     except (OSError, ValueError, IndexError):
@@ -556,7 +567,7 @@ def diagnostics_snapshot() -> dict:
         "load": load, "cpu_count": os.cpu_count() or 1, "uptime_seconds": round(uptime),
         "temperature_c": temperature,
         "throttled": throttled.split("=", 1)[-1] if "=" in throttled else "unknown",
-        "processes": [value for key, value in groups.items() if key != "netdata" or value["active"]],
+        "processes": [value for key, value in groups.items() if key in visible and (key != "netdata" or value["active"])],
     }
 
 
@@ -644,7 +655,7 @@ def netdata_snapshot() -> dict:
     return details
 
 
-def system_snapshot(state_dir: Path, include_diagnostics: bool = False) -> dict:
+def system_snapshot(state_dir: Path, include_diagnostics: bool = False, config: Config | None = None) -> dict:
     if os.getenv("PI_HOME_APPLIANCE_PLATFORM") == "alpine-prototype":
         roon_service = service_state("roonbridge")
         if roon_service == "not_installed" and Path("/opt/RoonBridge/start.sh").is_file():
@@ -725,7 +736,7 @@ def system_snapshot(state_dir: Path, include_diagnostics: bool = False) -> dict:
         "netdata_operation_status": (state_dir / "netdata-operation-status").read_text().strip() if (state_dir / "netdata-operation-status").is_file() else "",
     }
     if include_diagnostics:
-        snapshot["diagnostics"] = diagnostics_snapshot()
+        snapshot["diagnostics"] = diagnostics_snapshot(config) if config is not None else diagnostics_snapshot()
     return snapshot
 
 
@@ -913,7 +924,7 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
             if self.path in {"/api/admin/system", "/api/admin/system?diagnostics=1"}:
                 if not self.authorised():
                     return
-                system = system_snapshot(mode_path.parent, include_diagnostics=self.path.endswith("diagnostics=1"))
+                system = system_snapshot(mode_path.parent, include_diagnostics=self.path.endswith("diagnostics=1"), config=state.config)
                 system["display_brightness"] = state.display_brightness
                 body = json.dumps(system).encode()
                 self.send_json(200, body)
@@ -921,7 +932,7 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
             if self.path == "/api/admin/diagnostics":
                 if not self.authorised():
                     return
-                self.send_json(200, json.dumps(diagnostics_snapshot()).encode())
+                self.send_json(200, json.dumps(diagnostics_snapshot(state.config)).encode())
                 return
             if self.path == "/api/status":
                 body = json.dumps(state.snapshot()).encode()

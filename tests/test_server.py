@@ -70,6 +70,17 @@ class DisplayModeTests(unittest.TestCase):
         with patch("pi_bus_time_display.server.command_output", return_value="22 1024 0.1 /usr/sbin/netdata"), patch("pi_bus_time_display.server.service_state", return_value="stopped"):
             self.assertTrue(next(process for process in diagnostics_snapshot()["processes"] if process["label"] == "Netdata")["active"])
 
+    def test_diagnostics_hides_unconfigured_music_and_stopped_optional_tools(self):
+        from pi_bus_time_display.server import diagnostics_snapshot
+        with patch("pi_bus_time_display.server.command_output", return_value=""), patch("pi_bus_time_display.server.service_state", return_value="stopped"):
+            labels = [p["label"] for p in diagnostics_snapshot(Config(bus_enabled=False))["processes"]]
+            self.assertNotIn("Roon controller", labels)
+            self.assertNotIn("Roon Bridge", labels)
+            self.assertNotIn("Netdata", labels)
+            self.assertIn("Pi Home backend", labels)
+            configured = diagnostics_snapshot(Config(roon_zone_name="NAD M33"))["processes"]
+            self.assertIn("Roon controller", [p["label"] for p in configured])
+
     def test_bus_disabled_persists_and_automatic_stays_on_music(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "config.toml"

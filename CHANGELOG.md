@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.0-beta.44 Alpine Beta — 6 October 2026
+
+- Adds consistent space below portrait music navigation and asymmetric breathing room around Now Playing artwork.
+- Keeps bus live/update status directly beneath the final panel, scrolling with the panels when necessary.
+- Hides unconfigured Roon diagnostics and deliberately stopped optional endpoints, while retaining configured service failures. Labels the shared backend accurately when buses are disabled.
+- Adds Home and Bus Times shortcuts to physical-screen capture controls and wraps backend action buttons on mobile.
+
 ## 1.1.0-beta.43 Alpine Beta — 6 October 2026
 
 - Compacts portrait music headers, enlarges and spaces top navigation text, and brings the underline closer to its label. Now Playing uses centred artwork 20% smaller with metadata beneath it.
