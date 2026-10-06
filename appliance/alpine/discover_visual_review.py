@@ -276,14 +276,14 @@ if screen_height > screen_width:
         search_items.append({"title": "View all " + group.title(), "subtitle": "39 Results", "item_key": group})
     display.render_browser({"status": "ready", "section": "search", "layout": "list", "search_routes": {"fixture": {}}, "items": search_items})
     capture("search-docked")
-    assert display.browser_list.get_parent() is display.search_results_scroll
+    assert display.browser_list.get_ancestor(Gtk.ScrolledWindow) is display.search_results_scroll
     results_bounds = display.search_results_scroll.compute_bounds(page)[1]
     entry_bounds = display.browser_search_entry.compute_bounds(page)[1]
     assert results_bounds.get_y() + results_bounds.get_height() <= entry_bounds.get_y()
     assert entry_bounds.get_y() > screen_height * .4
     assert window.get_width() == screen_width and window.get_height() == screen_height
     display.set_roon_view("browse")
-    assert display.browser_list.get_parent() is display.browser_scroll
+    assert display.browser_list.get_ancestor(Gtk.ScrolledWindow) is display.browser_scroll
 
 display.render_browser({"status": "ready", "section": "albums", "layout": "covers", "surprise_preview": True, "items": [{"title": "Based on a True Story", "subtitle": "Fat Freddy's Drop", "item_key": "surprise", "image_key": "surprise-art"}]})
 for picture in display.browser_pictures.get("surprise-art", []): picture.set_filename(str(fixture_art("surprise-art", "SURPRISE")))
