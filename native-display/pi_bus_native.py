@@ -1265,6 +1265,8 @@ class Display(Gtk.Application):
             # viewport keeps route glyphs independent of the card allocation.
             outline = Gtk.DrawingArea(); outline.set_hexpand(portrait); outline.set_valign(Gtk.Align.CENTER)
             font_size = route_size if portrait else (123 if self.window.has_css_class("high-resolution") else 82)
+            if not portrait and len(visible) > 2:
+                font_size = round(font_size / (1.8 if len(visible) >= 4 else 1.4))
             outline.set_size_request(-1 if portrait else 188, round(font_size * 1.18))
             colour = service.get("colour") or {"40": "blue", "42": "green", "401": "violet"}.get(str(service.get("service")), "amber")
             outline.set_draw_func(self.draw_route_outline, (str(service.get("service", "")), font_size, colour))
