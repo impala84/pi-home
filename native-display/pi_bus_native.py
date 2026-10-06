@@ -1568,7 +1568,9 @@ class Display(Gtk.Application):
         width = monitor.get_geometry().width if monitor else 800
         if getattr(self, "responsive_portrait", False):
             width = min(self.window.get_width() or width, width)
-            available = max(180, width - 144)
+            # Includes outer margins, the alphabet rail, queue-list padding
+            # and each button's CSS padding; none may depend on image size.
+            available = max(180, width - 168)
             return 3, max(48, (available - 32) // 3 - 12)
         available = max(140, width - 266)
         columns = min(5 if genres else 4, max(1, available // 140))
