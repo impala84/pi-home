@@ -242,8 +242,8 @@ CSS += b"""
 .touch-landscape .roon-header, .touch-landscape .roon-page .nav, .touch-landscape .now-playing-content, .touch-landscape .queue-scroll, .touch-landscape .source-view { margin-right: 28px; }
 .touch-landscape .roon-page .browser-view { padding-right: 0; }
 .portrait .page { padding: 22px 24px 16px; }
-.portrait .roon-page { padding-right: 0; }
-.portrait .roon-header, .portrait .roon-page .nav, .portrait .now-playing-content, .portrait .queue-scroll, .portrait .source-view { margin-right: 24px; }
+.portrait .roon-page { padding-right: 24px; }
+.portrait .roon-header, .portrait .roon-page .nav, .portrait .now-playing-content, .portrait .queue-scroll, .portrait .source-view { margin-right: 0; }
 .portrait .now-playing-content { margin: 32px 24px 8px 0; }
 .portrait.compact-portrait .now-playing-content { margin-top: 24px; }
 .portrait .browser-view { padding-right: 0; }
@@ -328,7 +328,7 @@ CSS += b"""
 .loading-notice { font-size: 19px; color: #aaa; }
 .loading-dots { color: #6ed9ae; font-size: 34px; }
 .theme-roon .loading-dots { color: #817aeb; }
-.portrait.large-portrait .roon-page { padding-left: 38px; padding-top: 24px; }
+.portrait.large-portrait .roon-page { padding-left: 38px; padding-right: 38px; padding-top: 24px; }
 .portrait.large-portrait .discover-toolbar .roon-subnav button { font-size: 24px; min-height: 52px; }
 .portrait .discover-toolbar .roon-subnav button { min-height: 30px; padding-bottom: 1px; }
 .portrait .browser-view { padding-left: 0; padding-right: 0; }
@@ -339,7 +339,7 @@ CSS += b"""
 .portrait .artist-profile { padding: 8px 0 24px; }
 .portrait .recommendation-album { color: #fff; font-size: 18px; }
 .portrait.large-portrait .browser-filter { font-size: 24px; min-height: 52px; }
-.portrait.large-portrait .browser-cover-grid { padding-left: 12px; }
+.portrait.large-portrait .browser-cover-grid { padding-left: 0; }
 .portrait.large-portrait .nav button { font-size: 26px; min-height: 72px; }
 """
 
@@ -1005,7 +1005,8 @@ class Display(Gtk.Application):
             if len(image) > 8_388_608 or not image.startswith(b"\x89PNG\r\n\x1a\n"):
                 raise ValueError("Invalid screenshot")
             data["image"] = base64.b64encode(image).decode("ascii")
-        except (OSError, RuntimeError, TypeError, ValueError):
+        except (OSError, RuntimeError, TypeError, ValueError) as error:
+            print(f"Pi Home display capture failed: {error}", flush=True)
             data["error"] = "The live display could not be rendered. Ensure the touchscreen application is running and try again."
         post_json(BUS + "/api/device/display-capture", data, timeout=5)
         return False
@@ -1732,7 +1733,8 @@ class Display(Gtk.Application):
             width = min(self.window.get_width() or width, width)
             # Includes outer margins, the alphabet rail, queue-list padding
             # and each button's CSS padding; none may depend on image size.
-            available = width - 48 - (0 if genres else 80)
+            margin = 38 if width >= 1000 else 14 if width < 600 else 24
+            available = width - margin * 2 - (0 if genres else 80)
             gap = round(width * .025)
             return 3, max(48, (available - gap * 2) // 3)
         available = max(140, width - 266)
@@ -1746,7 +1748,8 @@ class Display(Gtk.Application):
         width = monitor.get_geometry().width if monitor else 800
         if getattr(self, "responsive_portrait", False):
             width = min(self.window.get_width() or width, width)
-            available = max(200, width - 64)
+            margin = 38 if width >= 1000 else 14 if width < 600 else 24
+            available = max(200, width - margin * 2)
             columns = int(self.settings_data.get("portrait_discovery_columns", 2))
             columns = columns if columns in {2, 3} else 2
             gap = 24
