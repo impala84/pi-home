@@ -1336,12 +1336,12 @@ class Display(Gtk.Application):
             daily = self.discovery_section == "daily"
             visible_items = ([dict(seed, _context_seed=True)] if daily and seed else []) + list(items)
             column_spacing = 24 if portrait_grid else 18 if daily else 36 if self.discovery_section == "releases" else 24
-            grid = Gtk.Grid(column_spacing=column_spacing, row_spacing=18 if daily else 20); grid.set_column_homogeneous(False); grid.set_halign(Gtk.Align.START); grid.set_hexpand(True)
+            grid = Gtk.Grid(column_spacing=column_spacing, row_spacing=18 if daily else 20); grid.set_column_homogeneous(False); grid.set_halign(Gtk.Align.START); grid.set_hexpand(True); grid.set_valign(Gtk.Align.START); grid.set_vexpand(False)
             track = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=18) if daily and not portrait_grid else None
             section_cards = []
             if track: track.add_css_class("daily-track"); track.set_margin_end(0)
             for index, item in enumerate(visible_items):
-                card = Gtk.Button(); card.add_css_class("discovery-card"); card.set_hexpand(False); card.set_halign(Gtk.Align.CENTER); card.set_valign(Gtk.Align.START)
+                card = Gtk.Button(); card.add_css_class("discovery-card"); card.set_hexpand(False); card.set_vexpand(False); card.set_halign(Gtk.Align.CENTER); card.set_valign(Gtk.Align.START)
                 if daily: card.add_css_class("daily-card")
                 if item.get("_context_seed"): card.add_css_class("recommendation-seed-card")
                 body = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5); body.set_halign(Gtk.Align.CENTER); body.set_valign(Gtk.Align.START)

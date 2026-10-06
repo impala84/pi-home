@@ -161,7 +161,13 @@ if screen_height > screen_width:
     capture("daily-for-you-three-columns")
     assert display.discovery_grid_metrics("daily")[0] == 3
     display.select_discovery_secondary("mixes")
+    display.discovery_signature = None
+    render("daily", daily)
     capture("daily-mixes-three-columns")
+    first = display.discovery_cards[0][0].compute_bounds(display.discovery_list)[1]
+    second_row = display.discovery_cards[3][0].compute_bounds(display.discovery_list)[1]
+    gap = second_row.get_y() - first.get_y() - first.get_height()
+    assert 0 <= gap <= 24, gap
     display.settings_data["portrait_discovery_columns"] = 2
     display.discovery_signature = None
     render("daily", daily)
