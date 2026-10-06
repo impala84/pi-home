@@ -74,7 +74,8 @@ Roon's inspected official ARM64 installer installs `/opt/RoonBridge`, data and
 identity under `/var/roon`, and a root systemd service. This target uses it natively
 and answers its initial confirmation automatically. Its runtime dependency check
 must pass; installation fails visibly if the current vendor binary is incompatible.
-No container or musl compatibility layer is used. Pi Home updates never touch either
+No container or musl compatibility layer is used. The package profile omits ffmpeg
+and cifs-utils: [Roon documents these as Server-only dependencies](https://help.roonlabs.com/portal/en/kb/articles/linux-install), not Bridge dependencies. Pi Home updates never touch either
 Roon directory. Roon manages its own Bridge binary updates.
 
 An interrupted initial install is not rerun over partial state automatically. Keep

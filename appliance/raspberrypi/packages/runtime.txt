@@ -27,8 +27,6 @@ libatomic1
 curl
 ca-certificates
 bzip2
-ffmpeg
-cifs-utils
 openssh-server
 sudo
 procps
