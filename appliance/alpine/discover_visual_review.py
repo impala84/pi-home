@@ -260,9 +260,16 @@ display.set_roon_view("now")
 display.title.set_text("Solarium"); display.artist.set_text("Emancipator")
 display.library_status = "in_library"; display.library_add.set_visible(True); display.set_library_icon(False)
 display.artwork.set_filename(str(fixture_art("now-playing", "NOW PLAYING")))
-display.render_bluos_inputs({"inputs": [{"id": "tv", "name": "Watch TV"}, {"id": "rega", "name": "Rega P3"}]}, True)
 display.adapt_display()
+display.render_bluos_inputs({"inputs": [{"id": "tv", "name": "Watch TV"}, {"id": "rega", "name": "Rega P3"}]}, True)
 capture("now-playing")
+if screen_height > screen_width:
+    for button in display.bluos_source_buttons.values():
+        assert button.get_hexpand(), "Late-loaded source tabs must expand like existing tabs"
+    source_buttons = list(display.bluos_source_buttons.values())
+    first_bounds = source_buttons[0].compute_bounds(page)[1]
+    next_bounds = source_buttons[1].compute_bounds(page)[1]
+    assert next_bounds.get_x() - first_bounds.get_x() - first_bounds.get_width() >= 7
 assert window.get_width() == screen_width and window.get_height() == screen_height, (window.get_width(), window.get_height(), screen_width, screen_height)
 footer_bounds = page.get_last_child().compute_bounds(page)[1]
 assert footer_bounds.get_y() + footer_bounds.get_height() <= screen_height - 4
