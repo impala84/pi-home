@@ -67,6 +67,7 @@ window.add_css_class("theme-roon")
 provider = Gtk.CssProvider(); provider.load_from_data(native.CSS)
 Gtk.StyleContext.add_provider_for_display(window.get_display(), provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 display = native.Display()
+display.settings_data["display_theme"] = "roon"
 page = display.build_roon()
 window.set_child(page)
 window.present()
@@ -167,13 +168,43 @@ if screen_height > screen_width:
 display.discovery_active = True
 display.discovery_section = "browse"
 display.set_roon_view("browse")
-display.render_browser({"status": "ready", "section": "albums", "layout": "covers", "items": [{"title": value["title"], "subtitle": value["artist"], "item_key": value["key"]} for value in recent * 3]})
+for name, button in display.discover_tabs.items():
+    (button.add_css_class if name == "browse" else button.remove_css_class)("active")
+def browse_fixture(section, labels):
+    display.render_browser({"status": "ready", "section": section, "layout": "covers", "show_labels": labels, "alpha_scrub": True, "items": [{"title": value["title"] + (" and a particularly long artist name" if labels else ""), "subtitle": value["artist"], "item_key": value["key"], "image_key": value["artwork_key"]} for value in recent * 3]})
+    for key, pictures in display.browser_pictures.items():
+        for picture in pictures: picture.set_filename(str(fixture_art(key, "LOADED COVER")))
+    settle()
+    assert window.get_width() == screen_width, (section, window.get_width(), screen_width)
+    clock = display.roon_clock.compute_bounds(page)[1]
+    assert clock.get_x() + clock.get_width() <= screen_width
+    scrub = display.browser_scrubber.compute_bounds(page)[1]
+    assert scrub.get_x() >= 0 and scrub.get_x() + scrub.get_width() <= screen_width - 4
+browse_fixture("albums", False)
 settle()
 capture("browse")
 if screen_height > screen_width:
     assert display.browser_sidebar.get_height() < 100
     assert display.browser_scroll.get_height() > screen_height * .6
     assert display.browser_grid_metrics()[0] == 3
+browse_fixture("artists", True)
+capture("browse-artists")
+
+display.render_browser({"status": "ready", "section": "albums", "layout": "covers", "surprise_preview": True, "items": [{"title": "Based on a True Story", "subtitle": "Fat Freddy's Drop", "item_key": "surprise", "image_key": "surprise-art"}]})
+for picture in display.browser_pictures.get("surprise-art", []): picture.set_filename(str(fixture_art("surprise-art", "SURPRISE")))
+capture("surprise")
+assert window.get_width() == screen_width and window.get_height() == screen_height
+if screen_height > screen_width:
+    stage = display.browser_list.get_first_child().get_first_child()
+    assert stage.get_orientation() == Gtk.Orientation.VERTICAL
+
+# Entering Recent resets Added, while its explicit Listened choice still works.
+display.request_discovery = lambda *args: False
+display.set_mode = lambda *args: None
+display.open_recent("listened")
+assert display.discovery_recent_mode == "listened"
+display.open_discover("recent")
+assert display.discovery_recent_mode == "added"
 
 display.set_roon_view("now")
 display.title.set_text("Solarium"); display.artist.set_text("Emancipator")
@@ -192,6 +223,8 @@ display.render_bus({"status": "ok", "stop_name": "Flamingo Valley", "stop_code":
 capture("bus-times")
 if screen_height > screen_width:
     assert display.services.get_first_child().get_orientation() == Gtk.Orientation.VERTICAL
+    assert not display.services.get_first_child().get_vexpand()
+assert window.get_width() == screen_width and window.get_height() == screen_height
 
 home = display.build_home(); window.set_child(home)
 display.settings_data["display_theme"] = "roon"

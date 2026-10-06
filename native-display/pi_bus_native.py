@@ -287,7 +287,13 @@ CSS += b"""
 .touch-landscape .settings-page .settings-action { min-height: 62px; }
 .portrait .settings-page .settings-title { font-size: 26px; }
 .portrait.compact-portrait .settings-page .settings-title { font-size: 22px; }
-.portrait .roon-subnav button { border-top: 0; border-bottom: 3px solid transparent; padding: 4px 2px; letter-spacing: 0; font-size: 13px; }
+.portrait .roon-page { padding-top: 12px; }
+.portrait .roon-subnav button { border-top: 0; border-bottom: 3px solid transparent; min-height: 32px; padding: 2px 2px; letter-spacing: .6px; font-size: 16px; }
+.portrait .browser-view .queue-scroll { margin-right: 0; }
+.portrait .daily-track { padding-left: 0; }
+.portrait .recommendation-heading { margin-left: 4px; }
+.portrait .stop, .portrait .stop-code { font-size: 26px; }
+.portrait .service { padding: 18px 12px; }
 .portrait .roon-subnav button.active { border-bottom-color: #5bcbd6; }
 .portrait.theme-roon .roon-subnav button.active { border-bottom-color: #817aeb; }
 .portrait .browser-sidebar { min-width: 0; }
@@ -299,7 +305,7 @@ CSS += b"""
 .portrait .home-level trough { min-height: 7px; min-width: 0; }
 .portrait .home-name { font-size: 21px; }
 .portrait .home-state { font-size: 14px; }
-.portrait.compact-portrait .roon-subnav button { font-size: 10px; min-height: 40px; }
+.portrait.compact-portrait .roon-subnav button { font-size: 12px; min-height: 32px; letter-spacing: .4px; }
 .portrait.compact-portrait .browser-filter { font-size: 12px; min-height: 40px; padding: 4px 6px; }
 """
 
@@ -457,10 +463,15 @@ class Display(Gtk.Application):
         portrait = height > width
         previous = getattr(self, "responsive_portrait", None)
         self.responsive_portrait = portrait
+        self.viewport_width, self.viewport_height = width, height
         for css_class, enabled in (("portrait", portrait), ("display-landscape", not portrait), ("compact-portrait", portrait and width < 600), ("high-resolution", max(width, height) >= 1200), ("touch-landscape", width >= 1200 and not portrait)):
             (self.window.add_css_class if enabled else self.window.remove_css_class)(css_class)
         self.now_playing_content.set_orientation(Gtk.Orientation.VERTICAL if portrait else Gtk.Orientation.HORIZONTAL)
+        self.now_playing_content.set_spacing(18 if portrait else 26)
         self.now_playing_centre.set_valign(Gtk.Align.START if portrait else Gtk.Align.CENTER)
+        self.zone.set_valign(Gtk.Align.START if portrait else Gtk.Align.CENTER)
+        self.zone.set_margin_top(8 if portrait else 0)
+        self.roon_clock.set_valign(Gtk.Align.START if portrait else Gtk.Align.CENTER)
         if hasattr(self, "settings_controls"):
             self.configure_settings_layout(width, height)
         self.browser_body.set_orientation(Gtk.Orientation.VERTICAL if portrait else Gtk.Orientation.HORIZONTAL)
@@ -490,7 +501,7 @@ class Display(Gtk.Application):
         # Ask GTK how much height the actual text and controls need. Long
         # titles must shrink the artwork instead of expanding the window.
         reserved = max(560, 120 + sum(widget.measure(Gtk.Orientation.VERTICAL, max(1, width - 64))[0] for widget in (self.music_header_overlay, self.portrait_music_tabs, self.now_playing_centre, self.music_navigation))) if portrait else 0
-        artwork_size = min(width - 64, max(160, height - reserved)) if portrait else (324 if width >= 1200 else min(280, max(220, height - 190)))
+        artwork_size = round(min(width - 64, max(160, height - reserved)) * .8) if portrait else (324 if width >= 1200 else min(280, max(220, height - 190)))
         self.artwork.set_size_request(artwork_size, artwork_size); self.artwork_button.set_size_request(artwork_size, artwork_size)
         if portrait:
             if self.artwork.get_parent() is self.artwork_button:
@@ -542,7 +553,7 @@ class Display(Gtk.Application):
         page.append(self.navigation("bus")); return page
 
     def build_roon(self):
-        page = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8); page.add_css_class("page"); page.add_css_class("roon-page")
+        page = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4); page.add_css_class("page"); page.add_css_class("roon-page")
         self.zone = self.label("ROON NOW PLAYING", "eyebrow"); self.roon_clock = self.label("--:--", "clock", 1)
         header_overlay = Gtk.Overlay(); header_overlay.add_css_class("roon-header"); header_overlay.set_child(self.header(self.zone, self.roon_clock)); self.music_header_overlay = header_overlay
         subnav = Gtk.Box(spacing=12); subnav.add_css_class("roon-subnav"); subnav.set_halign(Gtk.Align.CENTER); subnav.set_valign(Gtk.Align.START); self.roon_subnav = subnav
@@ -1090,17 +1101,27 @@ class Display(Gtk.Application):
         self.stop.set_text(data.get('stop_name', 'Bus times')); self.stop_code.set_text(data.get('stop_code', ''))
         while child := self.services.get_first_child(): self.services.remove(child)
         visible = data.get("services", [])[:4]
+        portrait = self.window.has_css_class("portrait")
+        self.services.set_spacing(24 if portrait else 14)
+        self.services.set_valign(Gtk.Align.START if portrait else Gtk.Align.FILL)
+        self.services.set_margin_top(16 if portrait else 0)
         for index, service in enumerate(visible):
             row = Gtk.Box(spacing=12); row.add_css_class("service"); row.add_css_class("service-" + (service.get("colour") or {"40": "blue", "42": "green", "401": "violet"}.get(str(service.get("service")), "amber"))); row.set_vexpand(True)
             if len(visible) == 3: row.add_css_class("compact")
             elif len(visible) >= 4: row.add_css_class("dense")
-            if self.window.has_css_class("portrait"): row.set_orientation(Gtk.Orientation.VERTICAL)
+            if portrait:
+                row.set_orientation(Gtk.Orientation.VERTICAL); row.set_vexpand(False); row.set_spacing(12)
             number = self.label(str(service.get("service", "")), "service-no"); number.set_size_request((150 if len(visible) > 2 else 188) if self.window.has_css_class("high-resolution") else (100 if len(visible) > 2 else 125), -1); number.set_valign(Gtk.Align.CENTER); row.append(number)
             arrivals = Gtk.Box(spacing=8); arrivals.set_hexpand(True)
-            if self.window.has_css_class("portrait"):
-                number.set_xalign(.5); number.set_size_request(-1, -1); number.set_vexpand(True); number.set_valign(Gtk.Align.END); arrivals.set_vexpand(True)
+            if portrait:
+                number.set_xalign(.5); number.set_size_request(-1, -1); number.set_valign(Gtk.Align.CENTER)
+                route_size = min(216, round((getattr(self, "viewport_height", self.window.get_height()) - 220) / max(1, len(visible)) * .42))
+                attrs = Pango.AttrList(); attrs.insert(Pango.attr_size_new(max(64, route_size) * Pango.SCALE)); number.set_attributes(attrs)
             for arrival in service.get("arrivals", [])[:3]:
-                col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL); col.set_valign(Gtk.Align.CENTER); minutes = arrival.get("minutes"); col.append(self.label("Due" if minutes == 0 else str(minutes), "arrival", .5)); col.append(self.label("MIN · LIVE" if arrival.get("monitored") else "MIN · AFTER", "arrival-sub", .5)); col.set_hexpand(True); arrivals.append(col)
+                col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL); col.set_valign(Gtk.Align.CENTER); minutes = arrival.get("minutes"); value = self.label("Due" if minutes == 0 else str(minutes), "arrival", .5)
+                if portrait:
+                    attrs = Pango.AttrList(); attrs.insert(Pango.attr_size_new(min(80, max(32, round(route_size * .48))) * Pango.SCALE)); value.set_attributes(attrs)
+                col.append(value); col.append(self.label("MIN · LIVE" if arrival.get("monitored") else "MIN · AFTER", "arrival-sub", .5)); col.set_hexpand(True); arrivals.append(col)
             row.append(arrivals); self.services.append(row)
         self.bus_status.set_text("Live from LTA DataMall" if data.get("status") == "ok" and not data.get("stale") else "Offline / last known arrivals")
         updated = data.get("updated_at"); self.updated.set_text("Updated " + updated[11:19] if updated else "")
@@ -1203,7 +1224,8 @@ class Display(Gtk.Application):
         self.set_roon_view("browse")
         if self.browser_state is None: self.request_browser("section", section="albums")
 
-    def open_discover(self, section="recent", mix="", picks=False):
+    def open_discover(self, section="recent", mix="", picks=False, recent_mode=None):
+        if section == "recent": self.discovery_recent_mode = recent_mode or "added"
         self.discovery_pages = {}
         self.discovery_browser_origin = False
         self.discovery_active = True; self.discovery_section = section; self.discovery_mix = mix
@@ -1278,7 +1300,7 @@ class Display(Gtk.Application):
             self.discovery_list.append(controls)
         if self.discovery_section == "daily":
             columns, size = self.browser_grid_metrics(); size = min(212, size)
-            if getattr(self, "responsive_portrait", False): size = max(120, round((self.window.get_width() - 64) / 2.35))
+            if getattr(self, "responsive_portrait", False): size = max(120, round((self.viewport_width - 64) / 2.35))
         else:
             columns, size = self.discovery_grid_metrics(self.discovery_section)
         content = self.discovery_list
@@ -1349,8 +1371,7 @@ class Display(Gtk.Application):
         return False
 
     def open_recent(self, mode):
-        self.discovery_recent_mode = mode
-        self.open_discover("recent")
+        self.open_discover("recent", recent_mode=mode)
 
     def discovery_scrolled(self, adjustment):
         self.load_visible_discovery_artwork()
@@ -1544,8 +1565,8 @@ class Display(Gtk.Application):
         # expanded the window. Reserve the section rail, scrubber and padding.
         width = monitor.get_geometry().width if monitor else 800
         if getattr(self, "responsive_portrait", False):
-            width = self.window.get_width() or width
-            available = max(180, width - 120)
+            width = min(self.window.get_width() or width, width)
+            available = max(180, width - 144)
             return 3, max(48, (available - 32) // 3 - 12)
         available = max(140, width - 266)
         columns = min(5 if genres else 4, max(1, available // 140))
@@ -1557,7 +1578,7 @@ class Display(Gtk.Application):
         monitor = monitors.get_item(0) if monitors.get_n_items() else None
         width = monitor.get_geometry().width if monitor else 800
         if getattr(self, "responsive_portrait", False):
-            width = self.window.get_width() or width
+            width = min(self.window.get_width() or width, width)
             available = max(200, width - 64)
             gap = 36 if section == "releases" else 24
             return 2, max(64, (available - gap) // 2 - 8)
@@ -1719,7 +1740,9 @@ class Display(Gtk.Application):
         artwork = Gtk.Overlay(); picture = Gtk.Picture(); picture.add_css_class("browser-cover-art"); picture.set_can_shrink(True); picture.set_content_fit(Gtk.ContentFit.COVER); artwork.set_child(picture)
         if not tile_kind:
             self.set_browser_placeholder(picture, artist=(self.browser_state or {}).get("section") == "artists")
-        square = Gtk.AspectFrame(xalign=.5, yalign=.5, ratio=1, obey_child=False); square.set_size_request(size, size); square.set_halign(Gtk.Align.CENTER); square.set_hexpand(False); square.set_child(artwork); content.append(square)
+        # An AspectFrame only requests a minimum; loaded textures can grow it.
+        # Bound artwork and text so a real cover cannot widen the GTK window.
+        square = Gtk.ScrolledWindow(); square.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.NEVER); square.set_propagate_natural_width(False); square.set_propagate_natural_height(False); square.set_min_content_width(size); square.set_max_content_width(size); square.set_min_content_height(size); square.set_max_content_height(size); square.set_size_request(size, size); square.set_halign(Gtk.Align.CENTER); square.set_child(artwork); content.append(square)
         key = item.get("image_key"); self.browser_artwork_keys.append(key)
         if key:
             self.browser_pictures.setdefault(key, []).append(picture)
@@ -1735,7 +1758,8 @@ class Display(Gtk.Application):
                 title.set_wrap(True); title.set_lines(2); title.set_max_width_chars(18); title.set_justify(Gtk.Justification.CENTER); title.set_size_request(-1, 42)
             if item.get("subtitle") and not tile_kind:
                 subtitle = self.label(item.get("subtitle"), "browser-cover-subtitle", .5); subtitle.set_max_width_chars(22); subtitle.set_ellipsize(Pango.EllipsizeMode.END); content.append(subtitle)
-        button = Gtk.Button(); button.add_css_class("browser-cover-card"); button.set_child(content); button.set_sensitive(bool(item.get("item_key"))); button.connect("clicked", self.open_browser_item, item.get("item_key")); return button
+        shell = Gtk.ScrolledWindow(); shell.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.NEVER); shell.set_propagate_natural_width(False); shell.set_propagate_natural_height(False); shell.set_min_content_width(size); shell.set_max_content_width(size); shell.set_min_content_height(size + (60 if show_labels else 0)); shell.set_max_content_height(size + (60 if show_labels else 0)); shell.set_child(content)
+        button = Gtk.Button(); button.add_css_class("browser-cover-card"); button.set_child(shell); button.set_sensitive(bool(item.get("item_key"))); button.connect("clicked", self.open_browser_item, item.get("item_key")); return button
 
     def render_browser(self, data):
         self.browser_rendering = True; self.browser_loading = True; self.browser_state = data; self.browser_back.set_visible(bool(data.get("can_back")) and not data.get("surprise_preview")); self.browser_back.set_sensitive(bool(data.get("can_back"))); self.browser_scrubber.set_visible(bool(data.get("alpha_scrub")))
@@ -1779,10 +1803,11 @@ class Display(Gtk.Application):
             preview.set_margin_top(12)
             monitor = Gdk.Display.get_default().get_monitors().get_item(0)
             screen_width = monitor.get_geometry().width if monitor else 800
-            size = max(100, min(480, screen_width - 400, self.browser_scroll.get_allocated_height() - 135))
+            portrait = getattr(self, "responsive_portrait", False)
+            size = max(100, min(480, screen_width - (96 if portrait else 400), self.browser_scroll.get_allocated_height() - (350 if portrait else 135)))
             picture = Gtk.Picture(); picture.set_can_shrink(True); picture.set_content_fit(Gtk.ContentFit.COVER)
-            square = Gtk.AspectFrame(xalign=.5, yalign=.5, ratio=1, obey_child=False); square.set_size_request(size, size); square.set_halign(Gtk.Align.CENTER); square.set_child(picture)
-            stage = Gtk.Box(spacing=40); stage.set_halign(Gtk.Align.CENTER); stage.set_valign(Gtk.Align.CENTER)
+            square = Gtk.ScrolledWindow(); square.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.NEVER); square.set_propagate_natural_width(False); square.set_propagate_natural_height(False); square.set_min_content_width(size); square.set_max_content_width(size); square.set_min_content_height(size); square.set_max_content_height(size); square.set_size_request(size, size); square.set_halign(Gtk.Align.CENTER); square.set_child(picture)
+            stage = Gtk.Box(orientation=Gtk.Orientation.VERTICAL if portrait else Gtk.Orientation.HORIZONTAL, spacing=18 if portrait else 40); stage.set_halign(Gtk.Align.CENTER); stage.set_valign(Gtk.Align.CENTER)
             for caption, icon, action in (("Surprise Me", "view-refresh-symbolic", "surprise"), ("Play Now", "media-playback-start-symbolic", "surprise_play")):
                 controls = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10); controls.set_size_request(120, -1); controls.set_valign(Gtk.Align.CENTER); controls.set_halign(Gtk.Align.CENTER)
                 button = self.icon_button(icon, lambda _button, value=action: self.request_browser(value), "surprise-action"); button.set_tooltip_text(caption); button.set_halign(Gtk.Align.CENTER); controls.append(button); controls.append(self.label(caption, "surprise-caption", .5)); stage.append(controls)

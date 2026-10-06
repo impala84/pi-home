@@ -242,10 +242,13 @@ class NativeBrowserControlsTests(unittest.TestCase):
     def test_recent_mode_switch_stays_on_recent_and_uses_added_endpoint(self):
         owner = SimpleNamespace(open_discover=Mock())
         native_method("open_recent")(owner,"added")
-        self.assertEqual(owner.discovery_recent_mode,"added")
-        owner.open_discover.assert_called_once_with("recent")
+        owner.open_discover.assert_called_once_with("recent", recent_mode="added")
+        owner.open_discover.reset_mock()
+        native_method("open_recent")(owner,"listened")
+        owner.open_discover.assert_called_once_with("recent", recent_mode="listened")
         code = SOURCE.read_text(encoding="utf-8")
         self.assertIn('section = "added"',code)
+        self.assertIn('self.discovery_recent_mode = recent_mode or "added"', code)
         self.assertIn('client=touch',code)
         self.assertIn('("recommendations", "FOR YOU")',code)
 

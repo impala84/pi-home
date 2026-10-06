@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.0-beta.43 Alpine Beta — 6 October 2026
+
+- Compacts portrait music headers, enlarges and spaces top navigation text, and brings the underline closer to its label. Now Playing uses centred artwork 20% smaller with metadata beneath it.
+- Bounds loaded Browse artwork and complete cards, preventing real covers and artist names from widening the window and pushing the clock or alphabet scrubber off-screen. Adds loaded-artwork allocation regression checks.
+- Entering Recent selects Added; explicitly choosing Listened still works. Aligns portrait Daily swipe clipping with the common left margin.
+- Stacks portrait Surprise Me above the cover and Play Now below it. Gives bus cards natural heights, larger route numbers, smaller arrival text and a smaller stop heading.
+
 ## 1.1.0-beta.42 Alpine Beta — 6 October 2026
 
 - Gives portrait music pages a player/clock header followed by a separate underlined navigation row; removes vertically expanding horizontal menus and wasted browse space.
