@@ -1,12 +1,18 @@
 # Changelog
 
-## 1.1.1-beta.4 — 7 October 2026
+## 1.1.1-beta.5 — 7 October 2026
 
 - Refines portrait margins, menu spacing, Browse/genre grids and the search keyboard; keeps the current navigation hierarchy.
 - Moves artist information beside its image with albums below, reorders Surprise Again/artwork/metadata/Play Now, and replaces portrait recommendation seed artwork with a text heading.
 - Preserves genre SVG keyline detail instead of loading outlines as solid symbolic masks. Removes the duplicate diagnostics divider.
 - Adds real GTK capture coverage and useful capture-failure logging.
 - Beta commits run backend, controller, update-safety and native layout checks without creating a disk image. Full image construction is an explicit workflow option for stable releases or image testing; existing updater verification remains compatible.
+## 1.1.1-beta.4 — 7 October 2026
+
+- Add a separate Raspberry Pi OS Lite Trixie ARM64 installer with dedicated seatd/Cage/GTK services, recoverable first boot/root expansion and native official Roon Bridge. Alpine is unchanged.
+- Stage application-only updates with readiness checks and rollback; retain persistent configuration and Roon data. OS package/service-profile changes require tested maintenance.
+- Add an RSS/PSS A/B collector, optional modest zram, regression tests and exact installation/hardware test instructions.
+- Experimental: Pi hardware validation, precise UI/Roon timing spans and the complete flashable image pipeline remain outstanding.
 
 ## 1.1.1-beta.3 — 6 October 2026
 
