@@ -150,6 +150,9 @@ const browser = new BrowseManager(() => browseService, () => selectedZone());
 bluos.refreshConfig().catch(() => {});
 
 function mergeZones(command, data) {
+  // The Roon SDK closes subscriptions without a payload on disconnect.
+  // Ignore that notification; core_unpaired owns connection-state cleanup.
+  if (!data || typeof data !== 'object') return;
   if (command === 'Subscribed') zones = new Map((data.zones || []).map(zone => [zone.zone_id, zone]));
   for (const zone of data.zones_added || []) zones.set(zone.zone_id, zone);
   for (const zone of data.zones_changed || []) zones.set(zone.zone_id, {...zones.get(zone.zone_id), ...zone});

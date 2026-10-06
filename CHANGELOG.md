@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.1-beta.7 — 7 October 2026
+
+- Restores the beta.5 native music-screen navigation, search lifecycle and artwork sizing after beta.6 regressions. The beta.6 search docking and cosmetic refinements are withdrawn for this recovery release.
+- Keeps two larger arrivals in portrait and three in landscape; restores solid-white route numbers with less portrait prominence.
+- Prevents a missing Roon subscription-close payload from crashing the controller.
+- Checks window width after Discover artwork loads. Source-only beta; no disk image is rebuilt.
+
 ## 1.1.1-beta.6 — 7 October 2026
 
 - Standardises portrait outer margins and artwork column gaps at 30px; lowers the primary underline by 2px and makes playlists full-width.

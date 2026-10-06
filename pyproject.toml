@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pi-bus-time-display"
-version = "1.1.1-beta.6"
+version = "1.1.1-beta.7"
 description = "A Raspberry Pi home dashboard for Roon, Singapore buses and Home Assistant"
 requires-python = ">=3.11"
 license = {text = "MIT"}
