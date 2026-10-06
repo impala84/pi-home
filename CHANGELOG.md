@@ -3,6 +3,7 @@
 ## 1.1.0 Alpine — 6 October 2026
 
 - First separately published Alpine release, retaining the verified Alpine updater and optional-software setup.
+- Adds Stable/Beta selection in System → Software. Fresh Alpine installs default to Stable; existing beta appliances retain Beta. Updates use published Alpine tags with successful image verification, never Raspberry Pi OS releases or automatic downgrades.
 - Reduces Home device icons by 25%, without changing cards or controls.
 - Mobile portrait bus cards show a large centred route number above full-width, evenly spaced arrival columns. Longer route lists scroll naturally.
 

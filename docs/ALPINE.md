@@ -56,7 +56,7 @@ heights, with larger route numbers and scrolling when several routes need space.
 Active branch: `alpine-beta`, based on Discover beta.7. The former
 `alpine-appliance-prototype` branch is a temporary update bridge for beta.14
 and older installations. Keep it available until those devices have installed
-beta.15. Alpine Beta is separate from the Raspberry Pi OS Stable/Beta channels.
+beta.15. Alpine releases remain separate from Raspberry Pi OS releases. System → Software now offers Stable/Beta: fresh installs default to Stable and existing beta appliances retain Beta. Switching channels preserves settings and never automatically downgrades. The updater selects a published Alpine tag and checks that its exact revision passed the Alpine image workflow before staging it.
 Do not install it over the working Pi. Use a separate SD card.
 
 ## Physical touch recovery — 4 October 2026

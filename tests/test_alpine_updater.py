@@ -96,10 +96,20 @@ class AlpineUpdaterTests(unittest.TestCase):
     def test_only_successful_fixed_branch_builds_are_accepted(self):
         sha = "a" * 40
         valid = {"workflow_runs": [{"head_sha": sha, "head_branch": updater.BRANCH, "conclusion": "success", "event": "push", "head_repository": {"full_name": "impala84/pi-home"}}]}
-        with patch.object(updater, "fetch_json", return_value=valid): self.assertEqual(updater.verified_revision(), sha)
-        for changes in ({"head_sha": "../bad"}, {"head_branch": "main"}, {"conclusion": "failure"}, {"event": "pull_request"}, {"head_repository": {"full_name": "other/fork"}}):
-            invalid = {"workflow_runs": [{**valid["workflow_runs"][0], **changes}]}
-            with patch.object(updater, "fetch_json", return_value=invalid), self.assertRaises(RuntimeError): updater.verified_revision()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'config.toml').write_text('release_channel = "stable"')
+            (root / 'pyproject.toml').write_text('[project]\nversion = "1.0.0"')
+            (root / 'update-channel-initialized').touch()
+            with patch.object(updater, 'APP', root), patch.object(updater, 'STATE', root), patch.object(updater, 'CONFIG', root / 'config.toml'), patch.object(updater, 'published_releases', return_value=[{'tag_name': 'v1.1.0-alpine'}]):
+                reference = {'object': {'type': 'commit', 'sha': sha}}
+                with patch.object(updater, "fetch_json", side_effect=[reference, valid]):
+                    self.assertEqual(updater.verified_revision(), sha)
+                for changes in ({"head_sha": "../bad"}, {"head_branch": "main"}, {"conclusion": "failure"}, {"event": "pull_request"}, {"head_repository": {"full_name": "other/fork"}}):
+                    invalid = {"workflow_runs": [{**valid["workflow_runs"][0], **changes}]}
+                    with patch.object(updater, "fetch_json", side_effect=[reference, invalid]), self.assertRaises(RuntimeError): updater.verified_revision()
+                (root / 'pyproject.toml').write_text('[project]\nversion = "1.2.0"')
+                with self.assertRaises(updater.NoDowngrade): updater.verified_revision()
 
     def test_tar_traversal_and_links_are_rejected(self):
         for name, kind in (("../escape", tarfile.REGTYPE), ("repo/link", tarfile.SYMTYPE), ("/absolute", tarfile.REGTYPE)):

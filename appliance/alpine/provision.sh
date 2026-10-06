@@ -22,6 +22,7 @@ ln -s /opt/pi-home /opt/pi-bus-time-display
 ln -s /etc/pi-home /etc/pi-bus-time-display
 ln -s /var/lib/pi-home /var/lib/pi-bus-time-display
 cp config.example.toml /etc/pi-home/config.toml
+touch /var/lib/pi-home/update-channel-initialized
 sed -i 's/display_theme = "fresh-mint"/display_theme = "roon"/' /etc/pi-home/config.toml
 cp .env.example /etc/pi-home/secrets.env
 printf '%s\n' 'Ready' > /var/lib/pi-home/update-status

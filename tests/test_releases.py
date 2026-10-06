@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 from pi_bus_time_display.config import Config, load_config
 from pi_bus_time_display.releases import ReleaseChecker, SemVer, select_release
-from pi_bus_time_display.server import write_config
+from pi_bus_time_display.server import write_config, initialise_update_channel
 
 
 def release(tag, **fields):
@@ -13,6 +13,41 @@ def release(tag, **fields):
 
 
 class ReleaseTests(unittest.TestCase):
+    def test_existing_alpine_beta_migration_is_once_and_preserves_settings(self):
+        with tempfile.TemporaryDirectory() as directory, patch.dict('os.environ', {'PI_HOME_APPLIANCE_PLATFORM': 'alpine-prototype'}):
+            root = Path(directory)
+            path = root / 'config.toml'
+            config = Config(display_theme='roon')
+            write_config(path, config)
+            migrated = initialise_update_channel(config, path, root)
+            self.assertEqual(migrated.release_channel, 'beta')
+            self.assertEqual(load_config(path).display_theme, 'roon')
+            stable = Config(release_channel='stable')
+            self.assertEqual(initialise_update_channel(stable, path, root).release_channel, 'stable')
+
+    def test_fresh_alpine_marker_preserves_stable(self):
+        with tempfile.TemporaryDirectory() as directory, patch.dict('os.environ', {'PI_HOME_APPLIANCE_PLATFORM': 'alpine-prototype'}):
+            root = Path(directory)
+            (root / 'update-channel-initialized').touch()
+            self.assertEqual(initialise_update_channel(Config(), root / 'config.toml', root).release_channel, 'stable')
+
+    def test_distribution_isolation_and_alpine_stable_version(self):
+        items = [release('v1.1.0'), release('v1.2.0-alpine'), release('v1.3.0-beta.1-alpine', prerelease=True)]
+        self.assertEqual(select_release(items, 'beta', '1.0.0')['tag'], 'v1.1.0')
+        result = select_release(items, 'stable', '1.0.0', 'alpine')
+        self.assertEqual(result['tag'], 'v1.2.0-alpine')
+        self.assertEqual(result['latest_version'], '1.2.0')
+        self.assertEqual(select_release(items, 'beta', '1.0.0', 'alpine')['tag'], 'v1.3.0-beta.1-alpine')
+        self.assertEqual(select_release(items, 'stable', '1.4.0', 'alpine')['status'], 'ahead')
+
+    def test_cache_includes_installed_version_and_distribution(self):
+        with patch('pi_bus_time_display.releases.published_releases', return_value=[release('v1.1.0'), release('v1.1.0-alpine')]) as fetch:
+            checker = ReleaseChecker()
+            checker.check('stable', '1.0.0')
+            checker.check('stable', '1.1.0')
+            checker.check('stable', '1.1.0', distribution='alpine')
+            self.assertEqual(fetch.call_count, 3)
+
     def test_semver_numeric_prerelease_order_and_final(self):
         values = ['1.1.0-beta.2', '1.1.0-beta.10', '1.1.0', '1.10.0', '2.0.0']
         self.assertEqual(sorted(values, key=SemVer), values)

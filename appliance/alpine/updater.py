@@ -14,6 +14,8 @@ import subprocess
 import tarfile
 import tempfile
 import time
+import sys
+import tomllib
 import urllib.request
 
 APP = Path("/opt/pi-home")
@@ -24,6 +26,13 @@ DISPLAY_REVISION = Path("/run/pi-home/display-source-commit")
 MANAGED_RELEASE = re.compile(r"[0-9a-f]{40}-[0-9]+")
 UPDATE_RESERVE_BYTES = 96_000_000
 MIN_STAGE_BYTES = 160_000_000
+sys.path.insert(0, str(APP / "src"))
+from pi_bus_time_display.releases import published_releases, select_release
+CONFIG = Path("/etc/pi-home/config.toml")
+
+
+class NoDowngrade(RuntimeError):
+    pass
 
 
 def status(message):
@@ -107,10 +116,25 @@ def required_stage_space(current):
 
 
 def verified_revision():
-    result = fetch_json(REPO + "/actions/workflows/alpine-image.yml/runs?branch=" + BRANCH + "&status=success&per_page=1")
+    configuration = tomllib.loads(CONFIG.read_text())
+    channel = configuration.get("release_channel", "stable") if (STATE / "update-channel-initialized").exists() else "beta"
+    installed = tomllib.loads((APP / "pyproject.toml").read_text())["project"]["version"]
+    selected = select_release(published_releases(), channel, installed, "alpine")
+    if selected["status"] == "ahead":
+        raise NoDowngrade(selected["message"])
+    if selected["status"] == "unavailable":
+        raise RuntimeError(selected["message"])
+    reference = fetch_json(REPO + "/git/ref/tags/" + selected["tag"]).get("object", {})
+    if reference.get("type") == "tag" and re.fullmatch(r"[0-9a-f]{40}", reference.get("sha", "")):
+        reference = fetch_json(REPO + "/git/tags/" + reference["sha"]).get("object", {})
+    sha = reference.get("sha", "")
+    if reference.get("type") != "commit" or not re.fullmatch(r"[0-9a-f]{40}", sha):
+        raise RuntimeError("Invalid Alpine release revision")
+    result = fetch_json(REPO + "/actions/workflows/alpine-image.yml/runs?branch=" + BRANCH + "&head_sha=" + sha + "&status=success&per_page=100")
     runs = result.get("workflow_runs", [])
+    runs = [build for build in runs if build.get("head_sha") == sha]
     if not runs: raise RuntimeError("No verified Alpine build is available")
-    build = runs[0]; sha = build.get("head_sha", "")
+    build = runs[0]
     if build.get("head_branch") != BRANCH or build.get("conclusion") != "success" or build.get("event") not in {"push", "workflow_dispatch"} or build.get("head_repository", {}).get("full_name") != "impala84/pi-home" or not re.fullmatch(r"[0-9a-f]{40}", sha):
         raise RuntimeError("Invalid verified build response")
     return sha
@@ -177,7 +201,10 @@ def update():
     os.chdir("/")
     wait_for_clock()
     status("Update · Checking verified Alpine builds…")
-    sha = verified_revision()
+    try:
+        sha = verified_revision()
+    except NoDowngrade as error:
+        status("Update unchanged. " + str(error)); return
     if (APP / ".source-commit").exists() and (APP / ".source-commit").read_text().strip() == sha:
         if healthy(sha):
             status("Update unchanged. Latest verified Alpine is installed and running."); return

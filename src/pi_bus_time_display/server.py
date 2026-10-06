@@ -917,10 +917,9 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
             if self.path in {"/api/admin/releases", "/api/admin/releases?refresh=1"}:
                 if not self.authorised():
                     return
-                if os.getenv("PI_HOME_APPLIANCE_PLATFORM") == "alpine-prototype":
-                    result = {"installed_version": display_version(), "release_channel": "alpine-beta", "latest_version": None, "update_available": False, "status": "appliance", "message": "This device follows verified Alpine updates."}
-                    self.send_json(200, json.dumps(result).encode()); return
-                result = releases.check(state.config.release_channel, __version__, refresh=self.path.endswith("refresh=1"))
+                distribution = "alpine" if os.getenv("PI_HOME_APPLIANCE_PLATFORM") == "alpine-prototype" else "rpi"
+                result = releases.check(state.config.release_channel, __version__, refresh=self.path.endswith("refresh=1"), distribution=distribution)
+                result["distribution"] = distribution
                 self.send_json(200, json.dumps(result).encode())
                 return
             if self.path in {"/api/admin/system", "/api/admin/system?diagnostics=1"}:
@@ -1401,6 +1400,20 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
     return Handler
 
 
+def initialise_update_channel(config, config_path, state_dir):
+    """Existing beta appliances retain beta; fresh images carry a marker."""
+    if os.getenv("PI_HOME_APPLIANCE_PLATFORM") != "alpine-prototype":
+        return config
+    marker = state_dir / "update-channel-initialized"
+    if marker.exists():
+        return config
+    state_dir.mkdir(parents=True, exist_ok=True)
+    config = Config(**{**config.__dict__, "release_channel": "beta"})
+    write_config(config_path, config)
+    marker.touch()
+    return config
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=Path, default=Path("config.toml"))
@@ -1412,6 +1425,7 @@ def main() -> None:
     args = parser.parse_args()
     load_env(args.env)
     config = load_config(args.config)
+    config = initialise_update_channel(config, args.config, args.state_dir)
     if args.simulate:
         config = Config(**{**config.__dict__, "simulate": True})
     clear_sleep_mode_on_start(args.state_dir / "display-mode")
