@@ -1672,7 +1672,20 @@ class Display(Gtk.Application):
             self.browser_artist_scroll.set_min_content_height(1)
         picture = Gtk.Picture(); picture.set_can_shrink(True); picture.set_content_fit(Gtk.ContentFit.COVER)
         self.set_browser_placeholder(picture, artist=True)
-        square = Gtk.AspectFrame(xalign=.5, yalign=.5, ratio=1, obey_child=False); square.set_size_request(200, 200); square.set_halign(Gtk.Align.CENTER); square.set_child(picture); panel.append(square)
+        if portrait:
+            size = min(320, round(getattr(self, "viewport_width", 720) * .315))
+            square = Gtk.ScrolledWindow()
+            square.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.NEVER)
+            square.set_propagate_natural_width(False); square.set_propagate_natural_height(False)
+            square.set_min_content_width(size); square.set_max_content_width(size)
+            square.set_min_content_height(size); square.set_max_content_height(size)
+            square.set_size_request(size, size)
+            self.browser_artist_scroll.set_min_content_height(size + 40)
+            self.browser_artist_scroll.set_max_content_height(size + 40)
+        else:
+            square = Gtk.AspectFrame(xalign=.5, yalign=.5, ratio=1, obey_child=False)
+            square.set_size_request(200, 200)
+        square.set_halign(Gtk.Align.CENTER); square.set_child(picture); panel.append(square)
         key = profile.get("image_key")
         if key:
             self.browser_pictures.setdefault(key, []).append(picture); self.browser_artwork_keys.append(key)

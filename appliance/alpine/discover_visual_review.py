@@ -250,6 +250,9 @@ for key, pictures in display.browser_pictures.items():
 capture("artist-profile")
 if screen_height > screen_width:
     assert display.browser_artist_panel.get_orientation() == Gtk.Orientation.HORIZONTAL
+    portrait_art = display.browser_artist_panel.get_first_child()
+    assert portrait_art.get_width() <= screen_width * .36, portrait_art.get_width()
+    assert portrait_art.get_height() == portrait_art.get_width()
     artist_bounds = display.browser_artist_scroll.compute_bounds(page)[1]
     albums_bounds = display.browser_scroll.compute_bounds(page)[1]
     assert albums_bounds.get_y() >= artist_bounds.get_y() + artist_bounds.get_height()
