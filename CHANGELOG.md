@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.1-beta.1 — 6 October 2026
+
+- Matches the portrait Discover sketch: Settings and Sleep icons flank the primary tabs on one row; subsections remain directly below, with larger three-column Browse artwork and a compact alphabet rail.
+- Adds theme-coloured pulsing loading dots for Browse/Discover. Animation runs only while the loading view is visible.
+- Retains the 1.1.0 responsive display, configurable discovery grids, library/favourites, diagnostics, mobile bus, Home-icon and lightweight Netdata improvements. Stable releases remain unchanged.
+
 ## 1.1.0 Raspberry Pi OS — 6 October 2026
 
 - Brings Raspberry Pi OS to shared Alpine UI feature parity: responsive portrait/landscape layouts, separate orientation and mounting rotation, improved Settings, library/favourite state, configurable Discover grids, mobile bus cards, Home icons, theme loading and diagnostics/capture shortcuts.
