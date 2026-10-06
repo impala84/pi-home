@@ -182,7 +182,10 @@ else:
 
 # Check actual allocated portrait geometry, not just requested widget sizes.
 if screen_height > screen_width:
-    assert display.roon_clock.compute_bounds(page)[1].get_y() + display.roon_clock.get_height() <= display.discover_subnav.compute_bounds(page)[1].get_y()
+    assert not display.music_header_overlay.get_visible()
+    toolbar = display.discover_toolbar.compute_bounds(page)[1]
+    sidebar = display.discovery_sidebar.compute_bounds(page)[1]
+    assert toolbar.get_y() + toolbar.get_height() <= sidebar.get_y()
     assert display.discovery_sidebar.get_height() < 100
     assert display.discovery_scroll.get_height() > screen_height * .6
     first = display.discovery_cards[0][0]
