@@ -332,6 +332,11 @@ CSS += b"""
 .loading-notice { font-size: 19px; color: #aaa; }
 .loading-dots { color: #6ed9ae; font-size: 34px; }
 .theme-roon .loading-dots { color: #817aeb; }
+.portrait.large-portrait .roon-page { padding-left: 38px; padding-top: 24px; }
+.portrait.large-portrait .discover-toolbar .roon-subnav button { font-size: 24px; min-height: 52px; }
+.portrait.large-portrait .browser-filter { font-size: 24px; min-height: 52px; }
+.portrait.large-portrait .browser-cover-grid { padding-left: 12px; }
+.portrait.large-portrait .nav button { font-size: 26px; min-height: 72px; }
 """
 
 
@@ -475,6 +480,27 @@ class Display(Gtk.Application):
         panel.connect("map", start); panel.connect("unmap", stop)
         return panel
 
+    def discover_utility_icon(self, clock=False):
+        # Draw outlines directly: symbolic theme recolouring can fill SVG holes.
+        icon = Gtk.DrawingArea(); icon.set_size_request(30 if clock else 34, 34)
+        def draw(_area, cr, width, height):
+            cr.save(); cr.translate(width / 2, height / 2)
+            colour = (.53, .55, .56) if clock else ((.506, .478, .922) if self.settings_data.get("display_theme") == "roon" else (.431, .851, .682))
+            cr.set_source_rgb(*colour); cr.set_line_width(2); cr.set_line_join(1); cr.set_line_cap(1)
+            if clock:
+                cr.arc(0, 0, 12.5, 0, math.tau); cr.stroke()
+                cr.move_to(0, -8); cr.line_to(0, 0); cr.line_to(6, 4); cr.stroke()
+            else:
+                for point in range(32):
+                    angle = math.tau * point / 32
+                    radius = 14 if point % 4 in (0, 1) else 10.5
+                    x, y = math.cos(angle) * radius, math.sin(angle) * radius
+                    if point: cr.line_to(x, y)
+                    else: cr.move_to(x, y)
+                cr.close_path(); cr.stroke(); cr.arc(0, 0, 5, 0, math.tau); cr.stroke()
+            cr.restore()
+        icon.set_draw_func(draw); return icon
+
     def do_activate(self):
         provider = Gtk.CssProvider(); provider.load_from_data(CSS)
         Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
@@ -513,6 +539,7 @@ class Display(Gtk.Application):
         previous = getattr(self, "responsive_portrait", None)
         self.responsive_portrait = portrait
         self.viewport_width, self.viewport_height = width, height
+        (self.window.add_css_class if portrait and width >= 1000 else self.window.remove_css_class)("large-portrait")
         for css_class, enabled in (("portrait", portrait), ("display-landscape", not portrait), ("compact-portrait", portrait and width < 600), ("compact-landscape", not portrait and height < 600), ("high-resolution", max(width, height) >= 1200), ("touch-landscape", width >= 1200 and not portrait)):
             (self.window.add_css_class if enabled else self.window.remove_css_class)(css_class)
         self.now_playing_content.set_orientation(Gtk.Orientation.VERTICAL if portrait else Gtk.Orientation.HORIZONTAL)
@@ -547,6 +574,7 @@ class Display(Gtk.Application):
                 child.set_hexpand(portrait); child = child.get_next_sibling()
         exploring = self.discovery_active and self.roon_views.get_visible_child_name() in {"discover", "browse", "search"}
         self.discover_toolbar.set_visible(portrait and exploring)
+        self.discover_toolbar.set_margin_end(38 if portrait and width >= 1000 else 24)
         self.music_header_overlay.set_visible(not (portrait and exploring))
         self.portrait_music_tabs.set_visible(portrait and not exploring)
         self.portrait_music_tabs.set_margin_end(24 if portrait else 0)
@@ -633,12 +661,12 @@ class Display(Gtk.Application):
         self.discover_toolbar = Gtk.Box(spacing=12); self.discover_toolbar.add_css_class("discover-toolbar")
         self.discover_toolbar.set_margin_end(24); self.discover_toolbar.set_margin_bottom(18)
         settings = self.icon_button("emblem-system-symbolic", lambda *_: self.open_settings(), "discover-utility")
-        settings_icon = self.browser_svg_icon("settings", 34); settings_icon.remove_css_class("browser-tile-icon"); settings.set_child(settings_icon)
+        settings.set_child(self.discover_utility_icon())
         settings.set_tooltip_text("Settings"); self.discover_toolbar.append(settings)
         self.discover_toolbar_tabs = Gtk.Box(); self.discover_toolbar_tabs.set_hexpand(True)
         self.discover_toolbar.append(self.discover_toolbar_tabs)
         sleep = self.icon_button("preferences-system-time-symbolic", lambda *_: self.sleep(), "discover-utility discover-sleep")
-        sleep_icon = self.browser_svg_icon("clock", 30); sleep_icon.remove_css_class("browser-tile-icon"); sleep.set_child(sleep_icon)
+        sleep.set_child(self.discover_utility_icon(clock=True))
         sleep.set_tooltip_text("Sleep"); self.discover_toolbar.append(sleep)
         self.discover_toolbar.set_visible(False); page.append(self.discover_toolbar)
         self.roon_views = Gtk.Stack(transition_type=Gtk.StackTransitionType.NONE, transition_duration=0); self.roon_views.set_vexpand(True)
@@ -1670,8 +1698,7 @@ class Display(Gtk.Application):
             width = min(self.window.get_width() or width, width)
             # Includes outer margins, the alphabet rail, queue-list padding
             # and each button's CSS padding; none may depend on image size.
-            available = max(180, width - 140)
-            return 3, max(48, (available - 48) // 3)
+            return 3, max(48, round(width * .233))
         # GTK/theme versions give the rails different minimum widths. Reserve
         # their measured size plus page, grid and list padding, not a fixed
         # rail estimate that can force an 800px viewport wider than its panel.
@@ -1939,6 +1966,10 @@ class Display(Gtk.Application):
         elif items and layout in {"covers", "tiles"}:
             portrait = getattr(self, "responsive_portrait", False)
             grid = Gtk.Grid(column_spacing=24 if portrait else 16, row_spacing=18 if portrait else 24); grid.add_css_class("browser-cover-grid"); grid.set_column_homogeneous(True); grid.set_halign(Gtk.Align.FILL); grid.set_hexpand(True); columns = 5 if layout == "tiles" and active_section == "genres" else 4
+            if portrait:
+                grid.set_column_spacing(round(self.viewport_width * .044))
+                grid.set_row_spacing(round(self.viewport_width * .019))
+                grid.set_halign(Gtk.Align.START); grid.set_hexpand(False)
             columns, self.browser_tile_size = self.browser_grid_metrics(layout == "tiles" and active_section == "genres")
             tile_kind = active_section if layout == "tiles" else None
             for index, item in enumerate(item for item in items if item.get("hint") != "header"):
