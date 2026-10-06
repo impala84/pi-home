@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.1-beta.4 — 7 October 2026
+## 1.1.1-beta.5 — 7 October 2026
 
 - Refines portrait margins, menu spacing, Browse/genre grids and the search keyboard; keeps the current navigation hierarchy.
 - Moves artist information beside its image with albums below, reorders Surprise Again/artwork/metadata/Play Now, and replaces portrait recommendation seed artwork with a text heading.

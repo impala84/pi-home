@@ -1,6 +1,6 @@
 # Pi Home
 
-The next testing release is **1.1.1-beta.4**: refined portrait spacing, artist browsing, genre outlines and recommendation context. Select Beta in System → Software to receive it; Stable remains on 1.1.0.
+The next testing release is **1.1.1-beta.5**: refined portrait spacing, artist browsing, genre outlines and recommendation context. Select Beta in System → Software to receive it; Stable remains on 1.1.0.
 
 Beta updates are source-only releases: automated backend, controller, update-safety and native layout checks still run, but no downloadable disk image is built. For stable releases or explicit fresh-install testing, run the Alpine verification workflow on the release branch with **build_image** enabled, verify the image, then attach it to the release. The existing Alpine updater continues to require a successful verification run for the exact release commit.
 
