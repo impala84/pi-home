@@ -1666,7 +1666,7 @@ class Display(Gtk.Application):
             width = min(self.window.get_width() or width, width)
             # Includes outer margins, the alphabet rail, queue-list padding
             # and each button's CSS padding; none may depend on image size.
-            available = max(180, width - 128)
+            available = max(180, width - 140)
             return 3, max(48, (available - 48) // 3)
         available = max(140, width - 266)
         columns = min(5 if genres else 4, max(1, available // 140))
