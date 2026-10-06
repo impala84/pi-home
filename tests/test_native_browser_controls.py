@@ -52,6 +52,31 @@ LAYOUT_GTK = SimpleNamespace(Box=LayoutWidget, Picture=LayoutWidget, ScrolledWin
 
 
 class NativeBrowserControlsTests(unittest.TestCase):
+    def test_music_clock_redraws_on_minute_change_not_every_tick(self):
+        from datetime import datetime
+        clock = Mock()
+        owner = SimpleNamespace(bus_clock=Mock(), roon_clock=Mock(), home_clock=Mock(), sleep_clock=Mock(), music_clock_icon=clock)
+        first = datetime(2026, 10, 6, 21, 30)
+        second = datetime(2026, 10, 6, 21, 31)
+        method = native_method("tick", {"datetime": SimpleNamespace(now=Mock(side_effect=[first, first, second])), "TZ": None})
+        for _ in range(3): self.assertTrue(method(owner))
+        self.assertEqual(clock.queue_draw.call_count, 2)
+        owner.roon_clock.set_text.assert_called_with("21:31")
+
+    def test_music_clock_hands_follow_current_time(self):
+        import math
+        owner = SimpleNamespace(settings_data={})
+        time = SimpleNamespace(hour=3, minute=30)
+        gtk = SimpleNamespace(DrawingArea=LayoutWidget)
+        method = native_method("discover_utility_icon", {"Gtk": gtk, "math": math, "datetime": SimpleNamespace(now=lambda _: time), "TZ": None})
+        icon = method(owner, clock=True); context = Mock()
+        icon.properties["draw_func"][0](icon, context, 30, 34)
+        minute, hour = context.line_to.call_args_list
+        self.assertAlmostEqual(minute.args[0], 0, places=6)
+        self.assertAlmostEqual(minute.args[1], 9, places=6)
+        self.assertAlmostEqual(hour.args[0], math.cos(math.pi / 12) * 6)
+        self.assertAlmostEqual(hour.args[1], math.sin(math.pi / 12) * 6)
+
     def test_loading_animation_stops_when_unmapped_and_restarts_once(self):
         callbacks = {}; removed = []
         glib = SimpleNamespace(timeout_add=lambda delay, fn: callbacks.setdefault("pulse", (delay, fn)) and 7, source_remove=removed.append)
@@ -75,8 +100,8 @@ class NativeBrowserControlsTests(unittest.TestCase):
         owner.portrait_music_tabs.set_visible.assert_called_with(False)
         owner.discovery_active = False
         native_method("sync_music_navigation")(owner, "now")
-        owner.discover_toolbar.set_visible.assert_called_with(False)
-        owner.music_header_overlay.set_visible.assert_called_with(True)
+        owner.discover_toolbar.set_visible.assert_called_with(True)
+        owner.music_header_overlay.set_visible.assert_called_with(False)
 
     def test_now_playing_library_control_is_a_bundled_heart_and_remains_visible_for_an_album(self):
         code = SOURCE.read_text(encoding="utf-8")
