@@ -29,7 +29,8 @@ def configure_netdata_lightweight(root, enabled):
         setting = f"    {key} = {value}\n" if value is not None else ""
         if match:
             body = re.sub(rf"(?m)^[ \t]*{re.escape(key)}[ \t]*=.*\n?", "", match.group(1))
-            text = text[:match.start(1)] + body.rstrip() + "\n" + setting + text[match.end(1):]
+            body = body.rstrip()
+            text = text[:match.start(1)] + (body + "\n" if body else "") + setting + text[match.end(1):]
         elif value is not None:
             text = text.rstrip() + f"\n\n[{section}]\n" + setting
     atomic(path, text, 0o644)
