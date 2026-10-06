@@ -1698,7 +1698,7 @@ class Display(Gtk.Application):
             width = min(self.window.get_width() or width, width)
             # Includes outer margins, the alphabet rail, queue-list padding
             # and each button's CSS padding; none may depend on image size.
-            return 3, max(48, round(width * .233))
+            return 3, max(48, round(width * (.20 if width < 600 else .233)))
         # GTK/theme versions give the rails different minimum widths. Reserve
         # their measured size plus page, grid and list padding, not a fixed
         # rail estimate that can force an 800px viewport wider than its panel.
