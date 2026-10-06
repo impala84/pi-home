@@ -1123,11 +1123,11 @@ class Display(Gtk.Application):
             if portrait:
                 number.set_xalign(.5); number.set_size_request(-1, -1); number.set_valign(Gtk.Align.CENTER)
                 route_size = min(216, round((getattr(self, "viewport_height", self.window.get_height()) - 220) / max(1, len(visible)) * .42))
-                attrs = Pango.AttrList(); attrs.insert(Pango.attr_size_new(max(64, route_size) * Pango.SCALE)); number.set_attributes(attrs)
+                attrs = Pango.AttrList(); attrs.insert(Pango.attr_size_new_absolute(max(64, route_size) * Pango.SCALE)); number.set_attributes(attrs)
             for arrival in service.get("arrivals", [])[:3]:
                 col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL); col.set_valign(Gtk.Align.CENTER); minutes = arrival.get("minutes"); value = self.label("Due" if minutes == 0 else str(minutes), "arrival", .5)
                 if portrait:
-                    attrs = Pango.AttrList(); attrs.insert(Pango.attr_size_new(min(80, max(32, round(route_size * .48))) * Pango.SCALE)); value.set_attributes(attrs)
+                    attrs = Pango.AttrList(); attrs.insert(Pango.attr_size_new_absolute(min(80, max(32, round(route_size * .48))) * Pango.SCALE)); value.set_attributes(attrs)
                 col.append(value); col.append(self.label("MIN · LIVE" if arrival.get("monitored") else "MIN · AFTER", "arrival-sub", .5)); col.set_hexpand(True); arrivals.append(col)
             row.append(arrivals); self.services.append(row)
         self.bus_status.set_text("Live from LTA DataMall" if data.get("status") == "ok" and not data.get("stale") else "Offline / last known arrivals")
