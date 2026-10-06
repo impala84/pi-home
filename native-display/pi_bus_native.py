@@ -347,7 +347,8 @@ CSS += b"""
 .portrait .discover-toolbar .roon-subnav button { padding-bottom: 3px; }
 .portrait .discovery-card { padding: 0; }
 .portrait .recommendation-heading { margin-left: 0; margin-right: 0; }
-.portrait .browser-section, .portrait .browser-row, .portrait .browser-filter { padding-left: 0; padding-right: 0; }
+.portrait .browser-section, .portrait .browser-row, .portrait .browser-filter,
+.portrait.compact-portrait .browser-filter { padding-left: 0; padding-right: 0; }
 .portrait.compact-portrait .browser-key { min-width: 0; min-height: 32px; padding: 4px; font-size: 14px; }
 .portrait.compact-portrait .browser-search-entry { min-width: 0; min-height: 44px; font-size: 20px; }
 .portrait.large-portrait .browser-filter { font-size: 24px; min-height: 52px; }
