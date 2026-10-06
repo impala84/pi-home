@@ -1,5 +1,6 @@
 """Render deterministic native Discover screenshots in Alpine GTK/Xvfb."""
 import html
+import base64
 import importlib.util
 import os
 import subprocess
@@ -239,6 +240,23 @@ if screen_height > screen_width:
     assert display.browser_grid_metrics()[0] == 3
 browse_fixture("artists", True)
 capture("browse-artists")
+display.render_browser({"status": "ready", "section": "artists", "layout": "list", "can_back": True,
+    "artist_profile": {"name": "ABBA", "image_key": "artist-abba"},
+    "items": [{"title": "Play Artist", "action": True, "item_key": "play-artist"},
+              {"title": "ABBA Gold", "subtitle": "ABBA", "item_key": "abba-gold", "image_key": "abba-gold"},
+              {"title": "Voyage", "subtitle": "ABBA", "item_key": "voyage", "image_key": "voyage"}]})
+for key, pictures in display.browser_pictures.items():
+    for picture in pictures: picture.set_filename(str(fixture_art(key, key.upper())))
+capture("artist-profile")
+if screen_height > screen_width:
+    assert display.browser_artist_panel.get_orientation() == Gtk.Orientation.HORIZONTAL
+    artist_bounds = display.browser_artist_scroll.compute_bounds(page)[1]
+    albums_bounds = display.browser_scroll.compute_bounds(page)[1]
+    assert albums_bounds.get_y() >= artist_bounds.get_y() + artist_bounds.get_height()
+display.render_browser({"status": "ready", "section": "genres", "layout": "tiles", "show_labels": True,
+    "items": [{"title": name, "item_key": name} for name in ("Pop/Rock", "Classical", "Electronic", "Jazz", "Stage & Screen", "International", "Vocal", "Blues", "Easy Listening")]})
+capture("genres")
+assert window.get_width() == screen_width
 
 display.render_browser({"status": "ready", "section": "albums", "layout": "covers", "surprise_preview": True, "items": [{"title": "Based on a True Story", "subtitle": "Fat Freddy's Drop", "item_key": "surprise", "image_key": "surprise-art"}]})
 for picture in display.browser_pictures.get("surprise-art", []): picture.set_filename(str(fixture_art("surprise-art", "SURPRISE")))
@@ -263,6 +281,14 @@ display.artwork.set_filename(str(fixture_art("now-playing", "NOW PLAYING")))
 display.adapt_display()
 display.render_bluos_inputs({"inputs": [{"id": "tv", "name": "Watch TV"}, {"id": "rega", "name": "Rega P3"}]}, True)
 capture("now-playing")
+capture_results = []
+native.post_json = lambda url, data, **kwargs: capture_results.append(data)
+display.capture_display("native-capture-check")
+assert capture_results and "image" in capture_results[-1], capture_results
+capture_file = OUTPUT / "live-display-capture.png"
+capture_file.write_bytes(base64.b64decode(capture_results[-1]["image"]))
+capture_mean = float(subprocess.check_output(["identify", "-format", "%[fx:mean]", str(capture_file)], text=True))
+assert capture_mean > .03, ("Live capture is black", capture_mean)
 if screen_height > screen_width:
     for button in display.bluos_source_buttons.values():
         assert button.get_hexpand(), "Late-loaded source tabs must expand like existing tabs"

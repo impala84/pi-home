@@ -15,6 +15,7 @@ body[data-theme="roon"] .save-bar,body[data-theme="roon"] #toast{background:#242
 body[data-theme="roon"] .primary-tabs button[aria-selected="true"],body[data-theme="roon"] .service-tabs button[aria-selected="true"]{background:var(--mint);color:#151515}
 .display-capture{margin-top:24px;padding-top:18px;border-top:1px solid var(--line)}
 .display-capture p{font-size:15px;line-height:1.5}
+.display-capture>h3:first-child{border-top:0;padding-top:0}
 .physical-view-buttons{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,140px),1fr))}.physical-view-buttons button{min-width:0;white-space:normal}
 @media(max-width:620px){.action-buttons{flex-wrap:wrap}.action-buttons button{flex:1 1 140px;min-width:0;white-space:normal}}
 #capture-image{display:block;max-width:100%;height:auto;border-radius:8px;margin:14px 0}
