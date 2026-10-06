@@ -45,7 +45,10 @@ def main():
     state = Path("/var/lib/pi-home")
     try:
         storage = load("expand_root")
-        initialize(Path("/etc/pi-home"), state, storage.expand)
+        def expand():
+            if storage.main() != 0:
+                raise RuntimeError("Root expansion failed; see /var/log/pi-home/storage.log")
+        initialize(Path("/etc/pi-home"), state, expand)
         owner = pwd.getpwnam("morningbus")
         for path in (state / "machine-id", state / "raspberrypi-initialized"):
             os.chown(path, owner.pw_uid, owner.pw_gid)
