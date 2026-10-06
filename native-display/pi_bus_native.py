@@ -556,6 +556,7 @@ class Display(Gtk.Application):
         self.browser_sidebar_spacer.set_hexpand(portrait); self.browser_sidebar_spacer.set_vexpand(not portrait)
         for sidebar in (self.browser_sidebar, self.browser_discovery_sidebar, self.discovery_sidebar):
             sidebar.set_vexpand(not portrait); sidebar.set_valign(Gtk.Align.START if portrait else Gtk.Align.FILL)
+            sidebar.set_spacing(round(width * .036) if portrait else 2)
         # Portrait tabs are a real second row, not an overlay on the clock.
         for tabs in (self.roon_subnav, self.discover_subnav):
             parent = tabs.get_parent()
