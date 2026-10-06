@@ -1732,7 +1732,7 @@ class Display(Gtk.Application):
             width = min(self.window.get_width() or width, width)
             # Includes outer margins, the alphabet rail, queue-list padding
             # and each button's CSS padding; none may depend on image size.
-            available = width - 48 - (0 if genres else 64)
+            available = width - 48 - (0 if genres else 80)
             gap = round(width * .025)
             return 3, max(48, (available - gap * 2) // 3)
         available = max(140, width - 266)
@@ -1889,7 +1889,10 @@ class Display(Gtk.Application):
         path = Path(__file__).resolve().parents[1] / "roon-controller/static/icons" / (name + "-symbolic.svg")
         # Symbolic icon loading treats SVG strokes as filled masks. Render the
         # original vector as a picture so the keyline artwork stays outlined.
-        icon = Gtk.Picture.new_for_filename(str(path))
+        colour = "#817aeb" if self.settings_data.get("theme") == "roon" else "#6ed9ae"
+        svg = path.read_bytes().replace(b"#2e3436", colour.encode("ascii"))
+        texture = Gdk.Texture.new_from_bytes(GLib.Bytes.new(svg))
+        icon = Gtk.Picture.new_for_paintable(texture)
         icon.set_can_shrink(True); icon.set_size_request(size, size)
         icon.set_halign(Gtk.Align.CENTER); icon.set_valign(Gtk.Align.CENTER)
         icon.add_css_class("browser-tile-icon")
