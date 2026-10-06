@@ -60,6 +60,8 @@ body[data-theme="roon"] { background: linear-gradient(120deg, #242338, #181818 6
 @media (min-width: 701px), (orientation: landscape) { #clock { font-size: clamp(30px,4.7vw,50px); } }
 
 @media (max-width: 700px) and (orientation: portrait) {
+  html, body { height: auto; overflow-y: auto; }
+  main { height: auto; min-height: 100dvh; overflow: visible; }
   main { gap: 14px; padding: 62px 16px 88px; }
   header > div:first-child { max-width: 58%; }
   .header-tools { flex-direction: column; align-items: flex-end; gap: 8px; }
@@ -69,16 +71,21 @@ body[data-theme="roon"] { background: linear-gradient(120deg, #242338, #181818 6
   .services { gap: 12px; grid-auto-rows: minmax(0, 1fr); align-content: stretch; min-height: 0; }
   .bus-results .services { flex: 1; }
   .service {
-    grid-template-columns: 72px minmax(0, 1fr);
-    grid-template-rows: 1fr;
-    gap: 8px;
-    min-height: 0;
-    padding: 12px 10px;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    gap: 22px;
+    min-height: 230px;
+    padding: 22px 12px;
     text-align: center;
   }
-  .service-no { font-size: 48px; line-height: 1; }
+  .service-no { font-size: clamp(96px, 28vw, 160px); line-height: .9; justify-self: center; }
+  .bus-results .services { flex: 0 0 auto; max-height: none; grid-auto-rows: auto; }
+  .bus-results { justify-content: flex-start; }
   .arrivals { width: 100%; min-width: 0; gap: 0; }
-  .arrival { min-width: 0; padding: 0 4px; font-size: clamp(24px, 7.5vw, 36px); line-height: 1; text-align: center; }
+  .arrivals:has(> .arrival:only-child) { grid-template-columns: 1fr; }
+  .arrivals:has(> .arrival:nth-child(2):last-child) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .arrivals > .empty { grid-column: 1 / -1; }
+  .arrival { min-width: 0; border-left: 0; padding: 0 4px; font-size: clamp(32px, 10vw, 48px); line-height: 1; text-align: center; }
   .arrival:first-child { border-left: 0; }
   .arrival small { margin-top: 5px; font-size: 8px; letter-spacing: .04em; }
   footer { gap: 10px; flex-wrap: wrap; font-size: 11px; }

@@ -2,11 +2,11 @@
 
 Pi Home is an independent Raspberry Pi touchscreen interface for Roon, with optional Singapore bus arrivals and Home Assistant controls. It runs a native GTK4 display in Cage/Wayland, alongside a phone/desktop web interface. Chromium is not required.
 
-The Stable baseline is **v1.0.0**. The separate **v1.1.0-beta.45 Alpine Beta** focuses on the finished-appliance experience: first-run setup accepts an owner-chosen device/SSH account without imposing Alpine's interactive password-strength policy; Settings manages the installed Netdata Agent and accepts Netdata Cloud's official generated connection command without executing pasted shell; and the touchscreen uses hard-bounded discovery cards, physical-edge Daily swipe tracks, recommendation headings with an in-grid duotone seed album, release-specific Back navigation, a stable Now Playing artwork placeholder and viewport-aware artwork loading for smoother horizontal swipes. Its diagnostics capture now renders the live GTK touchscreen tree directly, including artwork, instead of depending on Cage compositor capture during direct scan-out. Alpine appliances follow their own verified Alpine Beta updates. This is not stable v1.1.
+The Raspberry Pi OS stable baseline remains **v1.0.0**. **Pi Home 1.1.0 Alpine** is the first separately published Alpine release (`v1.1.0-alpine`), with first-run setup, optional Roon Bridge/Netdata installation, shared display settings and responsive GTK layouts. Existing Alpine devices retain their verified updater, while Raspberry Pi OS devices stay on their own distribution. Native discovery uses bounded artwork cards and configurable two/three-column portrait grids; Diagnostics captures the live GTK touchscreen, including artwork. Automated release checks do not replace testing on the physical display.
 
 ## Features
 
-The [Alpine Beta appliance](docs/ALPINE.md) is developed on `alpine-beta`.
+The [Alpine appliance](docs/ALPINE.md) retains the `alpine-beta` branch name for updater compatibility.
 The old `alpine-appliance-prototype` branch is retained temporarily only so
 beta.14 and older appliances can cross to the renamed channel safely.
 

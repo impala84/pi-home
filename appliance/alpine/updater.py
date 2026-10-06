@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Alpine Beta application updates: verified revisions, staged and reversible.
+"""Alpine application updates: verified revisions, staged and reversible.
 
 No kernel/APK upgrades, no setup re-run, and no user-supplied download URLs.
 """
@@ -176,15 +176,15 @@ def update():
     # inherit a deleted current-working-directory inode.
     os.chdir("/")
     wait_for_clock()
-    status("Update · Checking verified Alpine Beta builds…")
+    status("Update · Checking verified Alpine builds…")
     sha = verified_revision()
     if (APP / ".source-commit").exists() and (APP / ".source-commit").read_text().strip() == sha:
         if healthy(sha):
-            status("Update unchanged. Latest verified Alpine Beta is installed and running."); return
+            status("Update unchanged. Latest verified Alpine is installed and running."); return
         status("Update files are current · Restarting the stale touchscreen…")
         restart()
         if not healthy(sha): raise RuntimeError("Current files are installed but the touchscreen could not be restarted on that revision")
-        status("Touchscreen repaired. Alpine Beta " + sha[:7] + " is now running."); return
+        status("Touchscreen repaired. Alpine " + sha[:7] + " is now running."); return
     releases = Path("/opt/pi-home-releases"); releases.mkdir(exist_ok=True, mode=0o755)
     # A 1.7 GB appliance cannot retain a full Python/npm tree for every update.
     # The live release is the rollback copy while the next one is staged.
@@ -251,7 +251,7 @@ def update():
     # old inactive tree must never roll back an already healthy new release.
     try: prune_releases(releases, {target})
     except OSError: pass
-    status("Update installed. Alpine Beta " + sha[:7] + "; settings and pairing preserved.")
+    status("Update installed. Alpine " + sha[:7] + "; settings and pairing preserved.")
 
 
 def main():

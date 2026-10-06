@@ -275,6 +275,10 @@ home = display.build_home(); window.set_child(home)
 display.settings_data["display_theme"] = "roon"
 display.render_home({"status": "ok", "entities": [{"entity_id": f"{domain}.fixture{index}", "domain": domain, "name": name, "state": "on", "supports_level": domain in ("fan", "light"), "percentage": 50} for index, (domain, name) in enumerate((("fan", "Living Room Fan"), ("light", "Living Room"), ("switch", "Pi-Hole Master"), ("switch", "Pi-Hole Slave")))]})
 capture("home")
+icon = display.home_grid.get_first_child().get_first_child().get_first_child().get_child()
+original_icon_size = max(64, min(240, round((screen_height - 190) / 4 * .7))) if screen_height > screen_width else 108 if max(screen_width, screen_height) >= 1200 else 72
+assert icon.get_pixel_size() == round(original_icon_size * .75)
+assert icon.get_width() >= original_icon_size
 if screen_height > screen_width:
     assert display.home_grid.get_first_child().get_orientation() == Gtk.Orientation.HORIZONTAL
 

@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.0 Alpine — 6 October 2026
+
+- First separately published Alpine release, retaining the verified Alpine updater and optional-software setup.
+- Reduces Home device icons by 25%, without changing cards or controls.
+- Mobile portrait bus cards show a large centred route number above full-width, evenly spaced arrival columns. Longer route lists scroll naturally.
+
 ## 1.1.0-beta.45 Alpine Beta — 6 October 2026
 
 - Adds a persisted 2/3-column portrait Discover grid setting in backend Display → Appearance, shared by Recent, Daily and New Releases.

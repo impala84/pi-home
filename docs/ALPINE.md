@@ -1,4 +1,4 @@
-# Alpine Beta appliance
+# Alpine appliance
 
 First boot includes **Choose optional software**. Select Roon Bridge to use the
 Pi as an audio endpoint, and/or Netdata for monitoring. Both require internet
@@ -27,10 +27,10 @@ by updating Pi Home. The initial configuration is backed up alongside
 `netdata.conf` as `netdata.conf.pi-home-backup`; unrelated configuration is
 preserved. Diagnostics shows combined Netdata/collector RSS and CPU when running.
 
-Current version: **1.1.0-beta.45 Alpine Beta**. First-run setup creates an
+Current version: **1.1.0 Alpine**, the first separately published Alpine release. First-run setup creates an
 owner-chosen device/SSH account, and Settings can manage the installed Netdata
 Agent and its Cloud connection without an Alpine shell. This update is available
-on the Alpine branch.
+on the Alpine branch. The existing `alpine-beta` branch/channel identifier is retained for updater compatibility; the published release is `v1.1.0-alpine` and is not a GitHub prerelease. It is separate from the Raspberry Pi OS stable distribution and is not marked the repository-wide latest release.
 
 Software version labels include “Alpine” (for example, “1.1.0-beta.20 Alpine”)
 to distinguish these builds from Raspberry Pi OS. Setup and web password changes

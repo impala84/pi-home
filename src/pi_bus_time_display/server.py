@@ -918,7 +918,7 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
                 if not self.authorised():
                     return
                 if os.getenv("PI_HOME_APPLIANCE_PLATFORM") == "alpine-prototype":
-                    result = {"installed_version": display_version(), "release_channel": "alpine-beta", "latest_version": None, "update_available": False, "status": "beta", "message": "This device follows verified Alpine Beta updates."}
+                    result = {"installed_version": display_version(), "release_channel": "alpine-beta", "latest_version": None, "update_available": False, "status": "appliance", "message": "This device follows verified Alpine updates."}
                     self.send_json(200, json.dumps(result).encode()); return
                 result = releases.check(state.config.release_channel, __version__, refresh=self.path.endswith("refresh=1"))
                 self.send_json(200, json.dumps(result).encode())
