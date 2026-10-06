@@ -1,4 +1,5 @@
 import tempfile
+import os
 import unittest
 from datetime import datetime
 from pathlib import Path
@@ -6,10 +7,110 @@ from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
 from pi_bus_time_display.config import Config, load_config
-from pi_bus_time_display.server import State, active_wifi_ssid, automatic_display_target, clear_sleep_mode_on_start, display_target, home_assistant_set_state, home_assistant_set_value, read_display_mode, service_state, set_display_mode, system_snapshot, within_sleep_window, write_config, write_control_request
+from pi_bus_time_display.server import State, active_wifi_ssid, automatic_display_target, clear_sleep_mode_on_start, display_config_dir, display_orientation, display_target, home_assistant_set_state, home_assistant_set_value, netdata_snapshot, read_display_mode, service_state, set_display_mode, system_snapshot, within_sleep_window, write_config, write_control_request
 
 
 class DisplayModeTests(unittest.TestCase):
+    def test_portrait_discovery_columns_persist_and_validate(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "config.toml"
+            for columns in (2, 3):
+                write_config(path, Config(portrait_discovery_columns=columns))
+                self.assertEqual(load_config(path).portrait_discovery_columns, columns)
+            write_config(path, Config(portrait_discovery_columns=4))
+            with self.assertRaises(ValueError): load_config(path)
+
+    def test_saved_theme_is_in_initial_html_before_scripts_run(self):
+        import io
+        from unittest.mock import Mock
+        from pi_bus_time_display.server import make_handler
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory)
+            state = State(Config(display_theme="roon"), path)
+            Handler = make_handler(state, path / "config.toml", path / "env", path / "mode")
+            for page in ("/admin.html", "/admin.html?test=1", "/", "/home.html"):
+                handler = Handler.__new__(Handler); handler.path = page
+                handler.wfile = io.BytesIO(); handler.is_authorised = Mock(return_value=True); handler.authorised = Mock(return_value=True)
+                handler.send_response = Mock(); handler.send_header = Mock(); handler.end_headers = Mock()
+                handler.do_GET()
+                html = handler.wfile.getvalue().decode()
+                self.assertIn('<body data-theme="roon"', html)
+                self.assertNotIn('href="/favicon.svg"', html)
+                state.config = Config(display_theme="fresh-mint")
+                handler.wfile = io.BytesIO(); handler.do_GET()
+                self.assertIn('<body data-theme="fresh-mint"', handler.wfile.getvalue().decode())
+                state.config = Config(display_theme="roon")
+
+    def test_touchscreen_bridge_reaches_alpine_helper_and_rejects_remote_requests(self):
+        import io
+        from unittest.mock import Mock
+        from pi_bus_time_display.server import make_handler
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory)
+            Handler = make_handler(State(Config(), path), path / "config.toml", path / "env", path / "mode")
+            for enabled in (True, False):
+                handler = Handler.__new__(Handler)
+                handler.path = "/api/device/roon-bridge"
+                handler.client_address = ("127.0.0.1", 1)
+                payload = b'{"enabled":true}' if enabled else b'{"enabled":false}'
+                handler.headers = {"Content-Length": str(len(payload))}
+                handler.rfile = io.BytesIO(payload); handler.send_json = Mock()
+                with patch.dict(os.environ, {"PI_HOME_APPLIANCE_PLATFORM": "alpine-prototype"}), patch("pi_bus_time_display.server.write_control_request") as action:
+                    handler.do_POST()
+                    action.assert_called_once_with(path, {"action":"roon_start" if enabled else "roon_stop"})
+                    self.assertEqual(handler.send_json.call_args.args[0], 200)
+                    handler.client_address = ("10.0.0.2", 1)
+                    handler.do_POST()
+                    self.assertEqual(handler.send_json.call_args.args[0], 403)
+                    self.assertEqual(action.call_count, 1)
+
+    def test_display_orientation_is_derived_from_each_panels_native_shape(self):
+        self.assertEqual(display_orientation("original", "normal"), "landscape")
+        self.assertEqual(display_orientation("original", "90"), "portrait")
+        self.assertEqual(display_orientation("touch2-10", "normal"), "portrait")
+        self.assertEqual(display_orientation("touch2-10", "90"), "landscape")
+
+    def test_alpine_display_settings_use_the_appliance_configuration(self):
+        with patch.dict(os.environ, {"PI_HOME_APPLIANCE_PLATFORM": "alpine-prototype"}):
+            self.assertEqual(display_config_dir(), Path("/etc/pi-home"))
+        with patch.dict(os.environ, {}, clear=True):
+            self.assertEqual(display_config_dir(), Path("/etc/pi-bus-time-display"))
+
+    def test_alpine_diagnostics_uses_openrc_service_names(self):
+        from pi_bus_time_display.server import diagnostics_snapshot
+        with patch.dict(os.environ, {"PI_HOME_APPLIANCE_PLATFORM": "alpine-prototype"}), patch("pi_bus_time_display.server.command_output", return_value=""), patch("pi_bus_time_display.server.service_state", return_value="running") as services:
+            data = diagnostics_snapshot()
+        self.assertTrue(all(process["active"] for process in data["processes"]))
+        self.assertEqual({call.args[0] for call in services.call_args_list}, {"pi-home-roon", "pi-home-api", "pi-home-display", "roonbridge"})
+
+    def test_diagnostics_includes_netdata_and_collectors_only_when_running(self):
+        from pi_bus_time_display.server import diagnostics_snapshot
+        output = "12 204800 1.2 /opt/netdata/bin/netdata -D\n13 10240 0.3 /opt/netdata/usr/libexec/netdata/plugins.d/apps.plugin\n14 99999 9.9 grep netdata\n"
+        with patch("pi_bus_time_display.server.command_output", return_value=output), patch("pi_bus_time_display.server.service_state", return_value="stopped"):
+            data = diagnostics_snapshot()
+        netdata = next(process for process in data["processes"] if process["label"] == "Netdata")
+        self.assertEqual(netdata["rss_kb"], 215040)
+        self.assertAlmostEqual(netdata["cpu_percent"], 1.5)
+        self.assertEqual(netdata["pids"], [12, 13])
+        with patch("pi_bus_time_display.server.command_output", return_value=""), patch("pi_bus_time_display.server.service_state", return_value="stopped"):
+            self.assertNotIn("Netdata", [process["label"] for process in diagnostics_snapshot()["processes"]])
+
+    def test_diagnostics_detects_alpine_packaged_netdata(self):
+        from pi_bus_time_display.server import diagnostics_snapshot
+        with patch("pi_bus_time_display.server.command_output", return_value="22 1024 0.1 /usr/sbin/netdata"), patch("pi_bus_time_display.server.service_state", return_value="stopped"):
+            self.assertTrue(next(process for process in diagnostics_snapshot()["processes"] if process["label"] == "Netdata")["active"])
+
+    def test_diagnostics_hides_unconfigured_music_and_stopped_optional_tools(self):
+        from pi_bus_time_display.server import diagnostics_snapshot
+        with patch("pi_bus_time_display.server.command_output", return_value=""), patch("pi_bus_time_display.server.service_state", return_value="stopped"):
+            labels = [p["label"] for p in diagnostics_snapshot(Config(bus_enabled=False))["processes"]]
+            self.assertNotIn("Roon controller", labels)
+            self.assertNotIn("Roon Bridge", labels)
+            self.assertNotIn("Netdata", labels)
+            self.assertIn("Pi Home backend", labels)
+            configured = diagnostics_snapshot(Config(roon_zone_name="NAD M33"))["processes"]
+            self.assertIn("Roon controller", [p["label"] for p in configured])
+
     def test_bus_disabled_persists_and_automatic_stays_on_music(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "config.toml"
@@ -140,6 +241,29 @@ class DisplayModeTests(unittest.TestCase):
         with patch("pi_bus_time_display.server.command_output", side_effect=["not-found"]):
             self.assertEqual(service_state("netdata.service"), "not_installed")
 
+    def test_netdata_state_uses_openrc_on_alpine(self):
+        with patch.dict(os.environ, {"PI_HOME_APPLIANCE_PLATFORM": "alpine-prototype"}), patch("pi_bus_time_display.server.Path.is_file", return_value=True), patch("pi_bus_time_display.server.command_output", return_value=" * status: started") as command:
+            self.assertEqual(service_state("netdata.service"), "running")
+            command.assert_called_once_with(["rc-service", "netdata", "status"])
+        with patch.dict(os.environ, {"PI_HOME_APPLIANCE_PLATFORM": "alpine-prototype"}), patch("pi_bus_time_display.server.Path.is_file", return_value=False):
+            self.assertEqual(service_state("netdata.service"), "not_installed")
+
+    def test_netdata_snapshot_reports_installed_version_and_cloud_state(self):
+        with patch("pi_bus_time_display.server.service_state", return_value="running"), patch("pi_bus_time_display.server.urllib.request.urlopen", side_effect=OSError), patch("pi_bus_time_display.server.command_output", side_effect=["netdata v2.1.0", "Available: Yes\nClaimed: Yes\nClaimed Id: node-123\nOnline: Yes\n"]):
+            details = netdata_snapshot()
+        self.assertEqual(details["version"], "v2.1.0")
+        self.assertEqual(details["cloud_status"], "online")
+        self.assertEqual(details["claim_id"], "node-123")
+
+    def test_netdata_snapshot_adopts_live_official_static_agent(self):
+        response = unittest.mock.MagicMock(); response.__enter__.return_value = response
+        with patch("pi_bus_time_display.server.service_state", return_value="not_installed"), patch("pi_bus_time_display.server.Path.is_file", return_value=True), patch("pi_bus_time_display.server.command_output", return_value="netdata v2.12.0-2-nightly"), patch("pi_bus_time_display.server.urllib.request.urlopen", return_value=response), patch("pi_bus_time_display.server.json.load", return_value={"agent-claimed": True, "online": True, "claimed-id": "static-node"}):
+            details = netdata_snapshot()
+        self.assertTrue(details["installed"])
+        self.assertEqual(details["service"], "running")
+        self.assertEqual(details["version"], "v2.12.0-2-nightly")
+        self.assertEqual(details["cloud_status"], "online")
+
     def test_unknown_mode_defaults_to_auto(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "display-mode"
@@ -181,6 +305,12 @@ class DisplayModeTests(unittest.TestCase):
             self.assertEqual(display_target(config, path, {"zone": {"state": "playing"}}, evening), "http://127.0.0.1:8766/")
 
     def test_touchscreen_update_request_is_atomically_queued(self):
+        import json
+        with patch.dict(os.environ, {"PI_HOME_APPLIANCE_PLATFORM": "alpine-prototype"}), patch("pi_bus_time_display.server.socket.socket") as sock:
+            client = sock.return_value.__enter__.return_value
+            client.makefile.return_value.readline.return_value = b'{"ok":true}\n'
+            self.assertTrue(write_control_request(Path("/unused"), {"action": "netdata_lightweight", "enabled": True}))
+            self.assertEqual(json.loads(client.sendall.call_args.args[0]), {"action": "netdata_lightweight", "enabled": True})
         with tempfile.TemporaryDirectory() as directory:
             state_dir = Path(directory)
             self.assertTrue(write_control_request(state_dir, {"action": "update"}))

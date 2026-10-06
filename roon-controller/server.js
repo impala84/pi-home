@@ -18,11 +18,14 @@ const {DiscoveryManager} = require('./discovery-state');
 const {openDiscovery} = require('./discovery-bridge');
 const {brokerWireId} = require('../tools/discovery-wire.cjs');
 const discovery = new DiscoveryManager();
+const {LibraryManager}=require('./library-state');
+const library=new LibraryManager({changed:()=>broadcast()});
 const discoveryCores = new Map();
 function discoveryTarget() {
   const host = core?.moo?.transport?.host;
   const found = discoveryCores.get(host);
   discovery.setTarget(core && found ? {...found,coreId:core.core_id} : null);
+  library.setTarget(core && found ? {...found,coreId:core.core_id} : null);
 }
 
 const port = Number(process.env.PORT || 8766);
@@ -133,7 +136,7 @@ function publicState() {
       can_seek: Boolean(zone.is_seek_allowed), output: output ? {id: output.output_id, volume: output.volume || null} : null
     },
     queue: {status: !configuredQueueEnabled() ? 'disabled' : (queueZoneId === zone.zone_id ? 'ready' : 'loading'), items: queueZoneId === zone.zone_id ? publicQueueItems(queueItems, queueHistory) : []},
-    labels, browser_enabled: configured.browserEnabled, details, amplifier: publicAmplifierState()
+    labels, browser_enabled: configured.browserEnabled, details: {...details,...library.getLibraryStatus(zone)}, amplifier: publicAmplifierState()
   };
 }
 
@@ -257,6 +260,7 @@ const roon = new RoonApi({
     browser.clear();
     core = transport = imageService = browseService = null;
     discovery.setTarget(null);
+    library.setTarget(null);
     details = {status: 'unavailable'}; detailsKey = ''; detailsRequest += 1;
     zones.clear();
     status.set_status('Waiting for Roon authorisation', false);
@@ -295,8 +299,11 @@ function body(request) {
 }
 
 function serveStatic(request, response) {
-  const names = {'/': 'index.html', '/app.js': 'app.js', '/discovery.js': 'discovery.js', '/discovery.css': 'discovery.css', '/style.css': 'style.css', '/refinements.css': 'refinements.css', '/favicon.svg': 'favicon.svg'};
-  const name = names[new URL(request.url, 'http://localhost').pathname];
+  const names = {'/': 'index.html', '/app.js': 'app.js', '/discovery.js': 'discovery.js', '/discovery.css': 'discovery.css', '/style.css': 'style.css', '/refinements.css': 'refinements.css', '/favicon.svg': 'favicon.svg', '/favicon-roon.svg': 'favicon-roon.svg'};
+  const pathname = new URL(request.url, 'http://localhost').pathname;
+  const allowedIcons = new Set(['music','jazz','classical','electronic','rock','stage','avant','folk','country','blues','rap','rb','reggae','latin','world','easy','vocal','ambient','holiday','children','religious','playlist','artist','album','folder']);
+  const icon = /^\/icons\/([a-z]+)-symbolic\.svg$/.exec(pathname);
+  const name = names[pathname] || (icon && allowedIcons.has(icon[1]) ? pathname.slice(1) : null);
   if (!name) return false;
   const types = {'.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml'};
   const data = fs.readFileSync(path.join(staticDir, name));
@@ -338,7 +345,10 @@ http.createServer(async (request, response) => {
         response.writeHead(200, {'Content-Type': type || 'image/jpeg', 'Cache-Control': 'private, max-age=3600'}); response.end(data);
       });
     }
-    if (request.method === 'GET' && url.pathname === '/api/discovery') return json(response,200,discovery.state(url.searchParams.get('section') || 'recent',url.searchParams.get('id') || '',url.searchParams.get('client') || ''));
+    if (request.method === 'GET' && url.pathname === '/api/discovery') {
+      const section = url.searchParams.get('section') || 'recent', client = url.searchParams.get('client') || '';
+      return json(response,200,section === 'daily-home' ? discovery.home(client) : discovery.state(section,url.searchParams.get('id') || '',client));
+    }
     if (request.method === 'GET' && url.pathname === '/api/discovery/image') {
       const imageUrl = discovery.imageUrl(url.searchParams.get('key'));
       if(!imageUrl) return response.writeHead(404).end();
@@ -360,6 +370,11 @@ http.createServer(async (request, response) => {
       if (url.pathname === '/api/bluos/mute') { await bluos.toggleMute(); return json(response, 200, {ok: true}); }
       if (!transport || !zone) return json(response, 409, {error: 'Roon is not connected'});
       if(url.pathname === '/api/discovery/mix-action') return json(response,200,await discovery.mixAction(data.id,zone.zone_id,data.action,data.nonce));
+      if(url.pathname === '/api/library/add') {
+        const result = await library.mutate(zone,{action:'add',albumId:data.album_id});
+        return json(response,200,result);
+      }
+      if(url.pathname === '/api/library/favorite') return json(response,200,await library.mutate(zone,{action:'favorite',albumId:data.album_id,favorite:data.favorite}));
       if(url.pathname === '/api/discovery/open') {
         if(!discovery.find(data.key) && data.section) {
           discovery.state(data.section,data.id||'');

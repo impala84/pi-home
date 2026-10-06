@@ -48,9 +48,11 @@ class SemVer:
         return len(self.pre) < len(other.pre)
 
 
-def select_release(releases: list, channel: str, installed: str) -> dict:
+def select_release(releases: list, channel: str, installed: str, distribution: str = "rpi") -> dict:
     if channel not in {"stable", "beta"}:
         raise ValueError("Release channel must be stable or beta")
+    if distribution not in {"rpi", "alpine"}:
+        raise ValueError("Unknown release distribution")
     current = SemVer(installed)
     candidates = []
     for release in releases:
@@ -62,8 +64,12 @@ def select_release(releases: list, channel: str, installed: str) -> dict:
         # Only normal v-prefixed release tags may reach the updater.
         if not isinstance(tag, str) or not tag.startswith("v"):
             continue
+        alpine = tag.endswith("-alpine")
+        if alpine != (distribution == "alpine"):
+            continue
+        version_tag = tag[:-7] if alpine else tag
         try:
-            version = SemVer(tag)
+            version = SemVer(version_tag)
         except ValueError:
             continue
         if channel == "stable" and (version.pre or release.get("prerelease")):
@@ -75,7 +81,7 @@ def select_release(releases: list, channel: str, installed: str) -> dict:
     available = latest > current
     status = "available" if available else "ahead" if latest < current else "current"
     message = "Update available." if available else "Installed version is newer than this channel; no downgrade will be performed." if status == "ahead" else "Up to date."
-    return {"installed_version": installed, "release_channel": channel, "latest_version": tag[1:], "tag": tag, "update_available": available, "status": status, "message": message}
+    return {"installed_version": installed, "release_channel": channel, "latest_version": (tag[:-7] if distribution == "alpine" else tag)[1:], "tag": tag, "update_available": available, "status": status, "message": message}
 
 
 def published_releases() -> list:
@@ -98,15 +104,17 @@ class ReleaseChecker:
         self.cached = {}
         self.checked_at = 0.0
 
-    def check(self, channel: str, installed: str, refresh: bool = False) -> dict:
+    def check(self, channel: str, installed: str, refresh: bool = False, distribution: str = "rpi") -> dict:
         with self.lock:
-            if not refresh and self.cached.get("release_channel") == channel and time.monotonic() - self.checked_at < 300:
+            key = (channel, installed, distribution)
+            if not refresh and getattr(self, "cache_key", None) == key and time.monotonic() - self.checked_at < 300:
                 return dict(self.cached)
             try:
-                result = select_release(published_releases(), channel, installed)
+                result = select_release(published_releases(), channel, installed, distribution)
             except (OSError, ValueError):
                 result = {"installed_version": installed, "release_channel": channel, "latest_version": None, "update_available": False, "status": "unavailable", "message": "Could not check GitHub releases. Try again later."}
             self.cached = result
+            self.cache_key = key
             self.checked_at = time.monotonic()
             return dict(result)
 

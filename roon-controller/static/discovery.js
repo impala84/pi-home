@@ -5,11 +5,11 @@ let discoveryMix = '';
 let discoverySignature = '';
 let discoveryRecentMode = 'listened';
 let discoveryPicks = false;
-const discoverTabs = [['recent','RECENT','RECENT'],['browse','BROWSE','BROWSE'],['daily','DAILY MIXES','MIXES'],['releases','NEW RELEASES','NEW'],['surprise','SURPRISE ME','SURPRISE ME']];
+const discoverTabs = [['recent','RECENT','RECENT'],['browse','BROWSE','BROWSE'],['daily','DAILY','DAILY'],['releases','NEW RELEASES','NEW'],['surprise','SURPRISE ME','SURPRISE ME']];
 function responsiveLabel(element,full,compact){const normal=document.createElement('span'),short=document.createElement('span');normal.className='nav-label-full';short.className='nav-label-compact';normal.textContent=full;short.textContent=compact;element.replaceChildren(normal,short);}
 function loadingNotice(){const status=document.createElement('p');status.className='loading-notice';status.setAttribute('role','status');status.setAttribute('aria-live','polite');status.textContent='Loading…';return status;}
 function initDiscover() {
-  const css=document.createElement('link');css.rel='stylesheet';css.href='discovery.css?v=1106';document.head.append(css);
+  const css=document.createElement('link');css.rel='stylesheet';css.href='discovery.css?v=1112';document.head.append(css);
   const nav=document.createElement('nav');nav.id='discover-nav';nav.className='music-subnav';nav.setAttribute('aria-label','Discover');nav.hidden=true;
   for(const [id,label,compact] of discoverTabs){const button=document.createElement('button');responsiveLabel(button,label,compact);button.dataset.discover=id;button.onclick=()=>openDiscover(id);nav.append(button);} document.body.append(nav);
   const panel=document.createElement('section');panel.id='discovery-view';panel.className='discovery-view';panel.hidden=true;document.body.append(panel);
@@ -70,10 +70,17 @@ function renderDiscover(data) {
   if(discoveryMix){const title=document.createElement('h1');title.className='mix-title';title.textContent=data.mix?.title||'Your Daily Mix';panel.append(title);}
   if(discoveryMix){const mix=discoveryMix;const controls=document.createElement('div');controls.className='mix-controls';for(const [action,label] of [['play','PLAY THIS MIX'],['queue','QUEUE THIS MIX']]){const button=document.createElement('button');button.textContent=label;button.onclick=async()=>{const buttons=[...controls.querySelectorAll('button')];buttons.forEach(b=>b.disabled=true);clearTimeout(discoveryTimer);try{const nonce=crypto.randomUUID();const response=await fetch(api('/api/discovery/mix-action'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:mix,action,nonce})});const result=await response.json();if(!response.ok)throw Error(result.error||'Request not confirmed. Check the Roon queue before retrying.');controls.append(discoveryMessage(`${action==='play'?'Play requested for':'Queued'} ${result.count} mix selections.`));}catch(error){controls.append(discoveryMessage(error.message));}finally{buttons.forEach(b=>b.disabled=false);}};controls.append(button);}panel.append(controls);}
   const content=panel;
-  const group=(title,items)=>{const section=document.createElement('section');if(title){const heading=document.createElement('h2');heading.className='browser-section';heading.textContent=title;section.append(heading);}const grid=document.createElement('div');grid.className='discovery-grid';for(const item of items)grid.append(discoveryCard(item));section.append(grid);content.append(section);};
+  const group=(title,items)=>{
+    const section=document.createElement('section');
+    if(title){const heading=document.createElement('h2');heading.className='browser-section';heading.textContent=title;section.append(heading);}
+    const grid=document.createElement('div');grid.className='discovery-grid';
+    if(discoveryTab==='daily'&&!discoveryMix)grid.classList.add('daily-grid');
+    grid.replaceChildren(...items.map(discoveryCard));section.append(grid);
+    content.append(section);
+  };
   group(null,data.items||[]);
   for(const recommendation of data.groups||[]){const reason=recommendation.reason==='added'?'Because you added':recommendation.reason==='recent'?'Because you listened to':'Inspired by';group(recommendation.seed?`${reason} ${recommendation.seed.title}`:'Picked for you',recommendation.items||[]);}
-  if(discoveryTab==='daily'&&!discoveryMix&&!discoveryPicks){const more=document.createElement('button');more.className='browser-back';more.textContent='MORE RECOMMENDATIONS';more.onclick=()=>openDiscover('daily','',true,'picks');panel.append(more);}
+  if(discoveryTab==='daily'&&!discoveryMix&&!discoveryPicks){const more=document.createElement('button');more.className='browser-back';more.textContent='FOR YOU';more.onclick=()=>openDiscover('daily','',true,'picks');panel.append(more);}
   if(!data.items?.length&&!data.groups?.length)panel.append(discoveryMessage('Nothing available here yet.'));
   if(discoveryMix&&data.total>(data.items||[]).length)content.append(discoveryMessage(`Showing the first ${data.items.length} mix selections. The mix buttons request the whole mix.`));
   panel.scrollTop=scroll;

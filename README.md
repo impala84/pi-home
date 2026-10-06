@@ -2,9 +2,13 @@
 
 Pi Home is an independent Raspberry Pi touchscreen interface for Roon, with optional Singapore bus arrivals and Home Assistant controls. It runs a native GTK4 display in Cage/Wayland, alongside a phone/desktop web interface. Chromium is not required.
 
-The Stable baseline is **v1.0.0**. The separate **v1.1.0-beta.7** candidate focuses on touchscreen consistency: Browse-style side navigation for Recent/Dailies, compact album grids, playlist-style mix tracks and bottom-left Back; select the Beta update channel to try it. Web layout is unchanged from beta.6. Actual-server discovery reads were previously verified. Physical GTK acceptance, audio-confirmed Discover playback and fresh installation remain unverified; this is not stable v1.1.
+**Pi Home 1.1.0** is available separately for Raspberry Pi OS (`v1.1.0`) and Alpine (`v1.1.0-alpine`). Both share the responsive GTK/web UI, display controls, library/favourite actions and configurable Discover grids. Raspberry Pi OS retains its systemd installer and tagged updater; Alpine retains its image, first-boot wizard and verified OpenRC updater. Stable/Beta selection never crosses distributions or automatically downgrades. Diagnostics captures the live GTK touchscreen, including artwork. Automated release checks do not replace testing on the physical display.
 
 ## Features
+
+The [Alpine appliance](docs/ALPINE.md) retains the `alpine-beta` branch name for updater compatibility.
+The old `alpine-appliance-prototype` branch is retained temporarily only so
+beta.14 and older appliances can cross to the renamed channel safely.
 
 - Roon artwork, lead artist, track information, progress, playback, mute and volume.
 - Queue, library browsing, combined library/connected TIDAL search and Surprise playback, through Roon's official extension API. Catalogue availability depends on the connected Roon Server.
@@ -12,6 +16,7 @@ The Stable baseline is **v1.0.0**. The separate **v1.1.0-beta.7** candidate focu
 - Optional Singapore LTA arrivals: up to four service rows and three arrivals per service.
 - Optional Home Assistant controls for up to eight allow-listed `fan`, `light`, `switch` and `input_boolean` entities.
 - Fresh Mint and Roon-inspired themes, shared across touchscreen and web.
+- Shared Landscape/Portrait display settings with panel-aware rotation and responsive native GTK layouts from 480×800 through 1920×1200.
 - Scheduled sleep, touch wake, brightness/orientation controls and playback-aware wake behaviour. TV/record inputs do not independently hold the display awake.
 - Password-protected web settings, diagnostics, actual display capture and controlled system actions.
 - Published-release updates with Stable/Beta selection, preserving appliance configuration and credentials.
@@ -51,12 +56,12 @@ Do not run these production commands on a development Mac.
 2. From that normal user's terminal, clone a published tag. For the current release:
 
    ```sh
-   git clone --branch v1.0.0 https://github.com/impala84/pi-home.git pi-home
+   git clone --branch v1.1.0 https://github.com/impala84/pi-home.git pi-home
    cd pi-home
    sudo ./scripts/install-pi.sh
    ```
 
-3. Configure `/etc/pi-bus-time-display/config.toml` and `/etc/pi-bus-time-display/secrets.env`. The installer prints a generated web-admin password once. Do not commit these files. New configuration is music-first; enable optional modules explicitly. Existing installations retain their saved settings.
+3. Configure `/etc/pi-home/config.toml` and `/etc/pi-home/secrets.env`. The installer prints a generated web-admin password once. Do not commit these files. New configuration is music-first; enable optional modules explicitly. Existing installations retain their saved settings.
 4. If the Pi should also be an audio endpoint, run `sudo ./scripts/install-roon-bridge.sh`. This downloads Roon's official architecture-specific installer; Roon Bridge is separately distributed and not bundled in Pi Home.
 5. Enable appliance mode from the same normal user:
 
@@ -74,14 +79,16 @@ For a frozen v1.0 rebuild, use the `v1.0.0` tag, not an untagged `main` checkout
 
 | Path | Purpose |
 | --- | --- |
-| `/opt/pi-bus-time-display/` | Git checkout, Node modules and `.venv` |
-| `/etc/pi-bus-time-display/config.toml` | Non-secret application configuration |
-| `/etc/pi-bus-time-display/secrets.env` | LTA, Home Assistant, OpenObserve and admin credentials |
-| `/etc/pi-bus-time-display/roon.env` | Optional Node environment overrides |
-| `/etc/pi-bus-time-display/display-user`, `display-profile`, `display-transform` | Saved native-session user, panel and orientation |
-| `/var/lib/pi-bus-time-display/` | Persistent display preferences, action queue, update status and Roon pairing state |
+| `/opt/pi-home/` | Git checkout, Node modules and `.venv` |
+| `/etc/pi-home/config.toml` | Non-secret application configuration |
+| `/etc/pi-home/secrets.env` | LTA, Home Assistant, OpenObserve and admin credentials |
+| `/etc/pi-home/roon.env` | Optional Node environment overrides |
+| `/etc/pi-home/display-user`, `display-profile`, `display-transform` | Saved native-session user, panel and orientation |
+| `/var/lib/pi-home/` | Persistent display preferences, action queue, update status and Roon pairing state |
 
-Use encrypted/off-device backups for `/etc/pi-bus-time-display/` and `/var/lib/pi-bus-time-display/`. These contain secrets and personal state. Do not put them in the public repository.
+Use encrypted/off-device backups for `/etc/pi-home/` and `/var/lib/pi-home/`. These contain secrets and personal state. Do not put them in the public repository.
+
+New installations use Pi Home directory names. Re-running the installer on an older installation adds compatible Pi Home paths without moving settings or Roon pairing. Older internal service names remain supported; these are compatibility identifiers, not the product name.
 
 ## Configuration
 
@@ -105,7 +112,7 @@ Secrets/environment variables belong in `secrets.env`, not TOML:
 | `HOME_ASSISTANT_TOKEN` | Only for Home Assistant |
 | `OPENOBSERVE_PASSWORD` | Only for authenticated OpenObserve logging |
 
-Node overrides in `roon.env`: `ROON_ZONE_NAME`, `CONFIG_PATH`, `PORT`. Keep the production port at 8766 because GTK/proxy routes expect it. Roon pairing is saved in `/var/lib/pi-bus-time-display/roon/`, not an environment variable.
+Node overrides in `roon.env`: `ROON_ZONE_NAME`, `CONFIG_PATH`, `PORT`. Keep the production port at 8766 because GTK/proxy routes expect it. Roon pairing is saved in `/var/lib/pi-home/roon/`, not an environment variable.
 
 ## Updates and release channels
 
@@ -159,7 +166,7 @@ python3 -m venv .venv
 cp config.example.toml config.toml
 cp .env.example .env
 # Set a local admin password; optionally enable simulated bus display.
-.venv/bin/pi-bus-time-display --simulate --config config.toml --env .env
+.venv/bin/pi-home --simulate --config config.toml --env .env
 ```
 
 For the controller, in another terminal:

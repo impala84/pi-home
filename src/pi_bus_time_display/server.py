@@ -5,6 +5,7 @@ import base64
 import hmac
 import json
 import os
+import re
 import secrets
 import socket
 import subprocess
@@ -28,6 +29,21 @@ from .releases import ReleaseChecker
 
 
 CONTROL_REQUEST_LOCK = threading.Lock()
+ALPINE_SYSTEM_ACTIONS = {
+    "update", "reboot", "netdata_enable", "netdata_disable", "netdata_claim",
+    "netdata_claim_command", "netdata_official_install", "netdata_disconnect", "netdata_lightweight",
+    "device_credentials", "install_tools", "display_on", "display_off",
+    "set_brightness", "set_display", "roon_install", "roon_start", "roon_stop", "roon_restart",
+}
+SYSTEM_ACTIONS = ALPINE_SYSTEM_ACTIONS | {
+    "leds_enable", "leds_disable",
+    "set_hostname", "set_wifi", "set_rotation", "set_display",
+}
+
+
+def display_version():
+    suffix = " Alpine" if os.getenv("PI_HOME_APPLIANCE_PLATFORM") == "alpine-prototype" else ""
+    return __version__ + suffix
 
 
 class State:
@@ -35,6 +51,7 @@ class State:
         self.config = config
         self.lock = threading.Lock()
         self.display_capture = None
+        self.display_view_request = None
         self.data: dict = {"status": "starting", "services": []}
         self.last_success: datetime | None = None
         self.last_roon_playing = 0.0
@@ -75,12 +92,20 @@ class State:
     def controls_snapshot(self) -> dict:
         with self.lock:
             capture_id = self.display_capture["id"] if self.display_capture else None
+            view_request = dict(self.display_view_request) if self.display_view_request else None
         return {
             "services": [{"name": service, "enabled": service in self.enabled_services} for service in self.config.services],
             "home": self.home_data,
             "display_brightness": self.display_brightness,
             "capture_request": capture_id,
+            "display_view_request": view_request,
         }
+
+    def request_display_view(self, view: str) -> dict:
+        request = {"id": secrets.token_urlsafe(12), "view": view}
+        with self.lock:
+            self.display_view_request = request
+        return dict(request)
 
     def capture_display(self, timeout: float = 15) -> bytes:
         request = {"id": secrets.token_urlsafe(24), "event": threading.Event(), "image": None, "error": None}
@@ -273,6 +298,7 @@ def write_config(path: Path, config: Config) -> None:
         f"roon_zone_name = {json.dumps(config.roon_zone_name)}",
         f"roon_display_name = {json.dumps(config.roon_display_name)}",
         f"display_theme = {json.dumps(config.display_theme)}",
+        f"portrait_discovery_columns = {config.portrait_discovery_columns}",
         f"bus_enabled = {str(config.bus_enabled).lower()}",
         f"roon_now_playing_name = {json.dumps(config.roon_now_playing_name)}",
         f"roon_queue_name = {json.dumps(config.roon_queue_name)}",
@@ -457,7 +483,7 @@ def command_output(command: list[str]) -> str:
         return ""
 
 
-def diagnostics_snapshot() -> dict:
+def diagnostics_snapshot(config: Config | None = None) -> dict:
     memory: dict[str, int] = {}
     try:
         for line in Path("/proc/meminfo").read_text(encoding="ascii").splitlines():
@@ -474,6 +500,7 @@ def diagnostics_snapshot() -> dict:
         "api": {"label": "Bus data service", "rss_kb": 0, "cpu_percent": 0.0, "pids": [], "active": False},
         "controller": {"label": "Roon controller", "rss_kb": 0, "cpu_percent": 0.0, "pids": [], "active": False},
         "bridge": {"label": "Roon Bridge", "rss_kb": 0, "cpu_percent": 0.0, "pids": [], "active": False},
+        "netdata": {"label": "Netdata", "rss_kb": 0, "cpu_percent": 0.0, "pids": [], "active": False},
     }
     for line in command_output(["ps", "-eo", "pid=,rss=,pcpu=,args="]).splitlines():
         parts = line.strip().split(None, 3)
@@ -481,6 +508,7 @@ def diagnostics_snapshot() -> dict:
             continue
         pid, rss, cpu, args = parts
         lowered = args.lower()
+        executable = lowered.split()[0]
         group = None
         if "pi_bus_native.py" in lowered or "/cage" in lowered:
             group = "display"
@@ -488,7 +516,9 @@ def diagnostics_snapshot() -> dict:
             group = "controller"
         elif "roonbridge" in lowered or "roon bridge" in lowered:
             group = "bridge"
-        elif "pi-bus-time-display" in lowered and "native" not in lowered:
+        elif Path(executable).name == "netdata" or executable.startswith(("/opt/netdata/usr/libexec/netdata/", "/usr/libexec/netdata/", "/usr/lib/netdata/")):
+            group = "netdata"
+        elif ("pi-bus-time-display" in lowered or "/pi-home " in lowered) and "native" not in lowered:
             group = "api"
         if group:
             try:
@@ -498,10 +528,23 @@ def diagnostics_snapshot() -> dict:
                 groups[group]["active"] = True
             except ValueError:
                 pass
-    groups["controller"]["active"] = command_output(["systemctl", "is-active", "pi-bus-roon-controller.service"]) == "active" or groups["controller"]["active"]
-    groups["api"]["active"] = command_output(["systemctl", "is-active", "pi-bus-time-display.service"]) == "active" or groups["api"]["active"]
-    groups["display"]["active"] = command_output(["systemctl", "is-active", "pi-bus-native.service"]) == "active" or groups["display"]["active"]
-    groups["bridge"]["active"] = any(command_output(["systemctl", "is-active", name]) == "active" for name in ("roonbridge.service", "RoonBridge.service")) or groups["bridge"]["active"]
+    alpine = os.getenv("PI_HOME_APPLIANCE_PLATFORM") == "alpine-prototype"
+    services = {"controller": "pi-home-roon", "api": "pi-home-api", "display": "pi-home-display", "bridge": "roonbridge"} if alpine else {"controller": "pi-bus-roon-controller.service", "api": "pi-bus-time-display.service", "display": "pi-bus-native.service", "bridge": "roonbridge.service"}
+    for group, service in services.items():
+        groups[group]["active"] = service_state(service) == "running" or groups[group]["active"]
+    if not alpine:
+        groups["bridge"]["active"] = service_state("RoonBridge.service") == "running" or groups["bridge"]["active"]
+    visible = set(groups)
+    if config is not None:
+        if not config.roon_zone_name.strip():
+            visible.discard("controller")
+        if not config.bus_enabled:
+            groups["api"]["label"] = "Pi Home backend"
+        # Optional tools are shown when running, or enabled at boot so failures
+        # remain diagnosable. A deliberately stopped endpoint is not an idle row.
+        bridge_enabled = Path("/etc/runlevels/default/roonbridge").exists() if alpine else command_output(["systemctl", "is-enabled", "roonbridge.service"]) == "enabled" or command_output(["systemctl", "is-enabled", "RoonBridge.service"]) == "enabled"
+        if not groups["bridge"]["active"] and not bridge_enabled:
+            visible.discard("bridge")
     try:
         uptime = float(Path("/proc/uptime").read_text(encoding="ascii").split()[0])
     except (OSError, ValueError, IndexError):
@@ -525,7 +568,7 @@ def diagnostics_snapshot() -> dict:
         "load": load, "cpu_count": os.cpu_count() or 1, "uptime_seconds": round(uptime),
         "temperature_c": temperature,
         "throttled": throttled.split("=", 1)[-1] if "=" in throttled else "unknown",
-        "processes": list(groups.values()),
+        "processes": [value for key, value in groups.items() if key in visible and (key != "netdata" or value["active"])],
     }
 
 
@@ -540,9 +583,29 @@ def active_wifi_ssid() -> str:
 
 def service_state(name: str) -> str:
     """Return a small, truthful systemd state without keeping a preference."""
+    if os.getenv("PI_HOME_APPLIANCE_PLATFORM") == "alpine-prototype":
+        service = name.removesuffix(".service")
+        if not re.fullmatch(r"[a-zA-Z0-9_-]+", service) or not Path("/etc/init.d", service).is_file():
+            return "not_installed"
+        result = command_output(["rc-service", service, "status"])
+        return "running" if "started" in result.lower() else "stopped"
     if command_output(["systemctl", "show", name, "--property=LoadState", "--value"]) != "loaded":
         return "not_installed"
     return "running" if command_output(["systemctl", "is-active", name]) == "active" else "stopped"
+
+
+def display_orientation(profile: str, rotation: str) -> str:
+    native_portrait = profile.startswith("touch2-")
+    portrait = rotation in ({"normal", "180"} if native_portrait else {"90", "270"})
+    return "portrait" if portrait else "landscape"
+
+
+def display_mounting(rotation: str) -> str:
+    return "inverted" if rotation in {"180", "270"} else "standard"
+
+
+def display_config_dir() -> Path:
+    return Path("/etc/pi-home" if os.getenv("PI_HOME_APPLIANCE_PLATFORM") == "alpine-prototype" else "/etc/pi-bus-time-display")
 
 
 def pi_led_state(state_dir: Path) -> str:
@@ -563,26 +626,72 @@ def current_boot_id() -> str:
         return ""
 
 
-def system_snapshot(state_dir: Path, include_diagnostics: bool = False) -> dict:
-    roon_service = "unknown"
-    for name in ("roonbridge.service", "RoonBridge.service"):
-        status = command_output(["systemctl", "is-active", name])
-        if status and status != "unknown":
-            roon_service = status
-            break
+def netdata_snapshot() -> dict:
+    service = service_state("netdata.service")
+    static_agent = Path("/opt/netdata/bin/netdata")
+    installed = service != "not_installed" or static_agent.is_file()
+    details = {"service": service if installed else "not_installed", "installed": installed, "version": "", "cloud_status": "unclaimed", "claim_id": ""}
+    if not details["installed"]:
+        return details
+    if details["service"] == "not_installed": details["service"] = "stopped"
+    version = command_output([str(static_agent) if static_agent.is_file() else "netdata", "-v"])
+    details["version"] = version.replace("netdata ", "", 1).strip() if version and version != "unknown" else "Installed"
+    try:
+        with urllib.request.urlopen("http://127.0.0.1:19999/api/v1/aclk", timeout=.8) as response:
+            aclk_json = json.load(response)
+        details["service"] = "running"
+        claimed = bool(aclk_json.get("agent-claimed")); online = bool(aclk_json.get("online"))
+        details["cloud_status"] = "online" if claimed and online else "offline" if claimed else "unclaimed"
+        details["claim_id"] = str(aclk_json.get("claimed-id") or "")
+        details["cloud_available"] = bool(aclk_json.get("aclk-available"))
+    except (OSError, ValueError, json.JSONDecodeError):
+        static_cli = Path("/opt/netdata/bin/netdatacli")
+        aclk = command_output([str(static_cli) if static_cli.is_file() else "netdatacli", "aclk-state"])
+        if aclk and aclk != "unknown":
+            fields = {key.strip().lower(): value.strip() for line in aclk.splitlines() if ":" in line for key, value in [line.split(":", 1)]}
+            claimed = fields.get("claimed", "").lower() in {"yes", "true", "1"}
+            online = fields.get("online", "").lower() in {"yes", "true", "1"}
+            details["cloud_status"] = "online" if claimed and online else "offline" if claimed else "unclaimed"
+            details["claim_id"] = fields.get("claimed id", "")
+    return details
+
+
+def system_snapshot(state_dir: Path, include_diagnostics: bool = False, config: Config | None = None) -> dict:
+    if os.getenv("PI_HOME_APPLIANCE_PLATFORM") == "alpine-prototype":
+        roon_service = service_state("roonbridge")
+        if roon_service == "not_installed" and Path("/opt/RoonBridge/start.sh").is_file():
+            roon_service = "stopped"
+    else:
+        roon_service = "not_installed"
+        for name in ("roonbridge.service", "RoonBridge.service"):
+            status = service_state(name)
+            if status != "not_installed":
+                roon_service = status
+                break
     active_wifi = active_wifi_ssid()
     try:
         update_status = (state_dir / "update-status").read_text(encoding="utf-8").strip()
     except OSError:
         update_status = "Ready"
+    display_config = display_config_dir()
     try:
-        display_rotation = Path("/etc/pi-bus-time-display/display-transform").read_text(encoding="utf-8").strip()
+        display_rotation = (display_config / "display-transform").read_text(encoding="utf-8").strip()
     except OSError:
         display_rotation = "normal"
     try:
-        display_profile = Path("/etc/pi-bus-time-display/display-profile").read_text(encoding="utf-8").strip()
+        display_profile = (display_config / "display-profile").read_text(encoding="utf-8").strip()
     except OSError:
         display_profile = "original"
+    try:
+        viewport_orientation = (display_config / "display-orientation").read_text(encoding="utf-8").strip()
+        if viewport_orientation not in {"landscape", "portrait"}: raise ValueError
+    except (OSError, ValueError):
+        viewport_orientation = display_orientation(display_profile, display_rotation)
+    try:
+        mounting = (display_config / "display-mounting").read_text(encoding="utf-8").strip()
+        if mounting not in {"standard", "inverted"}: raise ValueError
+    except (OSError, ValueError):
+        mounting = display_mounting(display_rotation)
     try:
         changed_boot_id = (state_dir / "reboot-required-boot-id").read_text(encoding="ascii").strip()
         reboot_required = bool(changed_boot_id and changed_boot_id == current_boot_id())
@@ -598,21 +707,38 @@ def system_snapshot(state_dir: Path, include_diagnostics: bool = False) -> dict:
             roon_controller = "Waiting for authorisation"
     except (OSError, ValueError, json.JSONDecodeError):
         roon_controller = "Unavailable"
+    netdata = netdata_snapshot()
+    try:
+        setup = json.loads((state_dir.parent / "pi-home-setup/progress.json").read_text(encoding="utf-8"))
+        device_username = setup.get("username", "admin")
+    except (OSError, ValueError, json.JSONDecodeError):
+        device_username = "admin"
     snapshot = {
         "hostname": socket.gethostname(),
         "wifi_ssid": active_wifi,
         "roon_bridge": roon_service,
+        "roon_bridge_operation_status": (state_dir / "roonbridge-install-status").read_text().strip() if (state_dir / "roonbridge-install-status").is_file() else "",
         "roon_controller": roon_controller,
-        "netdata": service_state("netdata.service"),
+        "netdata": netdata["service"],
+        "netdata_details": netdata,
+        "netdata_lightweight": (state_dir / "netdata-lightweight").is_file() and (state_dir / "netdata-lightweight").read_text().strip() == "yes",
+        "device_username": device_username,
         "pi_leds": pi_led_state(state_dir),
         "update_status": update_status,
         "display_rotation": display_rotation,
+        "display_orientation": viewport_orientation,
+        "display_mounting": mounting,
         "display_profile": display_profile,
         "reboot_required": reboot_required,
-        "app_version": __version__,
+        "app_version": display_version(),
+        "alpine_tools": os.getenv("PI_HOME_APPLIANCE_PLATFORM") == "alpine-prototype",
+        "software_tools": True,
+        "tools_status": (state_dir / "tools-status").read_text().strip() if (state_dir / "tools-status").is_file() else "",
+        "storage_status": (state_dir / "storage-status").read_text().strip() if (state_dir / "storage-status").is_file() else "Not yet checked",
+        "netdata_operation_status": (state_dir / "netdata-operation-status").read_text().strip() if (state_dir / "netdata-operation-status").is_file() else "",
     }
     if include_diagnostics:
-        snapshot["diagnostics"] = diagnostics_snapshot()
+        snapshot["diagnostics"] = diagnostics_snapshot(config) if config is not None else diagnostics_snapshot()
     return snapshot
 
 
@@ -624,6 +750,33 @@ def write_control_request(state_dir: Path, request: dict) -> bool:
     one immutable file per action so ordering is preserved across bursts such
     as display-off immediately followed by display-on.
     """
+    if os.getenv("PI_HOME_APPLIANCE_PLATFORM") == "alpine-prototype":
+        if request.get("action") in ALPINE_SYSTEM_ACTIONS:
+            payload = {"action": request["action"]}
+            if request["action"] in {"display_on", "set_brightness"}:
+                brightness = int(request.get("brightness", 100))
+                if not 10 <= brightness <= 100: raise ValueError("Brightness must be between 10 and 100")
+                payload["brightness"] = brightness
+            if request["action"] == "netdata_claim":
+                payload.update(token=str(request.get("token", "")), rooms=str(request.get("rooms", "")))
+            if request["action"] in {"netdata_claim_command", "netdata_official_install"}:
+                payload["command"] = str(request.get("command", ""))
+            if request["action"] == "netdata_lightweight":
+                if type(request.get("enabled")) is not bool: raise ValueError("Choose a supported Netdata monitoring mode.")
+                payload["enabled"] = request["enabled"]
+            if request["action"] == "device_credentials":
+                payload.update(username=str(request.get("username", "")), password=str(request.get("password", "")), confirmation=str(request.get("confirmation", "")))
+            if request["action"] == "set_display":
+                payload.update(profile=str(request.get("profile", "")), orientation=str(request.get("orientation", "")), mounting=str(request.get("mounting", "standard")))
+            try:
+                with socket.socket(socket.AF_UNIX) as client:
+                    client.settimeout(105 if request["action"] in {"netdata_claim", "netdata_claim_command", "netdata_lightweight", "roon_start", "roon_stop", "roon_restart"} else 15); client.connect("/run/pi-home-setup.sock")
+                    client.sendall((json.dumps(payload) + "\n").encode())
+                    result = json.loads(client.makefile("rb").readline(4096))
+            except OSError as error: raise ValueError("Alpine system helper is not ready. Please retry.") from error
+            if not result.get("ok"): raise ValueError(result.get("error", "Could not start Alpine update"))
+            return bool(result.get("queued", result.get("ok")))
+        raise ValueError("OS controls are unavailable in Alpine Beta")
     with CONTROL_REQUEST_LOCK:
         state_dir.mkdir(parents=True, exist_ok=True)
         queue_dir = state_dir / "system-action-queue"
@@ -725,6 +878,7 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
                     "roon_zone_name": config.roon_zone_name,
                     "roon_display_name": config.roon_display_name,
                     "display_theme": config.display_theme,
+                    "portrait_discovery_columns": config.portrait_discovery_columns,
                     "bus_enabled": config.bus_enabled,
                     "roon_now_playing_name": config.roon_now_playing_name,
                     "roon_queue_name": config.roon_queue_name,
@@ -752,7 +906,7 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
                     "openobserve_stream": config.openobserve_stream,
                     "openobserve_username": config.openobserve_username,
                     "has_openobserve_password": bool(os.getenv("OPENOBSERVE_PASSWORD")),
-                    "app_version": __version__,
+                    "app_version": display_version(),
                     "release_channel": config.release_channel,
                     "admin_username": os.getenv("ADMIN_USERNAME", "admin"),
                     "admin_auth_enabled": os.getenv("ADMIN_AUTH_ENABLED", "true").lower() != "false",
@@ -764,13 +918,15 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
             if self.path in {"/api/admin/releases", "/api/admin/releases?refresh=1"}:
                 if not self.authorised():
                     return
-                result = releases.check(state.config.release_channel, __version__, refresh=self.path.endswith("refresh=1"))
+                distribution = "alpine" if os.getenv("PI_HOME_APPLIANCE_PLATFORM") == "alpine-prototype" else "rpi"
+                result = releases.check(state.config.release_channel, __version__, refresh=self.path.endswith("refresh=1"), distribution=distribution)
+                result["distribution"] = distribution
                 self.send_json(200, json.dumps(result).encode())
                 return
             if self.path in {"/api/admin/system", "/api/admin/system?diagnostics=1"}:
                 if not self.authorised():
                     return
-                system = system_snapshot(mode_path.parent, include_diagnostics=self.path.endswith("diagnostics=1"))
+                system = system_snapshot(mode_path.parent, include_diagnostics=self.path.endswith("diagnostics=1"), config=state.config)
                 system["display_brightness"] = state.display_brightness
                 body = json.dumps(system).encode()
                 self.send_json(200, body)
@@ -778,7 +934,7 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
             if self.path == "/api/admin/diagnostics":
                 if not self.authorised():
                     return
-                self.send_json(200, json.dumps(diagnostics_snapshot()).encode())
+                self.send_json(200, json.dumps(diagnostics_snapshot(state.config)).encode())
                 return
             if self.path == "/api/status":
                 body = json.dumps(state.snapshot()).encode()
@@ -795,6 +951,16 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
                 if any(self.headers.get(name) for name in ("X-Forwarded-For", "Forwarded", "X-Real-IP")):
                     controls["capture_request"] = None
                 self.send_json(200, json.dumps(controls).encode())
+                return
+            path = self.path.split("?", 1)[0]
+            if path in {"/", "/index.html", "/home.html", "/admin.html"}:
+                if path == "/admin.html" and not self.authorised(): return
+                theme = "roon" if state.config.display_theme == "roon" else "fresh-mint"
+                body = (static / ("index.html" if path == "/" else path[1:])).read_text(encoding="utf-8")
+                body = body.replace("<body", f'<body data-theme="{theme}"', 1)
+                if theme == "roon": body = body.replace("/favicon.svg", "/favicon-roon.svg")
+                encoded = body.encode("utf-8")
+                self.send_response(200); self.send_header("Content-Type", "text/html; charset=utf-8"); self.send_header("Content-Length", str(len(encoded))); self.send_header("Cache-Control", "no-store"); self.end_headers(); self.wfile.write(encoded)
                 return
             super().do_GET()
 
@@ -852,11 +1018,13 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
                     self.send_header("Location", "/login.html?error=1")
                     self.end_headers()
                 return
-            if self.path == "/api/device/update":
-                if self.client_address[0] not in {"127.0.0.1", "::1"}:
+            if self.path in {"/api/device/update", "/api/device/reboot"}:
+                if self.client_address[0] not in {"127.0.0.1", "::1"} or any(self.headers.get(name) for name in ("X-Forwarded-For", "Forwarded", "X-Real-IP")):
                     self.send_json(403, b'{"error":"Touchscreen only"}')
                     return
-                queued = write_control_request(mode_path.parent, {"action": "update"})
+                try: queued = write_control_request(mode_path.parent, {"action": self.path.rsplit("/", 1)[-1]})
+                except (OSError, ValueError) as error:
+                    self.send_json(503, json.dumps({"error": str(error)}).encode()); return
                 self.send_json(202, json.dumps({"ok": True, "queued": queued}).encode())
                 return
             if self.path == "/api/device/screen-power":
@@ -913,7 +1081,14 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
                     else: state.enabled_services.discard(service)
                     state.save_enabled_services()
                 elif self.path == "/api/device/roon-bridge":
-                    write_control_request(mode_path.parent, {"action": "roon_start" if data.get("enabled") else "roon_stop"})
+                    if type(data.get("enabled")) is not bool:
+                        self.send_json(400, b'{"error":"Choose whether Roon Bridge should run"}')
+                        return
+                    try:
+                        write_control_request(mode_path.parent, {"action": "roon_start" if data["enabled"] else "roon_stop"})
+                    except (OSError, ValueError) as error:
+                        self.send_json(502, json.dumps({"error": str(error)}).encode())
+                        return
                 else:
                     entity_id = str(data.get("entity_id", ""))
                     if entity_id not in state.config.home_assistant_entities:
@@ -977,8 +1152,8 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
                     enabled = bool(data.get("enabled", True))
                     if not (3 <= len(username) <= 32) or not all(character.isalnum() or character in "-_" for character in username):
                         raise ValueError("Username must be 3–32 letters, numbers, hyphens or underscores")
-                    if password and len(password) < 10:
-                        raise ValueError("Password must contain at least 10 characters")
+                    if password and len(password) < 8:
+                        raise ValueError("Password must contain at least 8 characters")
                     if enabled and not password and not os.getenv("ADMIN_PASSWORD", ""):
                         raise ValueError("Set a password before enabling web sign-in")
                     update_secret(env_path, "ADMIN_USERNAME", username)
@@ -1002,8 +1177,7 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
                     return
                 if self.path == "/api/admin/system-action":
                     action = str(data.get("action", ""))
-                    allowed = {"update", "reboot", "roon_start", "roon_stop", "roon_restart", "netdata_enable", "netdata_disable", "leds_enable", "leds_disable", "set_hostname", "set_wifi", "set_rotation", "set_display"}
-                    if action not in allowed:
+                    if action not in SYSTEM_ACTIONS:
                         raise ValueError("Unknown system action")
                     request = {"action": action}
                     if action == "set_hostname":
@@ -1011,16 +1185,29 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
                     if action == "set_wifi":
                         request["ssid"] = str(data.get("ssid", "")).strip()
                         request["password"] = str(data.get("password", ""))
+                    if action == "netdata_claim":
+                        request.update(token=str(data.get("token", "")), rooms=str(data.get("rooms", "")))
+                    if action in {"netdata_claim_command", "netdata_official_install"}:
+                        request["command"] = str(data.get("command", ""))
+                    if action == "netdata_lightweight":
+                        if type(data.get("enabled")) is not bool:
+                            raise ValueError("Choose a supported Netdata monitoring mode.")
+                        request["enabled"] = data["enabled"]
+                    if action == "device_credentials":
+                        request.update(username=str(data.get("username", "")).strip(), password=str(data.get("password", "")), confirmation=str(data.get("confirmation", "")))
                     if action == "set_rotation":
                         request["transform"] = "180" if data.get("rotated") else "normal"
                     if action == "set_display":
                         profile = str(data.get("profile", ""))
-                        transform = str(data.get("transform", ""))
+                        orientation = str(data.get("orientation", ""))
+                        mounting = str(data.get("mounting", "standard"))
                         if profile not in {"original", "touch2-5", "touch2-7", "touch2-5-7", "touch2-10"}:
                             raise ValueError("Unknown display profile")
-                        if transform not in {"normal", "90", "180", "270"}:
+                        if orientation not in {"landscape", "portrait"}:
                             raise ValueError("Unknown display orientation")
-                        request.update({"profile": profile, "transform": transform})
+                        if mounting not in {"standard", "inverted"}:
+                            raise ValueError("Unknown display rotation")
+                        request.update({"profile": profile, "orientation": orientation, "mounting": mounting})
                     queued = write_control_request(mode_path.parent, request)
                     if events:
                         events.emit("system.action.queued", action=action)
@@ -1029,9 +1216,14 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
                 if self.path == "/api/admin/display-mode":
                     mode = str(data.get("mode", ""))
                     set_display_mode(state, mode_path, mode)
+                    view = str(data.get("view", "")).strip()
+                    if view:
+                        if view not in {"now", "recent", "daily", "releases", "browse", "surprise"}:
+                            raise ValueError("Unknown display view")
+                        state.request_display_view(view)
                     if events:
                         events.emit("display.mode.changed", mode=mode)
-                    self.send_json(200, json.dumps({"ok": True, "display_mode": mode}).encode())
+                    self.send_json(200, json.dumps({"ok": True, "display_mode": mode, "display_view": view or None}).encode())
                     return
                 current = state.config
                 def values(name, fallback):
@@ -1063,6 +1255,7 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
                     roon_zone_name=str(data.get("roon_zone_name", current.roon_zone_name)).strip(),
                     roon_display_name=str(data.get("roon_display_name", current.roon_display_name)).strip() or "Roon",
                     display_theme=str(data.get("display_theme", current.display_theme)),
+                    portrait_discovery_columns=int(data.get("portrait_discovery_columns", current.portrait_discovery_columns)),
                     bus_enabled=bool(data.get("bus_enabled", current.bus_enabled)),
                     roon_now_playing_name=str(data.get("roon_now_playing_name", current.roon_now_playing_name)).strip() or "Now Playing",
                     roon_queue_name=str(data.get("roon_queue_name", current.roon_queue_name)).strip() or "Queue",
@@ -1094,6 +1287,8 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
                     raise ValueError("Bus stop code must be five digits")
                 if candidate.display_theme not in {"fresh-mint", "roon"}:
                     raise ValueError("Choose Fresh Mint or Roon for the display style")
+                if candidate.portrait_discovery_columns not in {2, 3}:
+                    raise ValueError("Choose 2 or 3 portrait Discover columns")
                 if candidate.release_channel not in {"stable", "beta"}:
                     raise ValueError("Choose Stable or Beta for the release channel")
                 if len(candidate.roon_display_name) > 16:
@@ -1206,6 +1401,20 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
     return Handler
 
 
+def initialise_update_channel(config, config_path, state_dir):
+    """Existing beta appliances retain beta; fresh images carry a marker."""
+    if os.getenv("PI_HOME_APPLIANCE_PLATFORM") != "alpine-prototype":
+        return config
+    marker = state_dir / "update-channel-initialized"
+    if marker.exists():
+        return config
+    state_dir.mkdir(parents=True, exist_ok=True)
+    config = Config(**{**config.__dict__, "release_channel": "beta"})
+    write_config(config_path, config)
+    marker.touch()
+    return config
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=Path, default=Path("config.toml"))
@@ -1217,6 +1426,7 @@ def main() -> None:
     args = parser.parse_args()
     load_env(args.env)
     config = load_config(args.config)
+    config = initialise_update_channel(config, args.config, args.state_dir)
     if args.simulate:
         config = Config(**{**config.__dict__, "simulate": True})
     clear_sleep_mode_on_start(args.state_dir / "display-mode")

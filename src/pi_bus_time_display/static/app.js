@@ -2,7 +2,7 @@ const byId = id => document.getElementById(id);
 const mins = n => n === 0 ? 'Due' : `${n}<small>min</small>`;
 function tick(){const value=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Singapore',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date());byId('clock').textContent=value;byId('rest-clock').textContent=value}
 function render(data){
-  document.body.dataset.theme=data.display_theme==='roon'?'roon':'fresh-mint';
+  const theme=data.display_theme==='roon'?'roon':'fresh-mint';document.body.dataset.theme=theme;const favicon=document.querySelector('link[rel="icon"]');if(favicon)favicon.href=theme==='roon'?'/favicon-roon.svg':'/favicon.svg';
   byId('roon-link').textContent='Now Playing';
   const nav=byId('roon-link').parentElement;
   if(!nav.querySelector('[data-discover]')){const link=document.createElement('a');link.dataset.discover='';link.href='/roon/#discover/recent';link.textContent='Discover';byId('roon-link').after(link);nav.style.gridTemplateColumns='repeat(4,minmax(0,1fr))'}

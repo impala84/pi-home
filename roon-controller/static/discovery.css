@@ -4,6 +4,8 @@
 .discovery-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:24px;margin-bottom:28px}
 .discovery-card{display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px;background:transparent!important;box-shadow:none;border:0;text-align:center;color:inherit;cursor:pointer;touch-action:pan-y;min-width:0}
 .discovery-card:active,.discovery-card:hover{background:transparent!important}
+.daily-grid{display:flex;gap:22px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x proximity;scrollbar-width:none;overscroll-behavior-inline:contain;touch-action:pan-x;padding:0 14px 12px 8px}
+.daily-grid::-webkit-scrollbar{display:none}.daily-grid .discovery-card{flex:0 0 clamp(190px,22vw,250px);scroll-snap-align:start;padding:4px}.daily-grid .discovery-art{max-width:250px}.daily-grid .discovery-card strong{font-size:22px}.daily-grid .discovery-card small{font-size:16px}
 .discovery-art{display:block;width:100%;max-width:260px;aspect-ratio:1;background:#262626;border-radius:8px;overflow:hidden;flex-shrink:0}
 .discovery-art img,.discovery-art svg{width:100%;height:100%;object-fit:cover}
 body[data-theme="roon"] .discovery-art.mix-duotone{background:#9690ed;isolation:isolate}body[data-theme="roon"] .mix-duotone img{filter:grayscale(1);mix-blend-mode:multiply}

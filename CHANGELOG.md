@@ -1,5 +1,357 @@
 # Changelog
 
+## 1.1.0 Raspberry Pi OS — 6 October 2026
+
+- Brings Raspberry Pi OS to shared Alpine UI feature parity: responsive portrait/landscape layouts, separate orientation and mounting rotation, improved Settings, library/favourite state, configurable Discover grids, mobile bus cards, Home icons, theme loading and diagnostics/capture shortcuts.
+- Retains Raspberry Pi OS systemd/Cage installation and tagged updater. Release selection excludes Alpine builds on both Stable and Beta channels.
+- Adds Raspberry Pi OS backend official Netdata installation, Cloud connection, lightweight profile and optional Roon Bridge/system-tools installation. Existing configuration and pairing are retained.
+- Applying display settings now restarts the Pi automatically; Roon endpoint controls are hidden when not installed.
+
+## 1.1.0 Alpine — 6 October 2026
+
+- First separately published Alpine release, retaining the verified Alpine updater and optional-software setup.
+- Adds Stable/Beta selection in System → Software. Fresh Alpine installs default to Stable; existing beta appliances retain Beta. Updates use published Alpine tags with successful image verification, never Raspberry Pi OS releases or automatic downgrades.
+- Reduces Home device icons by 25%, without changing cards or controls.
+- Mobile portrait bus cards show a large centred route number above full-width, evenly spaced arrival columns. Longer route lists scroll naturally.
+
+## 1.1.0-beta.45 Alpine Beta — 6 October 2026
+
+- Adds a persisted 2/3-column portrait Discover grid setting in backend Display → Appearance, shared by Recent, Daily and New Releases.
+- Portrait Daily uses separate Mixes and For You grids with vertical scrolling; landscape keeps horizontal swipe tracks.
+- Applies the saved web theme before first paint, avoiding the Mint flash on Settings, Bus Times and Home.
+- Makes bus live/update footer text a slightly darker grey.
+
+## 1.1.0-beta.44 Alpine Beta — 6 October 2026
+
+- Adds consistent space below portrait music navigation and asymmetric breathing room around Now Playing artwork.
+- Keeps bus live/update status directly beneath the final panel, scrolling with the panels when necessary.
+- Hides unconfigured Roon diagnostics and deliberately stopped optional endpoints, while retaining configured service failures. Labels the shared backend accurately when buses are disabled.
+- Adds Home and Bus Times shortcuts to physical-screen capture controls and wraps backend action buttons on mobile.
+
+## 1.1.0-beta.43 Alpine Beta — 6 October 2026
+
+- Compacts portrait music headers, enlarges and spaces top navigation text, and brings the underline closer to its label. Now Playing uses centred artwork 20% smaller with metadata beneath it.
+- Bounds loaded Browse artwork and complete cards, preventing real covers and artist names from widening the window and pushing the clock or alphabet scrubber off-screen. Adds loaded-artwork allocation regression checks.
+- Entering Recent selects Added; explicitly choosing Listened still works. Aligns portrait Daily swipe clipping with the common left margin.
+- Stacks portrait Surprise Me above the cover and Play Now below it. Gives bus cards natural heights, larger route numbers, smaller arrival text and a smaller stop heading.
+
+## 1.1.0-beta.42 Alpine Beta — 6 October 2026
+
+- Gives portrait music pages a player/clock header followed by a separate underlined navigation row; removes vertically expanding horizontal menus and wasted browse space.
+- Uses full-width two-column Recent/New Releases covers, three-column Browse and larger swipeable Daily cards. Recent opens Added first in both orientations.
+- Stacks portrait bus route numbers above arrivals and rearranges Home into horizontal icon/control rows with horizontal level sliders.
+- Shows Mixes loading/unavailable state even when For You succeeds, rather than silently hiding a failed mix request.
+- Apply Display saves the profile, orientation and mounting then automatically reboots, applying the output and touch calibration together. Brightness/theme changes do not reboot.
+- Raises the reboot confirmation slightly above visual centre in both orientations.
+
+## 1.1.0-beta.41 Alpine Beta — 6 October 2026
+
+- Removes the obsolete Alpine rejection of the local touchscreen Roon Bridge start/stop endpoint and routes it through the existing privileged service helper. Remote requests remain blocked.
+- Shows the touchscreen Bridge checkbox only for installed services, disables it during mutations, restores state with visible failure feedback and promptly refreshes actual service status.
+- Restores visible update stages and failures beside the Settings title, including the queued/requesting stage, without expanding the header beyond the viewport.
+
+## 1.1.0-beta.40 Alpine Beta — 6 October 2026
+
+- Aligns the installed version with the Pi Home Settings title baseline.
+- Gives Display Brightness its own accent subheading and separate slider, and Theme its own subheading with two equal-width, larger Mint/Roon choices.
+- Reorders bottom actions to Install Update, Apply Display, Reboot, retaining equal widths and margins.
+
+## 1.1.0-beta.39 Alpine Beta — 6 October 2026
+
+- Rebuilds touchscreen Settings to the supplied layout: left-aligned Pi Home Settings title with inline version, compact metrics underneath, Back/Sleep at the top right, common outer margins and equal-height control rows.
+- Uses three equal-width bottom actions with consistent spacing and responsive landscape/portrait grouping. Shows update details as the version tooltip rather than a full-width paragraph.
+- Shortens backend Netdata guidance to concise resource-saving and automatic-update descriptions.
+- Adds real GTK Settings allocation checks and a native review capture to the Alpine image workflow.
+
+## 1.1.0-beta.38 Alpine Beta — 6 October 2026
+
+- Shows running Netdata and its collector processes in backend Diagnostics with combined RSS memory and CPU usage; hides the row when stopped.
+- Renames the backend System Services tab to Tools, leaving the main Services menu unchanged.
+- Uses the tested lightweight plugin selection: disables netflow, otel, scripts.d, nfacct, network-viewer and debugfs; keeps apps and go.d enabled. Turning lightweight mode off restores the original plugin overrides.
+- Adds a persisted Lightweight monitoring option to first-boot software selection and backend Services. New official installations default to three-second sampling and disabled ML anomaly detection, retaining alerts, dashboard, database and Cloud connectivity.
+- Explains that installation downloads the latest official stable Agent, not Alpine's package, with Netdata's daily updater maintaining it independently of Pi Home updates. Existing installations remain unchanged until the option is selected; disabling it restores one-second sampling and automatic ML.
+- Backs up Netdata configuration before managing only its ML and sampling settings, and restarts a running Agent to apply changes.
+
+## 1.1.0-beta.37 Alpine Beta — 5 October 2026
+
+- Replaces the non-working browse-based library action with the exact private Roon calls observed from the official client. Resolves the playing album and profile through the selected zone, and confirms library membership from Roon's pushed state.
+- Uses Roon's + / outline heart / filled heart behaviour, including separate favourite and unfavourite actions on the canonical library edition. Keeps status work asynchronous and cached, rejects stale album actions and shows unconfirmed-action errors.
+- Stops the library button stretching vertically and adds real Alpine GTK square-allocation checks at six landscape/portrait viewport sizes.
+- Verifies Add to Library for Judas Priest's Rocka Rolla on the live Core, plus favourite/unfavourite with the original state restored. Final physical Pi acceptance remains an appliance test.
+
+## 1.1.0-beta.36 Alpine Beta — 5 October 2026
+
+- Gives native GTK settings dropdown popups an explicit light-gray surface, dark text and a pale-purple selection so their options remain legible under the Pi Home dark theme.
+
+## 1.1.0-beta.35 Alpine Beta — 5 October 2026
+
+- Adds a first-boot optional software step for Roon Bridge and the official stable Netdata Agent, with progress, retry and skip controls.
+- Keeps storage expansion, diagnostics, curl, certificates and time sync in every fresh image. Removes the obsolete Alpine Netdata package from new images and system-tools repair.
+- Enables Netdata's official daily updater and the cron service. Existing installations remain outside Pi Home's application update directories; a reflash starts fresh.
+- Verifies an actual official Netdata installation from the fresh ARM64 image, including its managed boot service and daily updater.
+
+## 1.1.0-beta.34 Alpine Beta — 5 October 2026
+
+- Replaces the dead-end “Not installed” Roon Bridge controls with an explicit appliance-managed **Install Roon Bridge** action and live installation progress.
+- Downloads Roon’s fixed official ARM64 package without executing its incompatible Debian/systemd installer wrapper, validates every archive path and required executable, and preserves Roon’s separate distribution model.
+- Installs the Alpine glibc compatibility, ICU, C++, ALSA and bzip2 dependencies, verifies Roon’s own compatibility check, and creates the managed OpenRC service before starting the endpoint.
+- Keeps Start, Stop and Restart available after installation and directs the owner to enable the new endpoint in Roon’s Audio settings.
+
+## 1.1.0-beta.33 Alpine Beta — 5 October 2026
+
+- Detects Netdata's official static installation under `/opt/netdata` instead of incorrectly reporting it as missing when Alpine's packaged binary and OpenRC service are absent.
+- Reads the official Agent's real version and Cloud status, and treats a responsive local dashboard as a running Agent.
+- Adopts the official installation with a managed OpenRC service so Run/Stop controls and startup after reboot work without reinstalling Netdata.
+
+## 1.1.0-beta.32 Alpine Beta — 5 October 2026
+
+- Replaces raw display rotation degrees with one persisted Landscape or Portrait setting shared by touchscreen and web Settings.
+- Applies orientation through the panel-aware Cage/Wayland and touch-calibration path, then reloads the Alpine display without requiring a full reboot when the selected screen hardware is unchanged.
+- Makes the native GTK interface respond to its real viewport: Now Playing stacks artwork above metadata and transport in portrait, while settings, Browse, Discover, Queue, navigation and the Add to Library heart reflow or resize through shared responsive rules.
+- Preserves the current 7-inch landscape arrangement while adding compact portrait and high-resolution 10-inch behaviour without separate per-screen page implementations.
+
+## 1.1.0-beta.31 Alpine Beta — 5 October 2026
+
+- Routes Roon Bridge Start, Stop and Restart through Alpine's privileged OpenRC helper instead of rejecting them as Raspberry Pi OS-only controls.
+- Reports the real Alpine Bridge state and creates a native OpenRC service around an existing official `/opt/RoonBridge/start.sh` installation; absent Bridge files now report as not installed rather than unknown.
+
+## 1.1.0-beta.30 Alpine Beta — 5 October 2026
+
+- Keeps the three Netdata actions on one responsive desktop/tablet row, with a mobile-only vertical fallback.
+- Gives appliance system tools their own labelled subsection and suppresses stale failed-operation copy after Netdata reports a live Cloud connection.
+- Replaces the legacy packaged-Agent claim guidance with Netdata’s official installation flow and installs curl automatically before launching the validated official installer.
+
+## 1.1.0-beta.29 Alpine Beta — 5 October 2026
+
+- Restores true centred Now Playing title and artist layout on the native touchscreen.
+- Replaces the hidden conditional library plus with an always-visible SVG heart whenever an album is playing. The outline fills immediately after Roon confirms Add to Library, and existing library state is shown only when Roon exposes its real Remove from Library action.
+
+## 1.1.0-beta.28 Alpine Beta — 5 October 2026
+
+- Install the `openssl` command required by Alpine Netdata's claim helper when
+  connecting an existing appliance, before stopping the local Agent.
+- Include both OpenSSL and curl in newly built appliance images and verify them
+  explicitly in the image workflow, while retaining the detailed claim errors
+  introduced in beta.27.
+
+## 1.1.0-beta.27 Alpine Beta — 5 October 2026
+
+- Add an asynchronous Now Playing library button backed by Roon's own library
+  state and Add to Library action, without a separate Pi Home favourites store.
+- Fix Netdata Cloud connection on Alpine by invoking the version-matched claim
+  helper bundled with the installed Agent and reading its actual ACLK state.
+- Report Netdata's precise claim failure, run the helper in stopped-daemon mode,
+  and recover once from a stale node identity left by an interrupted claim.
+- Remove the misleading official-Agent replacement path, which could report
+  success while Alpine's packaged Agent remained installed.
+- Brighten the Roon-theme favicon accent without changing the interface palette.
+
+## 1.1.0-beta.26 Alpine Beta — 5 October 2026
+
+- Fix the Netdata official-Agent button being rejected as an unknown system
+  action by using one shared API/helper action allowlist and forwarding its
+  validated Cloud connection command correctly.
+- Report progress when applying Cloud settings to the existing Agent instead
+  of leaving the connection attempt visually silent.
+- Move Browse's alphabet scrubber another 4 px left on both the physical GTK
+  display and browser interface.
+
+## 1.1.0-beta.25 Alpine Beta — 5 October 2026
+
+- Increase only the New Releases four-column gap so its final tile aligns with
+  the header clock boundary while retaining the larger artwork size.
+- Give Browse's alphabet scrubber its own 14 px physical-edge inset without
+  restoring the right padding that previously broke Daily's edge bleed.
+
+## 1.1.0-beta.24 Alpine Beta — 5 October 2026
+
+- Expand the flashed root partition and ext4 filesystem to the available SD-card
+  capacity before normal Pi Home services start, using the detected root device
+  rather than a hard-coded MMC path.
+- Include Alpine's `growpart` and `resize2fs` packages in the factory image, make
+  expansion idempotent, and keep boot recoverable with a dedicated storage log
+  and backend status if expansion fails.
+- Replace the updater's fixed 400 MB free-space gate with a requirement derived
+  from the installed application footprint plus a bounded staging reserve.
+- Add an explicit official-Netdata fallback for Cloud connections rejected by
+  Alpine's older packaged Agent. Pi Home downloads only Netdata's fixed HTTPS
+  installer, reconstructs validated arguments instead of executing pasted
+  shell, and reports installation progress or failure in Settings.
+
+## 1.1.0-beta.23 Alpine Beta — 5 October 2026
+
+- Replaced the separate Netdata token and Room fields with one paste box for
+  the complete official Netdata Cloud connection command.
+- Parse only the claim token, Rooms and official Cloud URL from that command;
+  pasted shell is never executed, logged or retained.
+- Configure the already-installed Agent through Netdata's current private
+  `claim.conf` method and restart only Netdata, avoiding the obsolete helper
+  that was rejecting otherwise valid claims.
+
+## 1.1.0-beta.22 Alpine Beta — 5 October 2026
+
+- Added authenticated physical-screen view controls to Diagnostics so Recent,
+  Daily, New Releases, Browse and Now Playing can be opened on the actual GTK
+  touchscreen before capturing it for visual verification.
+- Made the Pi Home favicon follow the selected Fresh Mint or Roon theme across
+  Settings, sign-in, Bus Times, Home and the Roon controller.
+- Renamed the global updater action to “Check and install” so its immediate
+  installation behaviour is explicit.
+
+## 1.1.0-beta.21 Alpine Beta — 5 October 2026
+
+- Render diagnostic screenshots from the live GTK touchscreen tree, including loaded album artwork, so Cage/DRM direct scan-out cannot silently produce a valid but completely black image.
+- Schedule capture on GTK's main loop and return a clear error when the application cannot produce a drawable frame.
+
+## 1.1.0-beta.20 Alpine Beta — 5 October 2026
+
+- Moved Daily recommendation context out of the cover artwork and into a clear
+  all-caps section heading. The source album is now the first ordinary card in
+  that section, retaining the purple duotone treatment without an overlay.
+- Enforced a hard viewport around every complete discovery card, preventing an
+  unusually long album title from changing column width or breaking the grid.
+- Retuned Recent and New Releases independently after device review: Recent is
+  larger again without returning to its crowded size, while New Releases uses
+  more of the available canvas.
+- Removed the final Browse-view right inset from the touchscreen discovery
+  canvas and now test both inner Daily swipe rows against the display edge.
+
+## 1.1.0-beta.19 Alpine Beta — 5 October 2026
+
+- Extended the native Discover viewport through the touchscreen page's 28 px
+  right inset, so Daily's horizontal rows now clip at the physical display
+  edge while the header clock and bottom navigation retain their alignment.
+- Added a real Alpine GTK allocation assertion for that edge-to-edge behaviour.
+
+## 1.1.0-beta.18 Alpine Beta — 5 October 2026
+
+- Rebalanced the touchscreen discovery canvas against Browse: Recent now uses
+  smaller four-column covers with more breathing room, while New Releases is
+  reduced slightly so neither grid crowds the clock or right edge.
+- Replaced the variable Daily recommendation banner with a fixed-size seed
+  album card. Its real cover receives the same purple duotone treatment as
+  mixes, “Inspired by” is overlaid on the art, and the album and artist remain
+  in fixed two-line ellipsized slots below it.
+- Added the bundled record-cover placeholder to Now Playing immediately at
+  startup and whenever the track artwork changes, preserving the square layout
+  while the real cover downloads instead of briefly widening the transport.
+
+## 1.1.0-beta.17 Alpine Beta — 5 October 2026
+
+- Turned first-run credentials into an appliance-owned flow: the owner chooses
+  the device/SSH username and a confirmed 8–128 character password. Simple
+  passwords receive a warning but remain allowed, using the BusyBox `chpasswd`
+  path confirmed in the Alpine image rather than interactive `passwd` policy.
+  No universal password is shipped, and credentials are excluded from progress
+  data and command output.
+- Added Netdata appliance management to System → Services for the already
+  installed Agent: running state, version, local dashboard, Cloud claim state,
+  Connect/Reconnect and Disconnect. The root helper selects the claim interface
+  supplied by the installed Netdata version and restarts only Netdata; it does
+  not replace or rerun the Agent installation.
+- Added System → Access controls for changing the local device/SSH account from
+  Pi Home, preserving the separate web-access controls and leaving room for
+  additional appliance settings without exposing Alpine administration.
+- Reworked touchscreen discovery geometry: Daily recommendation context is a
+  square in-flow tile, horizontal rows bleed cleanly to the right edge, Recent
+  and New Releases use larger fixed-size four-column cards, and long titles get
+  a stable text slot. New Release details now show their track list with a
+  dedicated Back rail instead of the Browse/Search sidebar.
+- Reduced horizontal swipe jank by loading artwork only for cards close to the
+  horizontal viewport, avoiding unnecessary downloads and repaints for the
+  entire off-screen row.
+
+## 1.1.0-beta.16 Alpine Beta — 5 October 2026
+
+- Enables actual kinetic touch scrolling for Recent, Daily and New Releases while keeping their scrollbars visually hidden.
+- Gives discovery artwork, titles and credits fixed slots so sparse results do not expand and one-line/two-line titles do not shift cover positions.
+- Clears the previous Browse rail and grid immediately when opening Surprise Me, showing one discreet loading state until its preview arrives.
+
+## 1.1.0-beta.15 Alpine Beta — 5 October 2026
+
+- Standardises the appliance, updater, workflow and image names on **Alpine Beta**.
+- Moves ongoing Alpine work to `alpine-beta` while retaining `alpine-appliance-prototype` as a compatibility bridge for devices running beta.14 and earlier.
+- Removes internal branch terminology from the web settings update status.
+
+## 1.1.0-beta.14 Alpine — 5 October 2026
+
+- Resets seatd between stopping and starting Cage during an application update, clearing the broken DRM-session pipe observed on the physical touchscreen.
+- Removes the old display revision marker immediately before launch so health checks accept only a marker published by the newly started GTK process.
+
+## 1.1.0-beta.13 Alpine — 4 October 2026
+
+- Repairs touchscreen updates on the small Alpine filesystem: remove inactive managed releases before staging, remove failed staging trees, and prevent repeated taps from launching overlapping updater processes.
+- Waits visibly for a trustworthy Pi clock before HTTPS update checks instead of failing against certificates while the clock is still at the Unix epoch.
+- Seeds a usable clock before networking on Pi hardware without an RTC, saves it at shutdown, enables Chrony burst requests and permits an immediate step whenever network time becomes available.
+
+## 1.1.0-beta.12 Alpine — 4 October 2026
+
+- Replaces Daily's arrow overlays and paging with roomy, kinetic horizontal swipe tracks.
+- Centres the restart confirmation card within its full-screen dimmed backdrop.
+- Fetches touchscreen Discover independently of the general device refresh and cancels obsolete Daily work when another page is selected, avoiding a private-API backlog.
+- Bounds Recent history more tightly so its first useful view arrives sooner.
+- Connects Alpine sleep and brightness requests to the root-owned backlight helper, extinguishing the panel backlight while keeping touch available to wake it.
+
+## 1.1.0-beta.11 Alpine — 4 October 2026
+
+- Makes an unchanged update self-repair a stale touchscreen process instead of incorrectly returning “unchanged”.
+
+## 1.1.0-beta.10 Alpine — 4 October 2026
+
+- Replaces Daily pagination with compact swipeable carousels and a continuous Mixes → For You feed.
+- Loads bounded Roon previews progressively instead of waiting for complete private graphs.
+- Replaces unreliable genre glyphs with a coherent bundled SVG icon set.
+- Adds a full-screen dimmed restart confirmation and hides Discover scrollbars.
+- Verifies the exact source revision running on the physical GTK display before an update is accepted.
+
+## 1.1.0-beta.9 Alpine — 4 October 2026
+
+- Fix updater restart ordering: stop the display once, restart backends with
+  OpenRC dependency cascades disabled, then start the display once. Avoid the
+  display service lock conflict observed on the physical Pi during beta.8 update.
+- Retain the activation failure reason in rollback status. Existing beta.7/8
+  updater processes need the one-time SSH restart override for this update.
+
+## 1.1.0-beta.8 Alpine — 4 October 2026
+
+- Rename Dailies to Daily, with Mixes and For You. Show four larger cards per
+  page in mixes and recommendations; keep remaining selections accessible via
+  Previous/Next and leave the full mix track list unchanged.
+- Replace font-dependent genre, playlist and discovery fallback symbols with
+  bundled SVG icons shared by native GTK and web views. Keep Roon purple and
+  Fresh Mint colouring, including unknown genres, without extra fonts.
+
+## Alpine prototype — unreleased experiment
+
+- Rebuild with all accepted Alpine fixes. Keep private updater command logs,
+  separate dependency preparation progress stages and explain TLS clock failures.
+  Hide epoch-era clock values while network time arrives; log the GTK renderer
+  so graphics performance can be diagnosed without guessing.
+- Fix diagnostics to read OpenRC service names on Alpine. Add an explicit system
+  tools installer for existing images, a confirmed native touchscreen reboot
+  action and a transparent Cage cursor theme alongside child-widget cursor hiding.
+- Identify Alpine builds explicitly in Software version labels. Setup and web
+  password changes accept eight characters minimum; confirmation remains required.
+- Include automatic network time, screenshot capture tooling and optional OpenRC
+  Netdata controls. Recover late Goodix startup and persist tested touch mapping.
+- Fix bare-metal exports retaining Docker identity: remove container markers and
+  reset injected hostname/DNS files before creating the disk image. Verify OpenRC
+  detects a physical system, not Docker. Enable boot/service logs and include
+  filesystem check tools; do not silently abandon crashed services after five retries.
+- Alpine prototype and new installers use Pi Home installation/configuration/state paths, with legacy compatibility links preserving existing settings and pairing.
+- Add a native first-boot setup wizard with device naming, Ethernet/Wi-Fi,
+  Roon authorisation and zone selection, display/theme/timezone, a web settings
+  password and completion restart. Include a touch keyboard and resumable setup.
+- Restrict privileged onboarding to a local account-checked Unix socket helper;
+  validate input, preserve boot settings and lock setup mutations after Finish.
+
+- Add an isolated ARM64 Alpine image factory, OpenRC service definitions,
+  Ethernet-first native Cage/GTK boot path and unique first-boot credentials.
+- Reject unsupported privileged OS actions rather than queue them to a missing
+  systemd worker. Normal Raspberry Pi OS behaviour is unchanged.
+- Keep the prototype outside application update channels. Hardware boot,
+  touchscreen acceptance, Wi-Fi onboarding and safe OS updates remain pending.
+
 ## 1.1.0-beta.7 — 4 October 2026
 
 - Focus on the native touchscreen: use Browse-style left secondary navigation for Recent (Added/Listened) and Dailies (Mixes/Recommendations); remove the competing top-row controls and More Recommendations button there. Web layout remains unchanged.

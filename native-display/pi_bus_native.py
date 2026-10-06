@@ -11,6 +11,7 @@ import select
 import struct
 import threading
 import time
+import tomllib
 import unicodedata
 import urllib.request
 import uuid
@@ -30,6 +31,20 @@ from gi.repository import Gdk, Gio, GLib, Graphene, Gsk, Gtk, Pango
 BUS = "http://127.0.0.1:8765"
 ROON = "http://127.0.0.1:8766"
 TZ = ZoneInfo("Asia/Singapore")
+
+def publish_display_source():
+    """Identify the source tree actually executing on the physical display."""
+    try:
+        source = Path(__file__).resolve().parents[1] / ".source-commit"
+        revision = source.read_text(encoding="utf-8").strip()
+        if re.fullmatch(r"[0-9a-f]{40}", revision):
+            marker = Path("/run/pi-home/display-source-commit")
+            temporary = marker.with_suffix(".tmp")
+            temporary.write_text(revision + "\n", encoding="utf-8")
+            temporary.replace(marker)
+    except OSError:
+        # Diagnostics must never prevent the touchscreen from starting.
+        pass
 
 def mix_duotone_matrix():
     """GTK transposes this row-major matrix: luminance maps black to violet."""
@@ -178,6 +193,12 @@ CSS += b"""
 .theme-choice.active { background: #6ed9ae; color: #101714; }
 .theme-roon .theme-choice.active { background: #817aeb; color: #fff; }
 .settings-select label { color: #fff; }
+.settings-select popover contents { background: #e4e3e8; color: #17171a; border: 1px solid #77727e; border-radius: 8px; }
+.settings-select popover listview { background: transparent; color: #17171a; }
+.settings-select popover listview row { min-height: 46px; padding: 5px 12px; color: #17171a; }
+.settings-select popover listview row label { color: #17171a; }
+.settings-select popover listview row:selected { background: #c9c5ff; color: #111116; }
+.settings-select popover listview row:selected label { color: #111116; }
 .artist-play { padding: 12px 18px; border: 0; border-radius: 7px; background: #303030; color: #6ed9ae; font-size: 18px; font-weight: 650; }
 .theme-roon .artist-play { background: #292929; color: #817aeb; }
 .artist-albums-heading { font-size: 16px; font-weight: 750; }
@@ -200,11 +221,95 @@ CSS += b"""
 .theme-roon .roon-artist, .theme-roon .detail-artist, .theme-roon .surprise-artist, .theme-roon .surprise-caption, .theme-roon .queue-meta, .theme-roon .queue-duration, .theme-roon .muted, .theme-roon .home-state, .theme-roon .settings-diagnostic, .theme-roon .time, .theme-roon .browser-filter { color: #aaa; }
 .theme-roon .browser-filter.active { color: #817aeb; }
 .theme-roon .detail-takeover { background: rgba(21,21,21,.96); }
-.discovery-card, .discovery-card:hover, .discovery-card:active { padding: 8px; background: transparent; background-image: none; box-shadow: none; }
+.discovery-card, .discovery-card:hover, .discovery-card:active { padding: 4px; background: transparent; background-image: none; box-shadow: none; }
 .discovery-card .queue-title { font-size: 18px; }.discovery-card .queue-subtitle { font-size: 14px; color: #aaa; }
-.discovery-scroll scrollbar { background: transparent; min-width: 6px; }.discovery-scroll scrollbar slider { background: #a7a5ac; min-width: 6px; border-radius: 4px; }
-.theme-roon .discovery-scroll scrollbar slider { background: #aaa3ed; }
+.daily-card .queue-title { font-size: 20px; }.daily-card .queue-subtitle { font-size: 16px; }
+.discovery-scroll scrollbar, .daily-scroll scrollbar { opacity: 0; min-width: 0; min-height: 0; }
+.discovery-scroll overshoot.top, .discovery-scroll overshoot.bottom, .daily-scroll overshoot.left, .daily-scroll overshoot.right { background: transparent; box-shadow: none; }
+.daily-track { padding: 0 0 4px 10px; }
+.daily-track .queue-title { margin-top: 5px; }
+.daily-heading { margin: 2px 7px 0 7px; }
+.recommendation-heading { margin: 12px 7px -8px 17px; color: #817aeb; font-size: 14px; font-weight: 780; letter-spacing: 1px; }
+.confirm-shade { background: rgba(5,5,7,.82); }
+.confirm-card { min-width: 390px; padding: 28px; border-radius: 14px; background: #242329; border: 1px solid #4a4752; }
+.confirm-title { font-size: 28px; font-weight: 760; color: #fff; }
+.confirm-copy { font-size: 17px; color: #bbb; }
+.confirm-cancel, .confirm-reboot { min-height: 54px; padding: 8px 22px; border-radius: 8px; font-size: 17px; font-weight: 700; }
+.confirm-cancel { background: #343338; color: #fff; }.confirm-reboot { background: #817aeb; color: #fff; }
 .loading-notice { font-size: 14px; font-weight: normal; color: #aaa; background: transparent; padding: 4px 0; }
+.touch-landscape .roon-page { padding-right: 0; }
+.touch-landscape .roon-header, .touch-landscape .roon-page .nav, .touch-landscape .now-playing-content, .touch-landscape .queue-scroll, .touch-landscape .source-view { margin-right: 28px; }
+.touch-landscape .roon-page .browser-view { padding-right: 0; }
+.portrait .page { padding: 22px 24px 16px; }
+.portrait .roon-page { padding-right: 0; }
+.portrait .roon-header, .portrait .roon-page .nav, .portrait .now-playing-content, .portrait .queue-scroll, .portrait .source-view { margin-right: 24px; }
+.portrait .now-playing-content { margin: 32px 24px 8px 0; }
+.portrait.compact-portrait .now-playing-content { margin-top: 24px; }
+.portrait .browser-view { padding-right: 0; }
+.portrait .artwork { min-width: 0; min-height: 0; }
+.portrait .roon-title { font-size: 40px; }
+.portrait .roon-artist { font-size: 24px; }
+.portrait .transport button { min-width: 64px; min-height: 64px; border-radius: 32px; }
+.portrait .transport .play { min-width: 82px; min-height: 82px; border-radius: 41px; }
+.portrait .nav button { min-height: 58px; font-size: 18px; }
+.portrait .roon-subnav button { min-height: 48px; padding: 6px 12px; font-size: 15px; }
+.portrait .browser-sidebar { padding: 0 0 8px; }
+.portrait .browser-filter { min-height: 48px; padding: 6px 10px; }
+.portrait .browser-back { margin: 0; }
+.portrait .queue-row { min-height: 92px; }
+.portrait .settings-card { padding: 20px; }
+.portrait .settings-controls { padding: 0; }
+.portrait .settings-column { padding: 4px 0; }
+.portrait .settings-select, .portrait .setting-line { min-height: 58px; }
+.portrait.compact-portrait .page { padding: 12px 14px 10px; }
+.portrait.compact-portrait .roon-title { font-size: 28px; }
+.portrait.compact-portrait .roon-artist { font-size: 19px; }
+.portrait.compact-portrait .nav button { min-height: 48px; padding: 4px; font-size: 14px; }
+.settings-page .settings-card { padding: 0; border: 0; background: transparent; }
+.settings-page .settings-column { padding: 0; }
+.settings-page .settings-controls { padding: 8px 0 0; }
+.settings-brand { color: #6ed9ae; }
+.settings-theme-choice { min-height: 48px; font-size: 16px; }
+.touch-landscape .settings-theme-choice { min-height: 56px; font-size: 19px; }
+.theme-roon .settings-brand { color: #8275ef; }
+.settings-version { font-size: 12px; color: #a4aaa7; }
+.settings-page .settings-diagnostic { font-size: 13px; color: #747974; }
+.settings-divider { background: #232228; min-height: 3px; margin-top: 10px; margin-bottom: 6px; }
+.settings-page .setting-line, .settings-page .settings-select { min-height: 40px; padding: 4px 12px; }
+.settings-page .brightness-setting scale { padding: 3px 10px; }
+.touch-landscape .settings-page { padding: 26px 28px; }
+.touch-landscape .settings-page .settings-card { padding: 0; }
+.touch-landscape .settings-page .settings-version { font-size: 17px; }
+.touch-landscape .settings-page .settings-diagnostic { font-size: 17px; }
+.touch-landscape .settings-page .settings-title { font-size: 43px; }
+.touch-landscape .settings-page .settings-controls { padding: 8px 0 0; }
+.touch-landscape .settings-page .setting-line, .touch-landscape .settings-page .settings-select { min-height: 62px; padding: 5px 18px; }
+.touch-landscape .settings-page .brightness-setting { padding: 5px 18px; }
+.touch-landscape .settings-page .settings-action { min-height: 62px; }
+.portrait .settings-page .settings-title { font-size: 26px; }
+.portrait.compact-portrait .settings-page .settings-title { font-size: 22px; }
+.portrait .roon-page { padding-top: 12px; }
+.portrait .roon-subnav button { border-top: 0; border-bottom: 3px solid transparent; min-height: 32px; padding: 2px 2px; letter-spacing: .6px; font-size: 16px; }
+.portrait .browser-view .queue-scroll { margin-right: 0; }
+.portrait .daily-track { padding-left: 0; }
+.bus-footer .muted { color: #888; }
+.portrait .recommendation-heading { margin-left: 4px; }
+.portrait .stop, .portrait .stop-code { font-size: 26px; }
+.portrait .service { padding: 18px 12px; }
+.portrait .service.compact, .portrait .service.dense { padding: 12px; }
+.portrait .roon-subnav button.active { border-bottom-color: #5bcbd6; }
+.portrait.theme-roon .roon-subnav button.active { border-bottom-color: #817aeb; }
+.portrait .browser-sidebar { min-width: 0; }
+.portrait .service-no { min-width: 0; font-size: 108px; }
+.portrait .arrival { font-size: 96px; }
+.portrait .service.compact .service-no, .portrait .service.dense .service-no { font-size: 58px; }
+.portrait .service.compact .arrival, .portrait .service.dense .arrival { font-size: 58px; }
+.portrait .home-level { min-height: 24px; min-width: 0; }
+.portrait .home-level trough { min-height: 7px; min-width: 0; }
+.portrait .home-name { font-size: 21px; }
+.portrait .home-state { font-size: 14px; }
+.portrait.compact-portrait .roon-subnav button { font-size: 12px; min-height: 32px; letter-spacing: .4px; }
+.portrait.compact-portrait .browser-filter { font-size: 12px; min-height: 40px; padding: 4px 6px; }
 """
 
 
@@ -264,7 +369,7 @@ class Display(Gtk.Application):
         self.discovery_request = 0
         self.discovery_signature = None
         self.discovery_pictures = {}
-        self.discovery_recent_mode = "listened"
+        self.discovery_recent_mode = "added"
         self.discovery_picks = False
         self.discovery_cards = []
         self.discovery_browser_origin = False
@@ -301,6 +406,7 @@ class Display(Gtk.Application):
         self.detail_image_key = None
         self.detail_signature = None
         self.bluos_source_buttons = {}
+        self.last_display_view_id = None
 
     def label(self, text="", css=None, x=0):
         widget = Gtk.Label(label=text, xalign=x)
@@ -327,36 +433,99 @@ class Display(Gtk.Application):
         provider = Gtk.CssProvider(); provider.load_from_data(CSS)
         Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
         self.window = Gtk.ApplicationWindow(application=self); self.window.set_decorated(False); self.window.set_default_size(800, 480); self.window.fullscreen()
-        transparent = Gdk.MemoryTexture.new(
-            1, 1, Gdk.MemoryFormat.R8G8B8A8_PREMULTIPLIED,
-            GLib.Bytes.new(b"\x00\x00\x00\x00"), 4,
-        )
-        self.hidden_cursor = Gdk.Cursor.new_from_texture(transparent, 0, 0, None)
-        self.window.set_cursor(self.hidden_cursor)
+        # Apply saved theme before the first frame, not after an API poll.
+        try:
+            initial_config = tomllib.loads(Path("/etc/pi-home/config.toml").read_text())
+            if initial_config.get("display_theme") == "roon": self.window.add_css_class("theme-roon")
+        except (OSError, ValueError): pass
+        self.window.set_cursor_from_name("none")
         activity = Gtk.EventControllerLegacy(); activity.set_propagation_phase(Gtk.PropagationPhase.CAPTURE); activity.connect("event", self.note_activity); self.window.add_controller(activity)
         self.stack = Gtk.Stack(transition_type=Gtk.StackTransitionType.NONE, transition_duration=0)
         self.stack.set_hhomogeneous(False); self.stack.set_vhomogeneous(False)
         self.stack.add_named(self.build_boot_splash(), "boot"); self.stack.add_named(self.build_bus(), "bus"); self.stack.add_named(self.build_roon(), "roon"); self.stack.add_named(self.build_home(), "home"); self.stack.add_named(self.build_settings(), "settings"); self.stack.add_named(self.build_sleep(), "sleep")
-        self.window.set_child(self.stack); self.window.present()
+        self.root_overlay = Gtk.Overlay(); self.root_overlay.set_child(self.stack)
+        self.window.set_child(self.root_overlay); self.window.present()
+        GLib.timeout_add_seconds(1, self.log_renderer)
+        GLib.timeout_add_seconds(1, self.hide_touch_cursor)
         for _ in range(3): threading.Thread(target=self.thumbnail_worker, daemon=True).start()
         threading.Thread(target=self.touchscreen_wake_worker, daemon=True).start()
         GLib.idle_add(self.adapt_display)
+        self.window.connect("notify::width", lambda *_: self.adapt_display())
+        self.window.connect("notify::height", lambda *_: self.adapt_display())
         GLib.timeout_add_seconds(1, self.tick); GLib.timeout_add_seconds(2, self.start_poll); self.tick(); self.start_poll()
 
     def adapt_display(self):
-        monitors = Gdk.Display.get_default().get_monitors()
-        monitor = monitors.get_item(0) if monitors.get_n_items() else None
-        if monitor:
-            geometry = monitor.get_geometry()
-            self.detail_artwork.set_size_request(max(320, min(geometry.width, geometry.height) - 60), max(320, min(geometry.width, geometry.height) - 60))
-            if max(geometry.width, geometry.height) >= 1200: self.window.add_css_class("high-resolution")
-            if geometry.width >= 1200 and geometry.width > geometry.height:
-                self.window.add_css_class("touch-landscape")
-                # A CSS min-size still lets GTK stretch this child to its former
-                # allocation. Constrain both the picture and its button so the
-                # landscape artwork is genuinely ten percent smaller.
-                self.artwork.set_size_request(324, 324)
-                self.artwork_button.set_size_request(324, 324)
+        width, height = self.window.get_width(), self.window.get_height()
+        monitors = Gdk.Display.get_default().get_monitors(); monitor = monitors.get_item(0) if monitors.get_n_items() else None
+        if monitor and width > 1 and height > 1:
+            geometry = monitor.get_geometry(); width, height = min(width, geometry.width), min(height, geometry.height)
+        if width < 2 or height < 2:
+            monitors = Gdk.Display.get_default().get_monitors(); monitor = monitors.get_item(0) if monitors.get_n_items() else None
+            if not monitor: return False
+            geometry = monitor.get_geometry(); width, height = geometry.width, geometry.height
+        portrait = height > width
+        previous = getattr(self, "responsive_portrait", None)
+        self.responsive_portrait = portrait
+        self.viewport_width, self.viewport_height = width, height
+        for css_class, enabled in (("portrait", portrait), ("display-landscape", not portrait), ("compact-portrait", portrait and width < 600), ("high-resolution", max(width, height) >= 1200), ("touch-landscape", width >= 1200 and not portrait)):
+            (self.window.add_css_class if enabled else self.window.remove_css_class)(css_class)
+        self.now_playing_content.set_orientation(Gtk.Orientation.VERTICAL if portrait else Gtk.Orientation.HORIZONTAL)
+        self.now_playing_content.set_spacing(24 if portrait else 26)
+        self.now_playing_centre.set_valign(Gtk.Align.START if portrait else Gtk.Align.CENTER)
+        self.zone.set_valign(Gtk.Align.START if portrait else Gtk.Align.CENTER)
+        self.zone.set_margin_top(8 if portrait else 0)
+        self.roon_clock.set_valign(Gtk.Align.START if portrait else Gtk.Align.CENTER)
+        if hasattr(self, "settings_controls"):
+            self.configure_settings_layout(width, height)
+        self.browser_body.set_orientation(Gtk.Orientation.VERTICAL if portrait else Gtk.Orientation.HORIZONTAL)
+        self.browser_sidebar.set_orientation(Gtk.Orientation.HORIZONTAL if portrait else Gtk.Orientation.VERTICAL)
+        self.browser_discovery_sidebar.set_orientation(Gtk.Orientation.HORIZONTAL if portrait else Gtk.Orientation.VERTICAL)
+        self.browser_sidebar_spacer.set_hexpand(portrait); self.browser_sidebar_spacer.set_vexpand(not portrait)
+        for sidebar in (self.browser_sidebar, self.browser_discovery_sidebar, self.discovery_sidebar):
+            sidebar.set_vexpand(not portrait); sidebar.set_valign(Gtk.Align.START if portrait else Gtk.Align.FILL)
+        # Portrait tabs are a real second row, not an overlay on the clock.
+        for tabs in (self.roon_subnav, self.discover_subnav):
+            parent = tabs.get_parent()
+            target = self.portrait_music_tabs if portrait else self.music_header_overlay
+            if parent is not target:
+                if parent is self.music_header_overlay: parent.remove_overlay(tabs)
+                else: parent.remove(tabs)
+                if portrait: target.append(tabs)
+                else: target.add_overlay(tabs)
+            tabs.set_halign(Gtk.Align.FILL if portrait else Gtk.Align.CENTER)
+            # Equal cells multiply the longest label's minimum width by five.
+            # Share the spare space instead, keeping every full label readable.
+            tabs.set_homogeneous(False); tabs.set_spacing(0 if portrait else 8)
+            child = tabs.get_first_child()
+            while child:
+                child.set_hexpand(portrait); child = child.get_next_sibling()
+        self.portrait_music_tabs.set_visible(portrait)
+        self.portrait_music_tabs.set_margin_end(24 if portrait else 0)
+        self.portrait_music_tabs.set_margin_bottom((16 if width < 600 else 24) if portrait else 0)
+        self.browser_body.set_margin_end(24 if portrait else 0)
+        self.browser_search_columns.set_orientation(Gtk.Orientation.VERTICAL if portrait and width < 700 else Gtk.Orientation.HORIZONTAL)
+        self.discovery_body.set_orientation(Gtk.Orientation.VERTICAL if portrait else Gtk.Orientation.HORIZONTAL)
+        self.discovery_sidebar.set_orientation(Gtk.Orientation.HORIZONTAL if portrait else Gtk.Orientation.VERTICAL)
+        self.detail_panel.set_orientation(Gtk.Orientation.VERTICAL if portrait else Gtk.Orientation.HORIZONTAL)
+        # Ask GTK how much height the actual text and controls need. Long
+        # titles must shrink the artwork instead of expanding the window.
+        reserved = max(560, 120 + sum(widget.measure(Gtk.Orientation.VERTICAL, max(1, width - 64))[0] for widget in (self.music_header_overlay, self.portrait_music_tabs, self.now_playing_centre, self.music_navigation))) if portrait else 0
+        artwork_size = round(min(width - 64, max(160, height - reserved)) * .8) if portrait else (324 if width >= 1200 else min(280, max(220, height - 190)))
+        self.artwork.set_size_request(artwork_size, artwork_size); self.artwork_button.set_size_request(artwork_size, artwork_size)
+        if portrait:
+            if self.artwork.get_parent() is self.artwork_button:
+                self.artwork_button.set_child(None); self.artwork_viewport.set_child(self.artwork); self.artwork_button.set_child(self.artwork_viewport)
+            for axis in ("width", "height"):
+                getattr(self.artwork_viewport, "set_min_content_" + axis)(artwork_size)
+                getattr(self.artwork_viewport, "set_max_content_" + axis)(artwork_size)
+            self.artwork_viewport.set_size_request(artwork_size, artwork_size)
+        elif self.artwork_button.get_child() is self.artwork_viewport:
+            self.artwork_viewport.set_child(None); self.artwork_button.set_child(self.artwork)
+        detail_size = max(240, min(width - 56, int(height * .42))) if portrait else max(240, min(width, height) - 60)
+        self.detail_artwork.set_size_request(detail_size, detail_size)
+        if previous is not None and previous != portrait:
+            self.home_signature = None; self.discovery_signature = None
+            if getattr(self, "browser_state", None): self.render_browser(self.browser_state)
         return False
 
     def header(self, centre, clock):
@@ -388,14 +557,16 @@ class Display(Gtk.Application):
         page = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=7); page.add_css_class("page"); page.add_css_class("bus-page")
         self.bus_clock = self.label("--:--", "clock", 1); self.stop = self.label("Connecting…", "stop"); self.stop_code = self.label("", "stop-code")
         stop_heading = Gtk.Box(spacing=14); stop_heading.append(self.stop); stop_heading.append(self.stop_code); page.append(self.header(stop_heading, self.bus_clock))
-        self.services = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14); self.services.set_vexpand(True); page.append(self.services)
-        footer = Gtk.Box(); footer.add_css_class("bus-footer"); self.bus_status = self.label("Starting", "muted"); self.updated = self.label("", "muted", 1); self.updated.set_hexpand(True); footer.append(self.bus_status); footer.append(self.updated); page.append(footer)
+        self.services = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14); self.services.set_vexpand(True)
+        self.bus_content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=7); self.bus_content.append(self.services)
+        self.bus_scroll = Gtk.ScrolledWindow(); self.bus_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.NEVER); self.bus_scroll.set_propagate_natural_height(False); self.bus_scroll.set_propagate_natural_width(False); self.bus_scroll.set_min_content_height(1); self.bus_scroll.set_size_request(-1, 1); self.bus_scroll.set_vexpand(True); self.bus_scroll.set_child(self.bus_content); page.append(self.bus_scroll)
+        footer = Gtk.Box(); footer.add_css_class("bus-footer"); self.bus_status = self.label("Starting", "muted"); self.updated = self.label("", "muted", 1); self.updated.set_hexpand(True); footer.append(self.bus_status); footer.append(self.updated); self.bus_content.append(footer)
         page.append(self.navigation("bus")); return page
 
     def build_roon(self):
-        page = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8); page.add_css_class("page"); page.add_css_class("roon-page")
+        page = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4); page.add_css_class("page"); page.add_css_class("roon-page")
         self.zone = self.label("ROON NOW PLAYING", "eyebrow"); self.roon_clock = self.label("--:--", "clock", 1)
-        header_overlay = Gtk.Overlay(); header_overlay.set_child(self.header(self.zone, self.roon_clock))
+        header_overlay = Gtk.Overlay(); header_overlay.add_css_class("roon-header"); header_overlay.set_child(self.header(self.zone, self.roon_clock)); self.music_header_overlay = header_overlay
         subnav = Gtk.Box(spacing=12); subnav.add_css_class("roon-subnav"); subnav.set_halign(Gtk.Align.CENTER); subnav.set_valign(Gtk.Align.START); self.roon_subnav = subnav
         self.now_playing_tab = self.button("NOW PLAYING", self.show_roon_now, ""); self.now_playing_tab.add_css_class("active")
         self.queue_tab = self.button("QUEUE", lambda *_: self.set_roon_view("queue"), "")
@@ -403,33 +574,40 @@ class Display(Gtk.Application):
         header_overlay.add_overlay(subnav); page.append(header_overlay)
         self.discover_subnav = Gtk.Box(spacing=8); self.discover_subnav.add_css_class("roon-subnav"); self.discover_subnav.set_halign(Gtk.Align.CENTER); self.discover_subnav.set_valign(Gtk.Align.START)
         self.discover_tabs = {}
-        for section, title in (("recent", "RECENT"), ("browse", "BROWSE"), ("daily", "DAILIES"), ("releases", "NEW RELEASES"), ("surprise", "SURPRISE ME")):
+        for section, title in (("recent", "RECENT"), ("browse", "BROWSE"), ("daily", "DAILY"), ("releases", "NEW RELEASES"), ("surprise", "SURPRISE ME")):
             button = self.button(title, lambda _button, value=section: self.open_discover(value), "")
             self.discover_tabs[section] = button; self.discover_subnav.append(button)
         header_overlay.add_overlay(self.discover_subnav); self.discover_subnav.set_visible(False); self.browser_tab.set_visible(False)
+        self.portrait_music_tabs = Gtk.Box(orientation=Gtk.Orientation.VERTICAL); self.portrait_music_tabs.set_visible(False); page.append(self.portrait_music_tabs)
         self.roon_views = Gtk.Stack(transition_type=Gtk.StackTransitionType.NONE, transition_duration=0); self.roon_views.set_vexpand(True)
         self.roon_views.set_hhomogeneous(False); self.roon_views.set_vhomogeneous(False)
         self.discovery_list = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18)
-        self.discovery_scroll = Gtk.ScrolledWindow(); self.discovery_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC); self.discovery_scroll.set_kinetic_scrolling(True); self.discovery_scroll.set_propagate_natural_height(False); self.discovery_scroll.set_min_content_height(1); self.discovery_scroll.set_size_request(-1, 1); self.discovery_scroll.set_vexpand(True); self.discovery_scroll.set_hexpand(True); self.discovery_scroll.set_child(self.discovery_list)
+        self.discovery_scroll = Gtk.ScrolledWindow(); self.discovery_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC); self.discovery_scroll.set_kinetic_scrolling(True); self.discovery_scroll.set_overlay_scrolling(True); self.discovery_scroll.set_propagate_natural_height(False); self.discovery_scroll.set_min_content_height(1); self.discovery_scroll.set_size_request(-1, 1); self.discovery_scroll.set_vexpand(True); self.discovery_scroll.set_hexpand(True); self.discovery_scroll.set_child(self.discovery_list)
         self.discovery_scroll.add_css_class("discovery-scroll")
-        self.discovery_scroll.get_vadjustment().connect("value-changed", lambda *_: self.load_visible_discovery_artwork())
+        self.discovery_scroll.get_vadjustment().connect("value-changed", self.discovery_scrolled)
         self.discovery_body = Gtk.Box(spacing=0); self.discovery_body.set_vexpand(True); self.discovery_body.set_hexpand(True)
         self.discovery_sidebar = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2); self.discovery_sidebar.add_css_class("browser-sidebar"); self.discovery_sidebar.set_vexpand(True)
         self.discovery_body.append(self.discovery_sidebar); self.discovery_body.append(self.discovery_scroll)
         self.roon_views.add_named(self.discovery_body, "discover")
-        content = Gtk.Box(spacing=26); content.set_vexpand(True); content.set_margin_start(8); content.set_margin_end(8); content.set_margin_top(8); content.set_margin_bottom(8)
-        self.artwork = Gtk.Picture(); self.artwork.add_css_class("artwork"); self.artwork.set_size_request(280, 280); self.artwork.set_valign(Gtk.Align.CENTER); self.artwork.set_content_fit(Gtk.ContentFit.COVER)
+        content = Gtk.Box(spacing=26); content.add_css_class("now-playing-content"); content.set_vexpand(True); content.set_margin_start(8); content.set_margin_end(8); content.set_margin_top(8); content.set_margin_bottom(8); self.now_playing_content = content
+        self.artwork = Gtk.Picture(); self.artwork.add_css_class("artwork"); self.artwork.set_size_request(280, 280); self.artwork.set_valign(Gtk.Align.CENTER); self.artwork.set_content_fit(Gtk.ContentFit.COVER); self.set_browser_placeholder(self.artwork)
         artwork_button = Gtk.Button(); artwork_button.add_css_class("artwork-button"); artwork_button.set_halign(Gtk.Align.CENTER); artwork_button.set_valign(Gtk.Align.CENTER); artwork_button.set_child(self.artwork); artwork_button.connect("clicked", lambda *_: self.set_roon_view("details")); content.append(artwork_button); self.artwork_button = artwork_button
-        centre = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=7); centre.set_valign(Gtk.Align.CENTER); centre.set_hexpand(True)
-        self.title = self.label("Waiting for Roon…", "roon-title", .5); self.title.set_wrap(True); self.title.set_lines(2); self.title.set_justify(Gtk.Justification.CENTER)
-        self.artist = self.label("Enable Pi Home Roon Controller in Roon", "roon-artist", .5); self.artist.set_wrap(True); self.artist.set_justify(Gtk.Justification.CENTER); centre.append(self.title); centre.append(self.artist)
+        self.artwork_viewport = Gtk.ScrolledWindow(); self.artwork_viewport.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.NEVER); self.artwork_viewport.set_propagate_natural_width(False); self.artwork_viewport.set_propagate_natural_height(False)
+        centre = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=7); centre.set_valign(Gtk.Align.CENTER); centre.set_hexpand(True); self.now_playing_centre = centre
+        self.title = self.label("Waiting for Roon…", "roon-title", .5); self.title.set_hexpand(True); self.title.set_halign(Gtk.Align.FILL); self.title.set_wrap(True); self.title.set_lines(2); self.title.set_justify(Gtk.Justification.CENTER)
+        self.artist = self.label("Enable Pi Home Roon Controller in Roon", "roon-artist", .5); self.artist.set_hexpand(True); self.artist.set_halign(Gtk.Align.FILL); self.artist.set_wrap(True); self.artist.set_justify(Gtk.Justification.CENTER); centre.append(self.title); centre.append(self.artist)
         self.progress = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0, 1, 1); self.progress.add_css_class("progress"); self.progress.set_draw_value(False); self.progress.set_sensitive(False); self.progress.connect("value-changed", self.change_seek); centre.append(self.progress)
         times = Gtk.Box(); self.elapsed = self.label("0:00", "time"); self.remaining = self.label("−0:00", "time", 1); self.remaining.set_hexpand(True); times.append(self.elapsed); times.append(self.remaining); centre.append(times); self.roon_times = times
         self.controls = Gtk.Box(spacing=14); self.controls.set_halign(Gtk.Align.CENTER); self.controls.add_css_class("transport")
         self.controls.set_margin_top(6); self.controls.set_margin_bottom(16)
+        self.library_add = self.button("", self.add_current_album); self.library_add.add_css_class("library-action"); self.library_add.set_tooltip_text("Add album to library"); self.library_add.set_visible(False)
+        self.library_add.set_valign(Gtk.Align.CENTER); self.library_add.set_halign(Gtk.Align.CENTER); self.library_add.set_size_request(50, 50)
+        self.library_pending = False; self.library_album_id = None; self.library_favorite = None
+        self.library_status = "unknown"; self.set_library_icon(False)
         self.prev = self.icon_button("media-skip-backward-symbolic", lambda *_: self.control("previous")); self.play = self.icon_button("media-playback-start-symbolic", lambda *_: self.control("playpause"), "play"); self.play.get_child().set_pixel_size(42); self.next = self.icon_button("media-skip-forward-symbolic", lambda *_: self.control("next"))
         self.prev.set_size_request(50, 50); self.prev.set_valign(Gtk.Align.CENTER); self.play.set_size_request(68, 68); self.play.set_valign(Gtk.Align.CENTER); self.next.set_size_request(50, 50); self.next.set_valign(Gtk.Align.CENTER)
-        self.controls.append(self.prev); self.controls.append(self.play); self.controls.append(self.next); centre.append(self.controls)
+        self.controls.append(self.library_add); self.controls.append(self.prev); self.controls.append(self.play); self.controls.append(self.next); centre.append(self.controls)
+        self.library_message = self.label("", "browser-message", .5); self.library_message.set_wrap(True); self.library_message.set_visible(False); centre.append(self.library_message)
         volume_row = Gtk.Box(spacing=10); self.mute = self.button("MUTE", self.toggle_audio_mute, "utility"); self.mute.set_size_request(62, 38); volume_row.append(self.mute); self.volume = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0, 100, 1); self.volume.add_css_class("volume"); self.volume.set_hexpand(True); self.volume.set_draw_value(False); self.volume.connect("value-changed", self.change_volume); volume_row.append(self.volume); self.volume_value = self.label("—", "time", 1); self.volume_value.add_css_class("volume-number"); volume_row.append(self.volume_value); centre.append(volume_row)
         content.append(centre); self.roon_views.add_named(content, "now")
         source = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12); source.add_css_class("source-view"); source.set_halign(Gtk.Align.CENTER); source.set_valign(Gtk.Align.CENTER); source.set_hexpand(True); source.set_vexpand(True)
@@ -444,7 +622,7 @@ class Display(Gtk.Application):
         queue_scroll.get_vadjustment().connect("value-changed", self.load_visible_queue_artwork)
         self.roon_views.add_named(queue_scroll, "queue")
         browser = Gtk.Overlay(); browser.add_css_class("browser-view"); browser.set_vexpand(True); browser.set_hexpand(True)
-        browser_body = Gtk.Box(spacing=0); browser_body.set_vexpand(True); browser_body.set_hexpand(True); browser.set_child(browser_body)
+        browser_body = Gtk.Box(spacing=0); browser_body.set_vexpand(True); browser_body.set_hexpand(True); browser.set_child(browser_body); self.browser_body = browser_body
         self.browser_section_buttons = {}; sidebar = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2); sidebar.add_css_class("browser-sidebar")
         for section in ("albums", "artists", "genres", "playlists"):
             button = self.button(section.upper(), lambda _button, value=section: self.request_browser("section", section=value), "browser-filter"); button.get_child().set_xalign(0); self.browser_section_buttons[section] = button; sidebar.append(button)
@@ -454,7 +632,7 @@ class Display(Gtk.Application):
         self.browser_sidebar = sidebar; browser_body.append(sidebar)
         self.browser_discovery_sidebar = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2); self.browser_discovery_sidebar.add_css_class("browser-sidebar"); self.browser_discovery_sidebar.set_vexpand(True); self.browser_discovery_sidebar.set_visible(False); browser_body.append(self.browser_discovery_sidebar)
         browser_main = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2); browser_main.add_css_class("browser-main"); browser_main.set_vexpand(True); browser_main.set_hexpand(True)
-        sidebar.set_vexpand(True); spacer = Gtk.Box(); spacer.set_vexpand(True); sidebar.append(spacer); sidebar.append(self.browser_back)
+        sidebar.set_vexpand(True); spacer = Gtk.Box(); spacer.set_vexpand(True); self.browser_sidebar_spacer = spacer; sidebar.append(spacer); sidebar.append(self.browser_back)
         self.browser_message = self.label("", "browser-message"); self.browser_message.set_ellipsize(Pango.EllipsizeMode.END); self.browser_message.set_visible(False); browser_main.append(self.browser_message)
         self.browser_list = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2); self.browser_list.add_css_class("queue-list")
         browser_scroll = Gtk.ScrolledWindow(); browser_scroll.add_css_class("queue-scroll"); browser_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC); browser_scroll.set_kinetic_scrolling(True); browser_scroll.set_overlay_scrolling(True); browser_scroll.set_propagate_natural_height(False); browser_scroll.set_propagate_natural_width(False); browser_scroll.set_min_content_height(1); browser_scroll.set_size_request(-1, 1); browser_scroll.set_vexpand(True); browser_scroll.set_hexpand(True); browser_scroll.set_child(self.browser_list); self.browser_scroll = browser_scroll
@@ -468,7 +646,7 @@ class Display(Gtk.Application):
         # Independent result scrollers must not be nested in the ordinary
         # browser viewport: that viewport measures them at minimum height.
         self.browser_search_columns = Gtk.Box(spacing=18); self.browser_search_columns.set_homogeneous(True); self.browser_search_columns.set_hexpand(True); self.browser_search_columns.set_vexpand(True); self.browser_search_columns.set_visible(False); content.append(self.browser_search_columns)
-        self.browser_scrubber = Gtk.DrawingArea(); self.browser_scrubber.add_css_class("browser-scrubber"); self.browser_scrubber.set_size_request(74, -1); self.browser_scrubber.set_vexpand(True); self.browser_scrubber.set_visible(False); self.browser_scrubber.set_draw_func(self.draw_browser_scrubber)
+        self.browser_scrubber = Gtk.DrawingArea(); self.browser_scrubber.add_css_class("browser-scrubber"); self.browser_scrubber.set_size_request(74, -1); self.browser_scrubber.set_margin_end(18); self.browser_scrubber.set_vexpand(True); self.browser_scrubber.set_visible(False); self.browser_scrubber.set_draw_func(self.draw_browser_scrubber)
         self.browser_scrub_scale = Gtk.Adjustment(value=0, lower=0, upper=25, step_increment=1); self.browser_scrub_scale.connect("value-changed", self.browser_scrub_changed)
         scrub_gesture = Gtk.GestureDrag.new(); scrub_gesture.connect("drag-begin", self.browser_scrub_begin); scrub_gesture.connect("drag-update", self.browser_scrub_drag); scrub_gesture.connect("drag-end", self.browser_scrub_end); self.browser_scrubber.add_controller(scrub_gesture)
         content.append(self.browser_scrubber); browser_main.append(content); browser_body.append(browser_main)
@@ -482,7 +660,7 @@ class Display(Gtk.Application):
         keyboard_actions = Gtk.Box(spacing=10); keyboard_actions.set_homogeneous(True)
         for title, value in (("SPACE", " "), ("⌫", "BACKSPACE"), ("CLEAR", "CLEAR")): keyboard_actions.append(self.button(title, lambda _button, value=value: self.browser_keyboard_key(value), "browser-key"))
         search_submit = self.button("SEARCH", self.submit_browser_search, "browser-key"); search_submit.add_css_class("browser-search-submit"); keyboard_actions.append(search_submit); search_panel.append(keyboard_actions); self.roon_views.add_named(search_panel, "search")
-        detail_panel = Gtk.Box(spacing=24); detail_panel.add_css_class("detail-panel"); detail_panel.set_hexpand(True); detail_panel.set_vexpand(True)
+        detail_panel = Gtk.Box(spacing=24); detail_panel.add_css_class("detail-panel"); detail_panel.set_hexpand(True); detail_panel.set_vexpand(True); self.detail_panel = detail_panel
         self.detail_artwork = Gtk.Picture(); self.detail_artwork.add_css_class("detail-artwork"); self.detail_artwork.set_size_request(420, 420); self.detail_artwork.set_content_fit(Gtk.ContentFit.COVER); self.detail_artwork.set_valign(Gtk.Align.CENTER)
         detail_artwork_button = Gtk.Button(); detail_artwork_button.add_css_class("detail-artwork-button"); detail_artwork_button.set_halign(Gtk.Align.CENTER); detail_artwork_button.set_valign(Gtk.Align.CENTER); detail_artwork_button.set_child(self.detail_artwork); detail_artwork_button.connect("clicked", lambda *_: self.set_roon_view("now")); detail_panel.append(detail_artwork_button)
         detail_copy = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6); detail_copy.set_hexpand(True); detail_copy.set_vexpand(True); detail_copy.set_valign(Gtk.Align.FILL)
@@ -497,7 +675,7 @@ class Display(Gtk.Application):
         self.detail_tracks = Gtk.Box(orientation=Gtk.Orientation.VERTICAL); self.detail_tracks.add_css_class("detail-tracks")
         detail_scroll = Gtk.ScrolledWindow(); detail_scroll.add_css_class("queue-scroll"); detail_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC); detail_scroll.set_kinetic_scrolling(True); detail_scroll.set_overlay_scrolling(True); detail_scroll.set_propagate_natural_height(True); detail_scroll.set_max_content_height(210); detail_scroll.set_child(self.detail_tracks); detail_content.append(detail_scroll)
         detail_copy.append(detail_content)
-        detail_panel.append(detail_copy); page.append(self.roon_views); page.append(self.navigation("roon"))
+        detail_panel.append(detail_copy); page.append(self.roon_views); self.music_navigation = self.navigation("roon"); page.append(self.music_navigation)
         takeover = Gtk.Box(); takeover.add_css_class("detail-takeover"); takeover.set_hexpand(True); takeover.set_vexpand(True)
         takeover.append(detail_panel); takeover.set_visible(False); self.detail_takeover = takeover
         root = Gtk.Overlay(); root.set_child(page); root.add_overlay(takeover); return root
@@ -506,26 +684,46 @@ class Display(Gtk.Application):
         page = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=7); page.add_css_class("page"); page.add_css_class("home-page")
         self.home_clock = self.label("--:--", "clock", 1); page.append(self.header(self.label("PI HOME", "eyebrow"), self.home_clock))
         self.home_status = self.label("Connecting to Home Assistant…", "muted", .5); page.append(self.home_status)
-        self.home_grid = Gtk.Grid(column_spacing=11, row_spacing=11); self.home_grid.add_css_class("home-grid"); self.home_grid.set_column_homogeneous(True); self.home_grid.set_row_homogeneous(True); self.home_grid.set_vexpand(True); page.append(self.home_grid)
+        self.home_grid = Gtk.Grid(column_spacing=11, row_spacing=11); self.home_grid.add_css_class("home-grid"); self.home_grid.set_column_homogeneous(True); self.home_grid.set_row_homogeneous(True); self.home_grid.set_vexpand(True)
+        scroll = Gtk.ScrolledWindow(); scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC); scroll.set_propagate_natural_height(False); scroll.set_min_content_height(1); scroll.set_vexpand(True); scroll.set_child(self.home_grid); page.append(scroll)
         page.append(self.navigation("home")); return page
+
+    def configure_settings_layout(self, width, height):
+        portrait = height > width
+        self.settings_controls.set_orientation(Gtk.Orientation.VERTICAL if portrait else Gtk.Orientation.HORIZONTAL)
+        self.settings_daily.set_size_request(-1 if portrait else round((width - 56) * .343), -1)
+        self.settings_daily.set_hexpand(portrait)
+        self.settings_controls.set_spacing(20 if portrait else round(width * .052))
+        self.settings_header.set_orientation(Gtk.Orientation.VERTICAL if portrait else Gtk.Orientation.HORIZONTAL)
+        self.settings_actions.set_orientation(Gtk.Orientation.VERTICAL if portrait else Gtk.Orientation.HORIZONTAL)
 
     def build_settings(self):
         page = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8); page.add_css_class("page"); page.add_css_class("settings-page")
-        top = Gtk.Box(spacing=10); top.append(self.button("BACK", self.close_settings)); title = self.label("Settings", "settings-title", .5); title.set_hexpand(True); top.append(title); top.append(self.button("SLEEP", self.sleep)); page.append(top)
+        top = Gtk.Box(spacing=20); top.add_css_class("settings-header"); self.settings_header = top
+        heading = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4); heading.set_hexpand(True)
+        title_row = Gtk.Box(spacing=10); title_row.set_valign(Gtk.Align.CENTER)
+        title_row.append(self.label("Pi Home", "settings-title")); title_row.get_last_child().add_css_class("settings-brand"); title_row.get_last_child().set_valign(Gtk.Align.BASELINE); title_row.append(self.label("Settings", "settings-title")); title_row.get_last_child().set_valign(Gtk.Align.BASELINE)
+        self.device_status = self.label("", "settings-version"); self.device_status.set_valign(Gtk.Align.BASELINE); self.device_status.set_max_width_chars(32); self.device_status.set_ellipsize(Pango.EllipsizeMode.END); title_row.append(self.device_status); heading.append(title_row)
+        self.touch_diagnostics = self.label("Loading diagnostics…", "settings-diagnostic"); self.touch_diagnostics.set_wrap(True); heading.append(self.touch_diagnostics); top.append(heading)
+        utilities = Gtk.Box(spacing=22); utilities.set_valign(Gtk.Align.START); utilities.append(self.button("BACK", self.close_settings)); utilities.append(self.button("SLEEP", self.sleep)); top.append(utilities); page.append(top)
+        separator = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL); separator.add_css_class("settings-divider"); page.append(separator)
         card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14); card.add_css_class("settings-card"); card.set_vexpand(True)
-        self.device_status = self.label("Checking system…", "muted", .5); card.append(self.device_status)
-        self.touch_diagnostics = self.label("Loading diagnostics…", "settings-diagnostic", .5); self.touch_diagnostics.set_wrap(True); self.touch_diagnostics.set_justify(Gtk.Justification.CENTER); self.touch_diagnostics.set_margin_top(8); self.touch_diagnostics.set_margin_bottom(14); card.append(self.touch_diagnostics)
-        self.touch_theme_row = Gtk.Box(spacing=8); self.touch_theme_row.append(self.label("Theme")); self.touch_theme_buttons = {}
+        self.settings_row_sizes = Gtk.SizeGroup(mode=Gtk.SizeGroupMode.VERTICAL)
+        self.touch_theme_row = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16); self.touch_theme_row.set_margin_top(8); self.touch_theme_row.append(self.label("THEME", "eyebrow")); self.touch_theme_buttons = {}
+        theme_choices = Gtk.Box(spacing=16); theme_choices.set_homogeneous(True); self.touch_theme_row.append(theme_choices)
         for value, title in (("fresh-mint", "Mint"), ("roon", "Roon")):
             button = self.button(title, lambda _button, theme=value: self.change_theme(theme), "theme-choice")
-            self.touch_theme_buttons[value] = button; self.touch_theme_row.append(button)
-        controls = Gtk.Box(spacing=28); controls.add_css_class("settings-controls"); controls.set_vexpand(True); controls.set_valign(Gtk.Align.START)
-        daily = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16); daily.add_css_class("settings-column"); daily.set_size_request(430, -1); daily.append(self.label("DAILY CONTROLS", "eyebrow")); self.touch_daily = daily; controls.append(daily)
+            button.set_hexpand(True); button.add_css_class("settings-theme-choice"); self.touch_theme_buttons[value] = button; theme_choices.append(button)
+        controls = Gtk.Box(spacing=28); controls.add_css_class("settings-controls"); controls.set_vexpand(True); controls.set_valign(Gtk.Align.START); self.settings_controls = controls
+        daily = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16); daily.add_css_class("settings-column"); daily.set_size_request(430, -1); daily.append(self.label("DAILY CONTROLS", "eyebrow")); self.touch_daily = daily; self.settings_daily = daily; controls.append(daily)
         display_column = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16); display_column.add_css_class("settings-column"); display_column.set_hexpand(True); display_column.append(self.label("DISPLAY", "eyebrow"))
         self.touch_profile = Gtk.DropDown.new_from_strings(["Profile · Original 800×480", "Profile · Touch 2 5-inch", "Profile · Touch 2 7-inch", "Profile · Touch 2 10-inch"]); self.touch_profile.add_css_class("settings-select"); display_column.append(self.touch_profile)
-        self.touch_orientation = Gtk.DropDown.new_from_strings(["Orientation · Normal", "Orientation · 90°", "Orientation · 180°", "Orientation · 270°"]); self.touch_orientation.add_css_class("settings-select"); display_column.append(self.touch_orientation); controls.append(display_column); card.append(controls)
-        brightness_row = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3); brightness_row.add_css_class("setting-line"); brightness_row.add_css_class("brightness-setting"); brightness_row.append(self.label("Display brightness", "muted")); self.touch_brightness = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 10, 100, 1); self.touch_brightness.set_draw_value(True); self.touch_brightness.set_value_pos(Gtk.PositionType.RIGHT); self.touch_brightness.connect("value-changed", self.change_brightness); brightness_row.append(self.touch_brightness); display_column.append(brightness_row)
-        actions = Gtk.Box(spacing=12); actions.set_valign(Gtk.Align.END); self.apply_display_button = self.button("APPLY DISPLAY", self.request_display_settings, "settings-action"); self.apply_display_button.set_hexpand(True); actions.append(self.apply_display_button); self.update_button = self.button("INSTALL UPDATE", self.request_update, "settings-action"); self.update_button.set_hexpand(True); actions.append(self.update_button); card.append(actions); page.append(card)
+        self.touch_orientation = Gtk.DropDown.new_from_strings(["Orientation · Landscape", "Orientation · Portrait"]); self.touch_orientation.add_css_class("settings-select"); display_column.append(self.touch_orientation); controls.append(display_column)
+        scroll = Gtk.ScrolledWindow(); scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC); scroll.set_vexpand(True); scroll.set_child(controls); card.append(scroll)
+        self.touch_mounting = Gtk.DropDown.new_from_strings(["Rotation · Standard", "Rotation · 180°"]); self.touch_mounting.add_css_class("settings-select"); display_column.append(self.touch_mounting)
+        brightness_row = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16); brightness_row.set_margin_top(8); brightness_row.append(self.label("DISPLAY BRIGHTNESS", "eyebrow")); self.touch_brightness = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 10, 100, 1); self.touch_brightness.set_draw_value(True); self.touch_brightness.set_value_pos(Gtk.PositionType.RIGHT); self.touch_brightness.connect("value-changed", self.change_brightness); brightness_row.append(self.touch_brightness); display_column.append(brightness_row)
+        for row in (self.touch_profile, self.touch_orientation, self.touch_mounting): self.settings_row_sizes.add_widget(row)
+        actions = Gtk.Box(spacing=18); actions.set_homogeneous(True); actions.set_valign(Gtk.Align.END); self.settings_actions = actions; self.apply_display_button = self.button("APPLY DISPLAY", self.request_display_settings, "settings-action"); self.apply_display_button.set_hexpand(True); self.update_button = self.button("INSTALL UPDATE", self.request_update, "settings-action"); self.update_button.set_hexpand(True); actions.append(self.update_button); actions.append(self.apply_display_button); actions.append(self.button("REBOOT", self.confirm_reboot, "settings-action")); card.append(actions); page.append(card)
         return page
 
     def build_sleep(self):
@@ -545,6 +743,7 @@ class Display(Gtk.Application):
             if value == theme: button.add_css_class("active")
             else: button.remove_css_class("active")
         self.theme_updating = False
+        if hasattr(self, "library_add"): self.set_library_icon(getattr(self, "library_favorite", None) is True)
         self.browser_scrubber.queue_draw()
         for pictures in self.discovery_pictures.values():
             for picture in pictures: picture.queue_draw()
@@ -632,7 +831,14 @@ class Display(Gtk.Application):
         return False
 
     def tick(self):
-        now = datetime.now(TZ).strftime("%H:%M"); self.bus_clock.set_text(now); self.roon_clock.set_text(now); self.home_clock.set_text(now); self.sleep_clock.set_text(now); return True
+        current = datetime.now(TZ)
+        now = current.strftime("%H:%M") if current.year >= 2024 else "--:--"
+        self.bus_clock.set_text(now); self.roon_clock.set_text(now); self.home_clock.set_text(now); self.sleep_clock.set_text(now); return True
+
+    def log_renderer(self):
+        renderer = self.window.get_renderer()
+        print(f"Pi Home GTK {Gtk.get_major_version()}.{Gtk.get_minor_version()}.{Gtk.get_micro_version()} renderer={type(renderer).__name__}", flush=True)
+        return False
 
     def start_poll(self):
         if not self.polling:
@@ -645,7 +851,16 @@ class Display(Gtk.Application):
         capture_id = device.get("capture_request")
         if capture_id and capture_id != getattr(self, "last_capture_id", None):
             self.last_capture_id = capture_id
-            self.capture_display(capture_id)
+            # GTK widgets may only be snapshotted on the main loop.  Scheduling
+            # the capture here also avoids relying solely on compositor
+            # screencopy, which can return a valid but black frame while Cage
+            # is directly scanning the fullscreen surface out to DRM.
+            GLib.idle_add(self.capture_display, capture_id)
+        view_request = device.get("display_view_request") or {}
+        view_id = view_request.get("id")
+        if view_id and view_id != self.last_display_view_id:
+            self.last_display_view_id = view_id
+            GLib.idle_add(self.apply_display_view_request, dict(view_request))
         now = time.monotonic(); config = None; system = None
         if not self.settings_data or now - self.last_config_fetch >= 60:
             config = get_json(BUS + "/api/admin/config") or {}; self.last_config_fetch = now
@@ -656,13 +871,6 @@ class Display(Gtk.Application):
         target = target_response.get("target") if isinstance(target_response, dict) else None
         GLib.idle_add(self.apply, target, status, roon, config, system, device, key, None)
         self.polling = False
-        if self.discovery_active and self.last_mode == "roon" and self.requested_audio_view == "discover" and not self.settings_open and not getattr(self, "discovery_opening", False) and self.discovery_section not in {"browse", "surprise"}:
-            request = self.discovery_request
-            section = "mix" if self.discovery_mix else self.discovery_section
-            if section == "recent" and self.discovery_recent_mode == "added": section = "added"
-            if section == "daily" and self.discovery_picks: section = "picks"
-            discovery = get_json(f"{ROON}/api/discovery?section={section}&client=touch&id={quote(self.discovery_mix, safe='')}", timeout=3.0)
-            GLib.idle_add(self.render_discover, request, discovery)
         image = get_bytes(f"{ROON}/api/image?key={quote(key, safe='')}") if key and key != self.image_key else None
         if image:
             GLib.idle_add(self.apply_artwork, key, image)
@@ -674,24 +882,48 @@ class Display(Gtk.Application):
             print(f"Pi Home core refresh completed in {elapsed:.3f}s", flush=True)
 
     def capture_display(self, capture_id):
-        # Run in the polling worker with the real Cage session environment.
-        # No elevated privileges, temporary screenshot files or display changes.
         data = {"id": capture_id}
         try:
-            result = subprocess.run(["/usr/bin/grim", "-"], capture_output=True, timeout=5, check=True)
-            if len(result.stdout) > 8_388_608 or not result.stdout.startswith(b"\x89PNG\r\n\x1a\n"):
+            # Snapshot the actual live GTK tree.  This captures precisely what
+            # Pi Home rendered (including fetched artwork) and remains reliable
+            # when Cage/wlroots uses direct scan-out, where grim can otherwise
+            # return an all-black but syntactically valid PNG.
+            width, height = self.window.get_width(), self.window.get_height()
+            if width <= 0 or height <= 0:
+                raise ValueError("Display has no drawable size")
+            paintable = Gtk.WidgetPaintable.new(self.window)
+            snapshot = Gtk.Snapshot()
+            paintable.snapshot(snapshot, float(width), float(height))
+            node = snapshot.to_node()
+            if node is None:
+                raise ValueError("Display produced no render node")
+            texture = self.window.get_renderer().render_texture(node, None)
+            image = bytes(texture.save_to_png_bytes().get_data())
+            if len(image) > 8_388_608 or not image.startswith(b"\x89PNG\r\n\x1a\n"):
                 raise ValueError("Invalid screenshot")
-            data["image"] = base64.b64encode(result.stdout).decode("ascii")
-        except FileNotFoundError:
-            data["error"] = "Capture support is missing. Install the latest Pi Home update."
-        except (subprocess.SubprocessError, OSError, ValueError):
-            data["error"] = "The display could not be captured. Ensure it is awake; this compositor may not support screenshots."
+            data["image"] = base64.b64encode(image).decode("ascii")
+        except (OSError, RuntimeError, TypeError, ValueError):
+            data["error"] = "The live display could not be rendered. Ensure the touchscreen application is running and try again."
         post_json(BUS + "/api/device/display-capture", data, timeout=5)
+        return False
+
+    def apply_display_view_request(self, request):
+        view = str(request.get("view", ""))
+        if view == "now":
+            self.show_roon_now()
+            self.set_mode("roon")
+        elif view in {"recent", "daily", "releases", "browse", "surprise"}:
+            self.open_discover(view)
+        return False
 
     def apply(self, target, status, roon, config, system, device, image_key, image):
         if status and "display_theme" in status and config is None: self.apply_theme(status["display_theme"])
         if config is not None:
+            grid_changed = self.settings_data.get("portrait_discovery_columns", 2) != config.get("portrait_discovery_columns", 2)
             self.settings_data = config
+            if grid_changed and getattr(self, "responsive_portrait", False) and hasattr(self, "discovery_data"):
+                self.discovery_signature = None
+                self.render_discover(self.discovery_request, self.discovery_data)
             self.apply_theme(config.get("display_theme"))
             for button in self.bus_nav_buttons: button.set_visible(config.get("bus_enabled", True))
             for button in self.roon_nav_buttons: button.set_label("Now Playing")
@@ -707,7 +939,10 @@ class Display(Gtk.Application):
         if system is not None:
             self.system_data = system
             update_status = str(system.get("update_status", "Ready"))
-            self.device_status.set_text(f"v{system.get('app_version', '—')}  ·  {update_status}")
+            visible_update = update_status.startswith(("Update ·", "Failed:"))
+            waiting_for_update = self.update_in_progress and not self.update_status_seen and update_status == "Ready"
+            if not waiting_for_update: self.device_status.set_text(update_status if visible_update else f"v{system.get('app_version', '—')}")
+            self.device_status.set_tooltip_text(update_status)
             if update_status.startswith("Update ·"):
                 self.update_status_seen = True
             elif self.update_in_progress and self.update_status_seen:
@@ -723,8 +958,8 @@ class Display(Gtk.Application):
             health += f"  ·  Controller {'ready' if states.get('Roon controller') else 'offline'}  ·  Bridge {'ready' if states.get('Roon Bridge') else 'offline'}"
             self.touch_diagnostics.set_text(health)
             if not self.display_controls_loaded:
-                profiles = {"original": 0, "touch2-5": 1, "touch2-7": 2, "touch2-5-7": 2, "touch2-10": 3}; orientations = {"normal": 0, "90": 1, "180": 2, "270": 3}
-                self.touch_profile.set_selected(profiles.get(system.get("display_profile"), 0)); self.touch_orientation.set_selected(orientations.get(system.get("display_rotation"), 0)); self.display_controls_loaded = True
+                profiles = {"original": 0, "touch2-5": 1, "touch2-7": 2, "touch2-5-7": 2, "touch2-10": 3}; orientations = {"landscape": 0, "portrait": 1}; mountings = {"standard": 0, "inverted": 1}
+                self.touch_profile.set_selected(profiles.get(system.get("display_profile"), 0)); self.touch_orientation.set_selected(orientations.get(system.get("display_orientation"), 0)); self.touch_mounting.set_selected(mountings.get(system.get("display_mounting"), 0)); self.display_controls_loaded = True
         self.render_touch_controls(device, self.system_data)
         self.render_home((device or {}).get("home") or {})
         brightness = int((device or {}).get("display_brightness", 100))
@@ -737,6 +972,12 @@ class Display(Gtk.Application):
         bus_signature = json.dumps(status, sort_keys=True, separators=(",", ":"), default=str)
         if bus_signature != self.bus_signature:
             self.render_bus(status); self.bus_signature = bus_signature
+        # Keep the Now Playing geometry stable while a new cover is fetched.
+        # Clearing to the bundled record-cover asset also prevents the previous
+        # album from lingering during the network/decode interval.
+        if image_key != self.image_key:
+            self.set_browser_placeholder(self.artwork)
+            self.image_key = None
         self.render_roon(roon)
         if not self.views_prewarmed:
             self.views_prewarmed = True; GLib.idle_add(self.prewarm_views)
@@ -826,23 +1067,28 @@ class Display(Gtk.Application):
         self.touch_controls_signature = signature
         while child := self.touch_daily.get_last_child():
             if child == self.touch_daily.get_first_child(): break
+            if child.has_css_class("setting-line"): self.settings_row_sizes.remove_widget(child)
             self.touch_daily.remove(child)
-        bridge = Gtk.Box(spacing=8); bridge.add_css_class("setting-line"); bridge_check = Gtk.CheckButton(label="Roon Bridge"); bridge_check.set_active((system or {}).get("roon_bridge") == "active"); bridge_check.connect("toggled", self.toggle_bridge); bridge.append(bridge_check); self.touch_daily.append(bridge)
+        bridge_state = (system or {}).get("roon_bridge")
+        if bridge_state in {"active", "running", "inactive", "stopped"}:
+            bridge = Gtk.Box(spacing=8); bridge.add_css_class("setting-line"); bridge_check = Gtk.CheckButton(label="Roon Bridge"); bridge_check.set_active(bridge_state in {"active", "running"}); bridge_check.connect("toggled", self.toggle_bridge); bridge.append(bridge_check); self.settings_row_sizes.add_widget(bridge); self.touch_daily.append(bridge)
         services = Gtk.Box(spacing=12); services.add_css_class("setting-line"); services.append(self.label("Buses"))
         for item in device.get("services", []):
             button = Gtk.CheckButton(label=item.get("name", "")); button.set_active(bool(item.get("enabled"))); button.connect("toggled", self.toggle_service, item.get("name", "")); services.append(button)
-        self.touch_daily.append(services)
+        self.settings_row_sizes.add_widget(services); self.touch_daily.append(services)
         self.touch_daily.append(self.touch_theme_row)
 
     def render_home(self, home):
-        signature = json.dumps({"status": home.get("status"), "entities": home.get("entities", []), "theme": self.settings_data.get("display_theme")}, sort_keys=True, default=str)
+        portrait = self.window.has_css_class("portrait")
+        self.bus_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC if portrait else Gtk.PolicyType.NEVER)
+        signature = json.dumps({"status": home.get("status"), "entities": home.get("entities", []), "theme": self.settings_data.get("display_theme"), "portrait": portrait}, sort_keys=True, default=str)
         if signature == self.home_signature: return
         self.home_signature = signature
         while child := self.home_grid.get_first_child(): self.home_grid.remove(child)
         entities = home.get("entities", [])[:8]
         self.home_status.set_text("Home Assistant offline" if home.get("status") == "offline" else ("Choose Home Assistant devices in web settings" if not entities else ""))
         for index, entity in enumerate(entities):
-            box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4); box.add_css_class("home-tile"); box.set_vexpand(True)
+            box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL if portrait else Gtk.Orientation.VERTICAL, spacing=18 if portrait else 4); box.add_css_class("home-tile"); box.set_vexpand(True)
             state = str(entity.get("state", "unknown")); detail = state.upper()
             if entity.get("percentage") is not None: detail += f" · {entity['percentage']}%"
             if state in {"on", "open", "playing"}: box.add_css_class("on")
@@ -851,31 +1097,52 @@ class Display(Gtk.Application):
             if self.settings_data.get("display_theme") == "roon": icon_name = icon_name.replace(".svg", "-roon.svg")
             icon_path = Path(__file__).with_name("icons") / icon_name
             icon_size = 108 if self.window.has_css_class("high-resolution") else 72
-            icon = Gtk.Image.new_from_gicon(Gio.FileIcon.new(Gio.File.new_for_path(str(icon_path)))); icon.set_pixel_size(icon_size); icon.set_size_request(icon_size, icon_size); icon.set_halign(Gtk.Align.CENTER); icon.set_valign(Gtk.Align.CENTER); icon.add_css_class("home-icon")
-            button = Gtk.Button(); button.add_css_class("home-device-button"); button.set_hexpand(True); button.set_vexpand(True); button.set_child(icon); button.connect("clicked", self.toggle_home, entity.get("entity_id", "")); control_row.append(button)
+            if portrait: icon_size = max(64, min(240, round((self.window.get_height() - 190) / max(4, len(entities)) * .7)))
+            icon_slot = icon_size; icon_size = round(icon_size * .75)
+            icon = Gtk.Image.new_from_gicon(Gio.FileIcon.new(Gio.File.new_for_path(str(icon_path)))); icon.set_pixel_size(icon_size); icon.set_size_request(icon_slot, icon_slot); icon.set_halign(Gtk.Align.CENTER); icon.set_valign(Gtk.Align.CENTER); icon.add_css_class("home-icon")
+            button = Gtk.Button(); button.add_css_class("home-device-button"); button.set_hexpand(not portrait); button.set_vexpand(True); button.set_child(icon); button.connect("clicked", self.toggle_home, entity.get("entity_id", "")); control_row.append(button)
+            details = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8); details.set_hexpand(True); details.set_valign(Gtk.Align.CENTER)
             if entity.get("supports_level"):
                 level = entity.get("percentage")
                 if level is None and entity.get("brightness") is not None: level = round(float(entity["brightness"]) * 100 / 255)
-                scale = Gtk.Scale.new_with_range(Gtk.Orientation.VERTICAL, 0, 100, 1); scale.add_css_class("home-level"); scale.set_draw_value(False); scale.set_inverted(True); scale.set_value(float(level or 0)); scale.connect("value-changed", self.change_home_value, entity.get("entity_id", "")); control_row.append(scale)
+                scale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL if portrait else Gtk.Orientation.VERTICAL, 0, 100, 1); scale.add_css_class("home-level"); scale.set_draw_value(False); scale.set_inverted(not portrait); scale.set_hexpand(portrait); scale.set_value(float(level or 0)); scale.connect("value-changed", self.change_home_value, entity.get("entity_id", "")); (details if portrait else control_row).append(scale)
             if domain in {"switch", "input_boolean"}:
                 swipe = Gtk.GestureSwipe(); swipe.connect("swipe", self.swipe_home_switch, entity.get("entity_id", "")); button.add_controller(swipe)
             box.append(control_row)
-            name = self.label(entity.get("name", "Device"), "home-name", .5); name.set_wrap(True); name.set_lines(2); box.append(name); box.append(self.label(detail, "home-state", .5))
-            self.home_grid.attach(box, index % 4, index // 4, 1, 1)
+            name = self.label(entity.get("name", "Device"), "home-name", 0 if portrait else .5); name.set_wrap(True); name.set_lines(2); (details if portrait else box).append(name); (details if portrait else box).append(self.label(detail, "home-state", 0 if portrait else .5))
+            if portrait: box.append(details)
+            self.home_grid.attach(box, 0 if portrait else index % 4, index if portrait else index // 4, 1, 1)
 
     def render_bus(self, data):
         if not data: self.bus_status.set_text("Bus service unavailable"); return
         self.stop.set_text(data.get('stop_name', 'Bus times')); self.stop_code.set_text(data.get('stop_code', ''))
         while child := self.services.get_first_child(): self.services.remove(child)
         visible = data.get("services", [])[:4]
+        portrait = self.window.has_css_class("portrait")
+        self.services.set_spacing(24 if portrait else 14)
+        self.services.set_valign(Gtk.Align.START if portrait else Gtk.Align.FILL)
+        self.services.set_vexpand(not portrait)
+        self.bus_content.set_valign(Gtk.Align.START if portrait else Gtk.Align.FILL)
+        self.services.set_margin_top(16 if portrait else 0)
         for index, service in enumerate(visible):
             row = Gtk.Box(spacing=12); row.add_css_class("service"); row.add_css_class("service-" + (service.get("colour") or {"40": "blue", "42": "green", "401": "violet"}.get(str(service.get("service")), "amber"))); row.set_vexpand(True)
             if len(visible) == 3: row.add_css_class("compact")
             elif len(visible) >= 4: row.add_css_class("dense")
+            if portrait:
+                row.set_orientation(Gtk.Orientation.VERTICAL); row.set_vexpand(False); row.set_spacing(12)
             number = self.label(str(service.get("service", "")), "service-no"); number.set_size_request((150 if len(visible) > 2 else 188) if self.window.has_css_class("high-resolution") else (100 if len(visible) > 2 else 125), -1); number.set_valign(Gtk.Align.CENTER); row.append(number)
             arrivals = Gtk.Box(spacing=8); arrivals.set_hexpand(True)
+            if portrait:
+                number.set_xalign(.5); number.set_size_request(-1, -1); number.set_valign(Gtk.Align.CENTER)
+                count = max(1, len(visible))
+                card_budget = (getattr(self, "viewport_height", self.window.get_height()) - 240 - (count - 1) * 24) / count
+                route_size = min(216, max(40, round((card_budget - 80) / 1.85)))
+                attrs = Pango.AttrList(); attrs.insert(Pango.attr_size_new_absolute(route_size * Pango.SCALE)); number.set_attributes(attrs)
             for arrival in service.get("arrivals", [])[:3]:
-                col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL); col.set_valign(Gtk.Align.CENTER); minutes = arrival.get("minutes"); col.append(self.label("Due" if minutes == 0 else str(minutes), "arrival", .5)); col.append(self.label("MIN · LIVE" if arrival.get("monitored") else "MIN · AFTER", "arrival-sub", .5)); col.set_hexpand(True); arrivals.append(col)
+                col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL); col.set_valign(Gtk.Align.CENTER); minutes = arrival.get("minutes"); value = self.label("Due" if minutes == 0 else str(minutes), "arrival", .5)
+                if portrait:
+                    attrs = Pango.AttrList(); attrs.insert(Pango.attr_size_new_absolute(min(80, max(24, round(route_size * .48))) * Pango.SCALE)); value.set_attributes(attrs)
+                col.append(value); col.append(self.label("MIN · LIVE" if arrival.get("monitored") else "MIN · AFTER", "arrival-sub", .5)); col.set_hexpand(True); arrivals.append(col)
             row.append(arrivals); self.services.append(row)
         self.bus_status.set_text("Live from LTA DataMall" if data.get("status") == "ok" and not data.get("stale") else "Offline / last known arrivals")
         updated = data.get("updated_at"); self.updated.set_text("Updated " + updated[11:19] if updated else "")
@@ -916,6 +1183,9 @@ class Display(Gtk.Application):
         play_icon = Gtk.Image.new_from_icon_name("media-playback-start-symbolic" if external else ("media-playback-pause-symbolic" if zone.get("state") == "playing" else "media-playback-start-symbolic")); play_icon.set_pixel_size(42); self.play.set_child(play_icon); self.prev.set_sensitive(not external and bool(zone.get("can_previous"))); self.next.set_sensitive(not external and bool(zone.get("can_next"))); self.play.set_sensitive(bool(zone.get("can_play") or zone.get("can_pause")))
         elapsed = int(zone.get("seek_position") or 0); length = int(playing.get("length") or 0); self.seek_updating = True; self.progress.set_range(0, max(1, length)); self.progress.set_value(min(elapsed, length) if length else 0); self.progress.set_sensitive(bool(zone.get("can_seek") and length)); self.seek_updating = False; self.elapsed.set_text(self.format_time(elapsed)); self.remaining.set_text("−" + self.format_time(max(0, length - elapsed)))
         output = zone.get("output") or {}; volume = output.get("volume") or {}; value = volume.get("value"); self.volume_updating = True; self.volume.set_sensitive(value is not None); self.volume.set_value(float(value or 0)); self.volume_value.set_text(str(value) if value is not None else "FIXED"); self.mute.set_sensitive(value is not None); self.mute.set_label("UNMUTE" if volume.get("is_muted") else "MUTE"); self.volume_updating = False
+        text_layout = (self.title.get_text(), self.artist.get_text())
+        if getattr(self, "responsive_portrait", False) and text_layout != getattr(self, "now_text_layout", None):
+            self.now_text_layout = text_layout; GLib.idle_add(self.adapt_display)
 
     def render_bluos_inputs(self, amplifier, have_roon):
         inputs = list(amplifier.get("inputs") or [])
@@ -975,7 +1245,9 @@ class Display(Gtk.Application):
         self.set_roon_view("browse")
         if self.browser_state is None: self.request_browser("section", section="albums")
 
-    def open_discover(self, section="recent", mix="", picks=False):
+    def open_discover(self, section="recent", mix="", picks=False, recent_mode=None):
+        if section == "recent": self.discovery_recent_mode = recent_mode or "added"
+        self.discovery_pages = {}
         self.discovery_browser_origin = False
         self.discovery_active = True; self.discovery_section = section; self.discovery_mix = mix
         self.discovery_picks = picks
@@ -989,6 +1261,14 @@ class Display(Gtk.Application):
         if section == "browse":
             self.request_browser("section", section="albums")
         elif section == "surprise":
+            # Do not expose the previous Browse rail/grid while the asynchronous
+            # Surprise preview is being prepared.
+            self.browser_sidebar.set_visible(False); self.browser_discovery_sidebar.set_visible(False)
+            self.browser_artist_scroll.set_visible(False); self.browser_search_columns.set_visible(False)
+            self.browser_scroll.set_visible(True); self.browser_message.set_visible(False)
+            while child := self.browser_list.get_first_child(): self.browser_list.remove(child)
+            self.browser_list.set_orientation(Gtk.Orientation.VERTICAL)
+            self.browser_list.append(self.label("Loading…", "loading-notice"))
             self.request_browser("surprise")
         else:
             self.sync_discovery_sidebar()
@@ -996,18 +1276,41 @@ class Display(Gtk.Application):
             self.discovery_pictures = {}; self.discovery_cards = []
             self.discovery_list.append(self.label("Loading…", "loading-notice"))
             self.discovery_scroll.get_vadjustment().set_value(0)
-            self.start_poll()
+            self.request_discovery()
+
+    def request_discovery(self, request=None):
+        request = self.discovery_request if request is None else request
+        if request != self.discovery_request or not self.discovery_active or self.discovery_section in {"browse", "surprise"}: return False
+        section = "mix" if self.discovery_mix else ("daily-home" if self.discovery_section == "daily" else self.discovery_section)
+        if section == "recent" and self.discovery_recent_mode == "added": section = "added"
+        mix = self.discovery_mix
+        threading.Thread(target=self._fetch_discovery, args=(request, section, mix), daemon=True).start()
+        return False
+
+    def _fetch_discovery(self, request, section, mix):
+        data = get_json(f"{ROON}/api/discovery?section={section}&client=touch&id={quote(mix, safe='')}", timeout=3.0)
+        GLib.idle_add(self._apply_discovery_response, request, data)
+
+    def _apply_discovery_response(self, request, data):
+        self.render_discover(request, data)
+        if request == self.discovery_request and self.discovery_active and (not data or data.get("status") == "loading" or data.get("refreshing")):
+            GLib.timeout_add(600 if data and data.get("status") == "loading" else 1200, self.request_discovery, request)
+        return False
 
     def render_discover(self, request, data):
         if request != self.discovery_request or not self.discovery_active or self.roon_views.get_visible_child_name() != "discover": return False
         data = data or {"status": "unavailable", "message": "Discover is unavailable. Normal Roon controls are unaffected."}
-        signature = json.dumps(data, sort_keys=True)
+        portrait_grid = getattr(self, "responsive_portrait", False)
+        signature = json.dumps([data, portrait_grid, self.settings_data.get("portrait_discovery_columns", 2), getattr(self, "discovery_daily_tab", "mixes")], sort_keys=True)
         if signature == self.discovery_signature: return False
         self.discovery_signature = signature
+        self.discovery_data = data
         while child := self.discovery_list.get_first_child(): self.discovery_list.remove(child)
         self.discovery_pictures = {}
         self.discovery_cards = []
+        self.discovery_card_scrollers = {}
         self.sync_discovery_sidebar()
+        self.discovery_body.set_margin_end(24 if portrait_grid else 0)
         if data.get("status") != "ready":
             self.discovery_list.append(self.label("Loading…" if data.get("status") == "loading" else data.get("message", "Discover is unavailable."), "loading-notice" if data.get("status") == "loading" else "browser-message")); return False
         if self.discovery_mix:
@@ -1018,79 +1321,135 @@ class Display(Gtk.Application):
                 control = self.button(label, lambda _button, value=action: self.request_mix_action(value, controls), "artist-play" if action == "play" else "browser-back")
                 controls.append(control)
             self.discovery_list.append(controls)
-        monitors = Gdk.Display.get_default().get_monitors()
-        monitor = monitors.get_item(0) if monitors.get_n_items() else None
-        if self.discovery_section in {"recent", "daily"}:
-            columns, size = self.browser_grid_metrics()
-            size = min(172, size)
+        if self.discovery_section == "daily" and not portrait_grid:
+            columns, size = self.browser_grid_metrics(); size = min(212, size)
         else:
-            columns = 4 if monitor and monitor.get_geometry().width >= 1200 else 2
-            size = 220 if columns == 4 else 180
+            columns, size = self.discovery_grid_metrics(self.discovery_section)
         content = self.discovery_list
-        def group(title, items):
+        self.discovery_daily_sections = {}
+        def group(title, items, section_key="", seed=None):
             if title:
-                heading = self.label(title, "browser-section"); heading.set_wrap(True); content.append(heading)
+                heading = self.label(title, "recommendation-heading" if seed else "browser-section")
+                heading.set_wrap(False); heading.set_ellipsize(Pango.EllipsizeMode.END); content.append(heading)
             if self.discovery_mix:
                 for item in items: content.append(self.discovery_track_row(item))
                 return
-            grid = Gtk.Grid(column_spacing=16 if self.discovery_section in {"recent", "daily"} else 20, row_spacing=20); grid.set_column_homogeneous(True); grid.set_hexpand(True)
-            for index, item in enumerate(items):
-                card = Gtk.Button(); card.add_css_class("discovery-card"); card.set_hexpand(True)
-                body = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-                picture = MixPicture(duotone=item.get("kind") == "mix"); picture.set_can_shrink(True); picture.set_content_fit(Gtk.ContentFit.COVER); self.set_browser_placeholder(picture)
-                art = Gtk.AspectFrame(xalign=.5, yalign=.5, ratio=1, obey_child=False); art.set_size_request(size, size); art.set_halign(Gtk.Align.CENTER); art.set_child(picture); body.append(art)
-                title_label = self.label(item.get("title", ""), "queue-title", .5); title_label.set_wrap(True); title_label.set_max_width_chars(23); title_label.set_lines(2); title_label.set_ellipsize(Pango.EllipsizeMode.END); body.append(title_label)
-                title_label.set_justify(Gtk.Justification.CENTER); title_label.set_size_request(-1, 48)
-                credit = self.label(item.get("artist") or " · ".join(item.get("context") or []), "queue-subtitle", .5); credit.set_wrap(True); credit.set_max_width_chars(25); credit.set_lines(2); credit.set_ellipsize(Pango.EllipsizeMode.END); body.append(credit)
+            daily = self.discovery_section == "daily"
+            visible_items = ([dict(seed, _context_seed=True)] if daily and seed else []) + list(items)
+            column_spacing = 24 if portrait_grid else 18 if daily else 36 if self.discovery_section == "releases" else 24
+            grid = Gtk.Grid(column_spacing=column_spacing, row_spacing=18 if daily else 20); grid.set_column_homogeneous(False); grid.set_halign(Gtk.Align.START); grid.set_hexpand(True); grid.set_valign(Gtk.Align.START); grid.set_vexpand(False)
+            track = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=18) if daily and not portrait_grid else None
+            section_cards = []
+            if track: track.add_css_class("daily-track"); track.set_margin_end(0)
+            for index, item in enumerate(visible_items):
+                card = Gtk.Button(); card.add_css_class("discovery-card"); card.set_hexpand(False); card.set_vexpand(False); card.set_halign(Gtk.Align.CENTER); card.set_valign(Gtk.Align.START)
+                if daily: card.add_css_class("daily-card")
+                if item.get("_context_seed"): card.add_css_class("recommendation-seed-card")
+                body = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5); body.set_halign(Gtk.Align.CENTER); body.set_valign(Gtk.Align.START)
+                picture = MixPicture(duotone=item.get("kind") == "mix" or item.get("_context_seed", False)); picture.add_css_class("queue-art"); picture.set_can_shrink(True); picture.set_content_fit(Gtk.ContentFit.COVER); self.set_browser_placeholder(picture)
+                art = Gtk.ScrolledWindow(); art.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.NEVER); art.set_propagate_natural_width(False); art.set_propagate_natural_height(False); art.set_min_content_width(size); art.set_max_content_width(size); art.set_min_content_height(size); art.set_max_content_height(size); art.set_size_request(size, size); art.set_halign(Gtk.Align.CENTER); art.set_child(picture); body.append(art)
+                title_height = 54 if daily else 58
+                credit_height = 36
+                title_label = self.label(item.get("title", ""), "queue-title", .5); title_label.set_wrap(True); title_label.set_max_width_chars(20 if daily else 23); title_label.set_lines(2); title_label.set_ellipsize(Pango.EllipsizeMode.END); title_label.set_size_request(size, title_height); title_label.set_valign(Gtk.Align.START); body.append(title_label)
+                title_label.set_justify(Gtk.Justification.CENTER)
+                credit = self.label(item.get("artist") or " · ".join(item.get("context") or []), "queue-subtitle", .5); credit.set_wrap(True); credit.set_max_width_chars(25); credit.set_lines(2); credit.set_ellipsize(Pango.EllipsizeMode.END); credit.set_size_request(size, credit_height); credit.set_valign(Gtk.Align.START); body.append(credit)
                 credit.set_justify(Gtk.Justification.CENTER)
-                card.set_child(body); card.connect("clicked", lambda _button, value=item: self.open_discover("daily", value.get("id", "")) if value.get("kind") == "mix" else self.open_discovery_item(value.get("key")))
-                grid.attach(card, index % columns, index // columns, 1, 1)
+                card_height = size + title_height + credit_height + 15
+                # A GTK size request is only a minimum. Clip the complete card
+                # inside a fixed viewport so even very long album names cannot
+                # widen a column or push the following covers off-grid.
+                shell = Gtk.ScrolledWindow(); shell.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.NEVER); shell.set_propagate_natural_width(False); shell.set_propagate_natural_height(False); shell.set_min_content_width(size); shell.set_max_content_width(size); shell.set_min_content_height(card_height); shell.set_max_content_height(card_height); shell.set_size_request(size, card_height); shell.set_child(body)
+                card.set_child(shell); card.connect("clicked", lambda _button, value=item: self.open_discover("daily", value.get("id", "")) if value.get("kind") == "mix" else self.open_discovery_item(value.get("key")))
+                card.set_size_request(size + 8, card_height + 8)
+                if track is not None:
+                    track.append(card)
+                else: grid.attach(card, index % columns, index // columns, 1, 1)
                 if key := item.get("artwork_key"):
                     key = "discover:" + key; self.discovery_pictures.setdefault(key, []).append(picture)
                     self.discovery_cards.append((card, key))
+                    section_cards.append(card)
                     if cached := self.queue_thumbnail_cache.get(key): picture.set_paintable(cached)
-            content.append(grid)
-        group(None, data.get("items", []))
-        for recommendation in data.get("groups", []):
-            reason = {"recent": "Because you listened to", "added": "Because you added"}.get(recommendation.get("reason"), "Inspired by")
-            seed = (recommendation.get("seed") or {}).get("title")
-            group(f"{reason} {seed}" if seed else "Picked for you", recommendation.get("items", []))
+            if track is not None:
+                scroller = Gtk.ScrolledWindow(); scroller.add_css_class("daily-scroll"); scroller.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.NEVER); scroller.set_kinetic_scrolling(True); scroller.set_overlay_scrolling(True); scroller.set_propagate_natural_width(False); scroller.set_hexpand(True); scroller.set_margin_end(0); scroller.set_child(track)
+                scroller.get_hadjustment().connect("value-changed", self.load_visible_discovery_artwork)
+                for card in section_cards: self.discovery_card_scrollers[id(card)] = scroller
+                content.append(scroller)
+                if section_key: self.discovery_daily_sections.setdefault(section_key, scroller)
+            else:
+                content.append(grid)
+                if section_key: self.discovery_daily_sections.setdefault(section_key, grid)
+        show_mixes = not (portrait_grid and self.discovery_section == "daily" and not self.discovery_mix and getattr(self, "discovery_daily_tab", "mixes") == "recommendations")
+        show_recommendations = not (portrait_grid and self.discovery_section == "daily" and not self.discovery_mix and getattr(self, "discovery_daily_tab", "mixes") == "mixes")
+        if show_mixes and self.discovery_section == "daily" and not self.discovery_mix and not data.get("items"):
+            mixes = data.get("mixes_status", "ready")
+            message = "Loading mixes…" if mixes == "loading" else data.get("mixes_message") or "No daily mixes available from Roon."
+            notice = self.label(message, "browser-message"); notice.set_wrap(True); content.append(notice)
+            self.discovery_daily_sections["mixes"] = notice
+        elif show_mixes: group(None, data.get("items", []), "mixes")
+        for recommendation in data.get("groups", []) if show_recommendations else []:
+            seed = recommendation.get("seed") or {}
+            reason = {"recent": "BECAUSE YOU LISTENED TO…", "added": "BECAUSE YOU ADDED…"}.get(recommendation.get("reason"), "INSPIRED BY…")
+            group(reason, recommendation.get("items", []), "recommendations", seed if seed.get("title") else None)
         if not data.get("items") and not data.get("groups"): self.discovery_list.append(self.label("Nothing available here yet.", "browser-message"))
+        elif not show_mixes and not data.get("groups"):
+            self.discovery_list.append(self.label("Loading recommendations…" if data.get("recommendations_status") == "loading" else "No recommendations available yet.", "browser-message"))
         if self.discovery_mix and data.get("total", 0) > len(data.get("items", [])):
             content.append(self.label("Track preview · the mix buttons request the whole mix.", "browser-message"))
         GLib.timeout_add(100, self.load_visible_discovery_artwork)
         return False
 
     def open_recent(self, mode):
-        self.discovery_recent_mode = mode
-        self.open_discover("recent")
+        self.open_discover("recent", recent_mode=mode)
+
+    def discovery_scrolled(self, adjustment):
+        self.load_visible_discovery_artwork()
+        if getattr(self, "responsive_portrait", False): return
+        if self.discovery_section != "daily" or not getattr(self, "discovery_daily_sections", None): return
+        marker = self.discovery_daily_sections.get("recommendations")
+        active = "recommendations" if marker and adjustment.get_value() >= max(0, marker.get_allocation().y - 30) else "mixes"
+        for value, button in getattr(self, "discovery_sidebar_buttons", {}).items():
+            if value == active: button.add_css_class("active")
+            else: button.remove_css_class("active")
 
     def discovery_secondary_navigation(self):
         if self.discovery_section == "recent":
             return (("added", "ADDED"), ("listened", "LISTENED")), self.discovery_recent_mode
         if self.discovery_section == "daily":
-            return (("mixes", "MIXES"), ("recommendations", "RECOMMENDATIONS")), "recommendations" if self.discovery_picks else "mixes"
+            return (("mixes", "MIXES"), ("recommendations", "FOR YOU")), getattr(self, "discovery_daily_tab", "mixes") if getattr(self, "responsive_portrait", False) else "mixes"
         return (), ""
 
     def select_discovery_secondary(self, value):
         if self.discovery_section == "recent": self.open_recent(value)
-        else: self.open_discover("daily", picks=value == "recommendations")
+        elif getattr(self, "responsive_portrait", False) and value in {"mixes", "recommendations"}:
+            self.discovery_daily_tab = value
+            self.discovery_signature = None
+            self.render_discover(self.discovery_request, getattr(self, "discovery_data", {}))
+            self.discovery_scroll.get_vadjustment().set_value(0)
+        else:
+            marker = getattr(self, "discovery_daily_sections", {}).get(value)
+            if marker:
+                adjustment = self.discovery_scroll.get_vadjustment()
+                adjustment.set_value(max(adjustment.get_lower(), min(adjustment.get_upper() - adjustment.get_page_size(), marker.get_allocation().y)))
 
     def sync_discovery_sidebar(self, sidebar=None, from_browser=False):
         sidebar = self.discovery_sidebar if sidebar is None else sidebar
         while child := sidebar.get_first_child(): sidebar.remove(child)
         entries, active = self.discovery_secondary_navigation()
-        sidebar.set_visible(bool(entries))
+        sidebar.set_visible(bool(entries) or from_browser)
         if not from_browser:
             if entries: self.discovery_body.add_css_class("browser-view")
             else: self.discovery_body.remove_css_class("browser-view")
+        self.discovery_sidebar_buttons = {}
         for value, label in entries:
             button = self.button(label, lambda _button, choice=value: self.select_discovery_secondary(choice), "browser-filter")
             button.get_child().set_xalign(0)
             if value == active: button.add_css_class("active")
-            sidebar.append(button)
-        spacer = Gtk.Box(); spacer.set_vexpand(True); sidebar.append(spacer)
-        if self.discovery_mix or from_browser:
+            sidebar.append(button); self.discovery_sidebar_buttons[value] = button
+        if from_browser and self.discovery_section == "releases":
+            back = self.button("BACK", lambda *_: self.open_discover("releases"), "browser-back")
+            back.set_halign(Gtk.Align.START); sidebar.prepend(back)
+        spacer = Gtk.Box(); spacer.set_vexpand(not getattr(self, "responsive_portrait", False)); sidebar.append(spacer)
+        if self.discovery_mix or (from_browser and self.discovery_section != "releases"):
             back = self.button("BACK", lambda *_: self.open_discover(self.discovery_section, self.discovery_mix, self.discovery_picks) if from_browser else self.open_discover("daily"), "browser-back")
             back.set_halign(Gtk.Align.START); back.set_valign(Gtk.Align.END); sidebar.append(back)
 
@@ -1115,8 +1474,14 @@ class Display(Gtk.Application):
         adjustment = self.discovery_scroll.get_vadjustment()
         top, bottom = adjustment.get_value() - 160, adjustment.get_value() + adjustment.get_page_size() + 160
         for card, key in self.discovery_cards:
-            valid, bounds = card.compute_bounds(self.discovery_list)
-            if valid and bounds.get_y() + bounds.get_height() >= top and bounds.get_y() <= bottom:
+            horizontal = getattr(self, "discovery_card_scrollers", {}).get(id(card))
+            if horizontal:
+                axis = horizontal.get_hadjustment(); valid, bounds = card.compute_bounds(horizontal.get_child())
+                visible = valid and bounds.get_x() + bounds.get_width() >= axis.get_value() - 160 and bounds.get_x() <= axis.get_value() + axis.get_page_size() + 160
+            else:
+                valid, bounds = card.compute_bounds(self.discovery_list)
+                visible = valid and bounds.get_y() + bounds.get_height() >= top and bounds.get_y() <= bottom
+            if visible:
                 if key not in self.queue_thumbnail_cache and key not in self.queue_thumbnail_pending:
                     self.queue_thumbnail_pending.add(key); self.queue_thumbnail_jobs.put(key)
         return False
@@ -1142,7 +1507,7 @@ class Display(Gtk.Application):
         threading.Thread(target=load, daemon=True).start()
 
     def open_discovery_item(self, key):
-        self.discovery_browser_origin = self.discovery_section in {"recent", "daily"}
+        self.discovery_browser_origin = self.discovery_section in {"recent", "daily", "releases"}
         self.discovery_opening = True
         request = self.discovery_request = self.discovery_request + 1
         self.discovery_signature = None
@@ -1196,7 +1561,7 @@ class Display(Gtk.Application):
             self.browser_search_button.add_css_class("active")
             for button in self.browser_section_buttons.values(): button.remove_css_class("active")
         if self.browser_loading:
-            if action in {"jump", "section", "search"}: self.browser_pending_request = (action, payload)
+            if action in {"jump", "section", "search", "surprise"}: self.browser_pending_request = (action, payload)
             return
         if action == "surprise" and not (self.browser_state or {}).get("surprise_preview"):
             self.browser_section_scrolls[(self.browser_state or {}).get("section", "albums")] = self.browser_scroll.get_vadjustment().get_value()
@@ -1233,9 +1598,36 @@ class Display(Gtk.Application):
         # Never derive minimum tile sizes from content that may have already
         # expanded the window. Reserve the section rail, scrubber and padding.
         width = monitor.get_geometry().width if monitor else 800
+        if getattr(self, "responsive_portrait", False):
+            width = min(self.window.get_width() or width, width)
+            # Includes outer margins, the alphabet rail, queue-list padding
+            # and each button's CSS padding; none may depend on image size.
+            available = max(180, width - 184)
+            return 3, max(48, (available - 32) // 3 - 12)
         available = max(140, width - 266)
         columns = min(5 if genres else 4, max(1, available // 140))
         size = max(64, min(212, (available - 16 * (columns - 1)) // columns - 12))
+        return columns, size
+
+    def discovery_grid_metrics(self, section="releases"):
+        monitors = Gdk.Display.get_default().get_monitors()
+        monitor = monitors.get_item(0) if monitors.get_n_items() else None
+        width = monitor.get_geometry().width if monitor else 800
+        if getattr(self, "responsive_portrait", False):
+            width = min(self.window.get_width() or width, width)
+            available = max(200, width - 64)
+            columns = int(self.settings_data.get("portrait_discovery_columns", 2))
+            columns = columns if columns in {2, 3} else 2
+            gap = 24
+            return columns, max(64, (available - gap * (columns - 1)) // columns - 8)
+        sidebar = section == "recent"
+        available = max(300, width - (170 if sidebar else 30))
+        columns = 4 if width >= 1000 else 2
+        gap = 24
+        # Browse is the visual benchmark. Recent needs substantially more air
+        # around its sidebar, while New Releases can remain a little larger.
+        cap = 236 if sidebar else 266
+        size = max(140, min(cap, (available - gap * (columns - 1)) // columns - 12))
         return columns, size
 
     def browser_scrub_changed(self, scale):
@@ -1331,23 +1723,28 @@ class Display(Gtk.Application):
 
     def browser_tile_symbol(self, title, kind):
         value = (title or "").lower()
-        if kind == "playlists": return "≡"
-        if "jazz" in value: return "♪"
-        if "classical" in value: return "♬"
-        if "electronic" in value: return "⌁"
-        if "pop" in value or "rock" in value: return "⚡"
-        if "stage" in value or "screen" in value or "soundtrack" in value: return "★"
-        if "folk" in value or "country" in value: return "♧"
-        if "blues" in value: return "♭"
-        if "rap" in value or "hip-hop" in value or "r&b" in value: return "♫"
-        if "reggae" in value: return "≋"
-        if "latin" in value or "world" in value or "international" in value: return "◈"
-        if "vocal" in value or "easy listening" in value: return "♩"
-        if "new age" in value or "ambient" in value: return "✦"
-        if "holiday" in value: return "❄"
-        if "children" in value: return "☺"
-        if "religious" in value or "gospel" in value: return "✦"
-        return (title or "?").strip()[:1].upper() or "?"
+        if kind == "playlists": return "playlist"
+        if "jazz" in value: return "jazz"
+        if "classical" in value: return "classical"
+        if "electronic" in value: return "electronic"
+        if "pop" in value or "rock" in value: return "rock"
+        if "stage" in value or "screen" in value or "soundtrack" in value: return "stage"
+        if "avant" in value: return "avant"
+        if "folk" in value: return "folk"
+        if "country" in value: return "country"
+        if "blues" in value: return "blues"
+        if "rap" in value or "hip-hop" in value: return "rap"
+        if "r&b" in value or "rhythm" in value: return "rb"
+        if "reggae" in value: return "reggae"
+        if "latin" in value: return "latin"
+        if "world" in value or "international" in value: return "world"
+        if "easy listening" in value: return "easy"
+        if "vocal" in value: return "vocal"
+        if "new age" in value or "ambient" in value: return "ambient"
+        if "holiday" in value: return "holiday"
+        if "children" in value: return "children"
+        if "religious" in value or "gospel" in value: return "religious"
+        return "music"
 
     def browser_action_icon(self, title):
         value = (title or "").lower()
@@ -1356,6 +1753,12 @@ class Display(Gtk.Application):
         if "shuffle" in value: return "media-playlist-shuffle-symbolic"
         if "from here" in value: return "go-jump-symbolic"
         return "media-playback-start-symbolic"
+
+    def browser_svg_icon(self, name, size=54):
+        path = Path(__file__).resolve().parents[1] / "roon-controller/static/icons" / (name + "-symbolic.svg")
+        icon = Gtk.Image.new_from_gicon(Gio.FileIcon.new(Gio.File.new_for_path(str(path))))
+        icon.set_pixel_size(size); icon.add_css_class("browser-tile-icon")
+        return icon
 
     def browser_menu_card(self, item, compact=False):
         content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12); content.set_halign(Gtk.Align.CENTER); content.set_valign(Gtk.Align.CENTER)
@@ -1375,14 +1778,16 @@ class Display(Gtk.Application):
         artwork = Gtk.Overlay(); picture = Gtk.Picture(); picture.add_css_class("browser-cover-art"); picture.set_can_shrink(True); picture.set_content_fit(Gtk.ContentFit.COVER); artwork.set_child(picture)
         if not tile_kind:
             self.set_browser_placeholder(picture, artist=(self.browser_state or {}).get("section") == "artists")
-        square = Gtk.AspectFrame(xalign=.5, yalign=.5, ratio=1, obey_child=False); square.set_size_request(size, size); square.set_halign(Gtk.Align.CENTER); square.set_hexpand(False); square.set_child(artwork); content.append(square)
+        # An AspectFrame only requests a minimum; loaded textures can grow it.
+        # Bound artwork and text so a real cover cannot widen the GTK window.
+        square = Gtk.ScrolledWindow(); square.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.NEVER); square.set_propagate_natural_width(False); square.set_propagate_natural_height(False); square.set_min_content_width(size); square.set_max_content_width(size); square.set_min_content_height(size); square.set_max_content_height(size); square.set_size_request(size, size); square.set_halign(Gtk.Align.CENTER); square.set_child(artwork); content.append(square)
         key = item.get("image_key"); self.browser_artwork_keys.append(key)
         if key:
             self.browser_pictures.setdefault(key, []).append(picture)
             texture = self.queue_thumbnail_cache.get(key)
             if texture: picture.set_paintable(texture)
         elif tile_kind:
-            icon = self.label(self.browser_tile_symbol(item.get("title"), tile_kind), "browser-tile-icon", .5); icon.set_halign(Gtk.Align.CENTER); icon.set_valign(Gtk.Align.CENTER); icon.set_margin_bottom(20); artwork.add_overlay(icon)
+            icon = self.browser_svg_icon(self.browser_tile_symbol(item.get("title"), tile_kind)); icon.set_halign(Gtk.Align.CENTER); icon.set_valign(Gtk.Align.CENTER); icon.set_margin_bottom(20); artwork.add_overlay(icon)
         if show_labels:
             title = self.label(item.get("title") or "Untitled", "browser-cover-title", .5); title.set_max_width_chars(22); title.set_ellipsize(Pango.EllipsizeMode.END); content.append(title)
             if tile_kind == "genres":
@@ -1391,7 +1796,8 @@ class Display(Gtk.Application):
                 title.set_wrap(True); title.set_lines(2); title.set_max_width_chars(18); title.set_justify(Gtk.Justification.CENTER); title.set_size_request(-1, 42)
             if item.get("subtitle") and not tile_kind:
                 subtitle = self.label(item.get("subtitle"), "browser-cover-subtitle", .5); subtitle.set_max_width_chars(22); subtitle.set_ellipsize(Pango.EllipsizeMode.END); content.append(subtitle)
-        button = Gtk.Button(); button.add_css_class("browser-cover-card"); button.set_child(content); button.set_sensitive(bool(item.get("item_key"))); button.connect("clicked", self.open_browser_item, item.get("item_key")); return button
+        shell = Gtk.ScrolledWindow(); shell.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.NEVER); shell.set_propagate_natural_width(False); shell.set_propagate_natural_height(False); shell.set_min_content_width(size); shell.set_max_content_width(size); shell.set_min_content_height(size + (60 if show_labels else 0)); shell.set_max_content_height(size + (60 if show_labels else 0)); shell.set_child(content)
+        button = Gtk.Button(); button.add_css_class("browser-cover-card"); button.set_child(shell); button.set_sensitive(bool(item.get("item_key"))); button.connect("clicked", self.open_browser_item, item.get("item_key")); return button
 
     def render_browser(self, data):
         self.browser_rendering = True; self.browser_loading = True; self.browser_state = data; self.browser_back.set_visible(bool(data.get("can_back")) and not data.get("surprise_preview")); self.browser_back.set_sensitive(bool(data.get("can_back"))); self.browser_scrubber.set_visible(bool(data.get("alpha_scrub")))
@@ -1435,10 +1841,11 @@ class Display(Gtk.Application):
             preview.set_margin_top(12)
             monitor = Gdk.Display.get_default().get_monitors().get_item(0)
             screen_width = monitor.get_geometry().width if monitor else 800
-            size = max(100, min(480, screen_width - 400, self.browser_scroll.get_allocated_height() - 135))
+            portrait = getattr(self, "responsive_portrait", False)
+            size = max(100, min(480, screen_width - (96 if portrait else 400), self.browser_scroll.get_allocated_height() - (350 if portrait else 135)))
             picture = Gtk.Picture(); picture.set_can_shrink(True); picture.set_content_fit(Gtk.ContentFit.COVER)
-            square = Gtk.AspectFrame(xalign=.5, yalign=.5, ratio=1, obey_child=False); square.set_size_request(size, size); square.set_halign(Gtk.Align.CENTER); square.set_child(picture)
-            stage = Gtk.Box(spacing=40); stage.set_halign(Gtk.Align.CENTER); stage.set_valign(Gtk.Align.CENTER)
+            square = Gtk.ScrolledWindow(); square.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.NEVER); square.set_propagate_natural_width(False); square.set_propagate_natural_height(False); square.set_min_content_width(size); square.set_max_content_width(size); square.set_min_content_height(size); square.set_max_content_height(size); square.set_size_request(size, size); square.set_halign(Gtk.Align.CENTER); square.set_child(picture)
+            stage = Gtk.Box(orientation=Gtk.Orientation.VERTICAL if portrait else Gtk.Orientation.HORIZONTAL, spacing=18 if portrait else 40); stage.set_halign(Gtk.Align.CENTER); stage.set_valign(Gtk.Align.CENTER)
             for caption, icon, action in (("Surprise Me", "view-refresh-symbolic", "surprise"), ("Play Now", "media-playback-start-symbolic", "surprise_play")):
                 controls = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10); controls.set_size_request(120, -1); controls.set_valign(Gtk.Align.CENTER); controls.set_halign(Gtk.Align.CENTER)
                 button = self.icon_button(icon, lambda _button, value=action: self.request_browser(value), "surprise-action"); button.set_tooltip_text(caption); button.set_halign(Gtk.Align.CENTER); controls.append(button); controls.append(self.label(caption, "surprise-caption", .5)); stage.append(controls)
@@ -1449,7 +1856,7 @@ class Display(Gtk.Application):
                 self.browser_pictures.setdefault(key, []).append(picture)
                 if texture := self.queue_thumbnail_cache.get(key): picture.set_paintable(texture)
                 self.retry_visible_thumbnail(key)
-            else: square.set_child(self.label("♫", "browser-tile-icon", .5))
+            else: square.set_child(self.browser_svg_icon("music"))
             title = self.label(album.get("title") or "Untitled", "surprise-title", .5); title.set_wrap(True); title.set_lines(2); title.set_max_width_chars(40); title.set_ellipsize(Pango.EllipsizeMode.END); title.set_justify(Gtk.Justification.CENTER); preview.append(title)
             artist = self.label(album.get("subtitle") or "", "surprise-artist", .5); artist.set_ellipsize(Pango.EllipsizeMode.END); artist.set_max_width_chars(40); preview.append(artist)
             self.browser_list.append(preview)
@@ -1563,6 +1970,15 @@ class Display(Gtk.Application):
         self.detail_title.set_text(details.get("album") or details.get("track") or "Nothing playing")
         self.detail_artist.set_text(details.get("artist") or "")
         self.detail_subtitle.set_text("Loading…" if details.get("status") == "loading" else (details.get("subtitle") or ""))
+        self.library_status = details.get("library_status") or "unknown"
+        if self.library_album_id != details.get("album_id") and not self.library_pending: self.library_message.set_visible(False)
+        self.library_album_id = details.get("album_id"); self.library_favorite = details.get("favorite")
+        if details.get("library_error") and not self.library_pending:
+            self.library_message.set_text(details["library_error"]); self.library_message.set_visible(True)
+        has_album = bool(details.get("album")) and details.get("status") != "loading"
+        self.library_add.set_visible(has_album)
+        self.library_add.set_sensitive(has_album and self.library_status != "unknown" and not self.library_pending and not details.get("library_busy") and (self.library_status != "in_library" or self.library_favorite is not None))
+        self.set_library_icon(self.library_favorite is True)
         metadata = details.get("metadata") or {}
         writeup = metadata.get("writeup") or ""; self.detail_writeup.set_text(writeup); self.detail_writeup.set_visible(bool(writeup))
         source = metadata.get("writeup_source") or ""; self.detail_source.set_text(f"SOURCE  {source.upper()}" if source else ""); self.detail_source.set_visible(bool(source))
@@ -1708,6 +2124,7 @@ class Display(Gtk.Application):
     def open_settings(self, *_): self.settings_open = True; self.last_system_fetch = 0; self.stack.set_visible_child_name("settings"); self.start_poll()
     def close_settings(self, *_): self.settings_open = False; self.stack.set_visible_child_name(self.last_mode)
     def note_activity(self, _controller, event):
+        if event is None: return False
         # Legacy controllers also receive pointer motion, enter/leave and window
         # events. A powered-down panel can consume the beginning of the first
         # contact, so accept its release as a wake gesture as well.
@@ -1762,8 +2179,63 @@ class Display(Gtk.Application):
     def control(self, action):
         if action == "playpause" and (((self.state or {}).get("amplifier") or {}).get("active_input")): action = "resume"
         threading.Thread(target=post_json, args=(ROON + "/api/control", {"action": action}), daemon=True).start()
+    def add_current_album(self, *_):
+        if self.library_pending or self.library_status == "unknown" or not self.library_album_id: return
+        album_id = self.library_album_id
+        favorite_action = self.library_status == "in_library"
+        if favorite_action and self.library_favorite is None: return
+        payload = {"album_id": album_id}
+        if favorite_action: payload["favorite"] = not self.library_favorite
+        self.library_pending = True; self.library_message.set_text("Updating Roon…"); self.library_message.set_visible(True)
+        self.library_add.set_sensitive(False)
+        def run():
+            try:
+                request = urllib.request.Request(ROON + ("/api/library/favorite" if favorite_action else "/api/library/add"), data=json.dumps(payload).encode(), headers={"Content-Type": "application/json"}, method="POST")
+                with urllib.request.urlopen(request, timeout=25.0) as response: result = json.load(response)
+            except urllib.error.HTTPError as error:
+                try: result = json.load(error)
+                except Exception: result = {"error": "Roon did not confirm the change. Check Roon before retrying."}
+            except Exception: result = {"error": "Roon did not confirm the change. Check Roon before retrying."}
+            def finish():
+                self.library_pending = False
+                if album_id == self.library_album_id:
+                    if result.get("library_status"):
+                        self.library_status = result["library_status"]; self.library_favorite = result.get("favorite"); self.set_library_icon(self.library_favorite is True)
+                    self.library_message.set_text(result.get("error") or ""); self.library_message.set_visible(bool(result.get("error")))
+                else: self.library_message.set_visible(False)
+                self.library_add.set_sensitive(self.library_status != "unknown" and (self.library_status != "in_library" or self.library_favorite is not None))
+                return False
+            GLib.idle_add(finish)
+        threading.Thread(target=run, daemon=True).start()
+
+    def set_library_icon(self, filled):
+        if getattr(self, "library_status", "unknown") != "in_library":
+            icon = Gtk.Image.new_from_icon_name("list-add-symbolic"); icon.set_pixel_size(28); icon.set_size_request(28, 28)
+            self.library_add.set_child(icon); self.library_add.set_tooltip_text("Loading library status…" if getattr(self, "library_status", "unknown") == "unknown" else "Add album to library")
+            return
+        suffix = "-filled" if filled else ""
+        theme = "-roon" if getattr(self, "settings_data", {}).get("display_theme") == "roon" else ""
+        icon_path = Path(__file__).with_name("icons") / f"heart{suffix}{theme}.svg"
+        icon = Gtk.Image.new_from_gicon(Gio.FileIcon.new(Gio.File.new_for_path(str(icon_path))))
+        icon.set_pixel_size(28); icon.set_size_request(28, 28)
+        self.library_add.set_child(icon)
+        self.library_add.set_tooltip_text("Unfavourite album" if filled else "Favourite album")
     def toggle_bridge(self, button):
-        threading.Thread(target=post_json, args=(BUS + "/api/device/roon-bridge", {"enabled": button.get_active()}), daemon=True).start()
+        requested = button.get_active(); button.set_sensitive(False)
+        threading.Thread(target=self._toggle_bridge, args=(button, requested), daemon=True).start()
+    def _toggle_bridge(self, button, requested):
+        result = post_json(BUS + "/api/device/roon-bridge", {"enabled": requested}, timeout=110)
+        def finish():
+            if not result:
+                button.handler_block_by_func(self.toggle_bridge)
+                button.set_active(not requested)
+                button.handler_unblock_by_func(self.toggle_bridge)
+                self.touch_diagnostics.set_text("Could not change Roon Bridge. Check backend Tools for service status.")
+            self.touch_controls_signature = None
+            self.last_system_fetch = 0
+            button.set_sensitive(True)
+            return False
+        GLib.idle_add(finish)
     def toggle_service(self, button, service):
         threading.Thread(target=post_json, args=(BUS + "/api/device/service-visibility", {"service": service, "enabled": button.get_active()}), daemon=True).start()
     def toggle_home(self, _button, entity_id):
@@ -1832,11 +2304,40 @@ class Display(Gtk.Application):
         self.update_in_progress = True; self.update_status_seen = False; self.update_button.set_sensitive(False); self.device_status.set_text("Update · Requesting installation…")
         threading.Thread(target=self._request_update, daemon=True).start()
 
+    def hide_touch_cursor(self):
+        # Child widgets (entries, scales and buttons) can override the window
+        # cursor. Include newly rendered children rather than hiding only once.
+        def hide(widget):
+            widget.set_cursor_from_name("none")
+            child = widget.get_first_child()
+            while child:
+                hide(child)
+                child = child.get_next_sibling()
+        hide(self.window)
+        return True
+
+    def confirm_reboot(self, *_):
+        if getattr(self, "reboot_confirmation", None): return
+        shade = Gtk.Overlay(); shade.add_css_class("confirm-shade"); shade.set_hexpand(True); shade.set_vexpand(True)
+        backdrop = Gtk.Box(); backdrop.set_hexpand(True); backdrop.set_vexpand(True); shade.set_child(backdrop)
+        card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16); card.add_css_class("confirm-card"); card.set_halign(Gtk.Align.CENTER); card.set_valign(Gtk.Align.CENTER)
+        card.set_margin_bottom(round(self.window.get_height() * .08))
+        card.append(self.label("Restart Pi Home?", "confirm-title", .5)); card.append(self.label("The touchscreen will be unavailable for about a minute.", "confirm-copy", .5))
+        actions = Gtk.Box(spacing=12); actions.set_halign(Gtk.Align.CENTER)
+        def close(*_):
+            self.root_overlay.remove_overlay(shade); self.reboot_confirmation = None
+        def restart(button):
+            button.set_sensitive(False); self.device_status.set_text("Restarting Pi Home…")
+            threading.Thread(target=post_json, args=(BUS + "/api/device/reboot", {}), daemon=True).start()
+        actions.append(self.button("CANCEL", close, "confirm-cancel")); actions.append(self.button("RESTART", restart, "confirm-reboot")); card.append(actions); shade.add_overlay(card)
+        self.reboot_confirmation = shade; self.root_overlay.add_overlay(shade); shade.set_cursor_from_name("none")
+
     def _request_update(self):
         result = post_json(BUS + "/api/device/update", {})
         queued = bool(result and result.get("queued", True))
         GLib.idle_add(self.device_status.set_text, "Update · Queued…" if queued else ("Update already running…" if result else "Could not start update"))
         if result:
+            self.update_status_seen = True
             self.last_system_fetch = 0
             GLib.idle_add(self.start_poll)
         else:
@@ -1844,16 +2345,17 @@ class Display(Gtk.Application):
             GLib.idle_add(self.update_button.set_sensitive, True)
 
     def request_display_settings(self, *_):
-        profiles = ("original", "touch2-5", "touch2-7", "touch2-10"); orientations = ("normal", "90", "180", "270")
-        profile = profiles[min(self.touch_profile.get_selected(), len(profiles) - 1)]; transform = orientations[min(self.touch_orientation.get_selected(), len(orientations) - 1)]
+        profiles = ("original", "touch2-5", "touch2-7", "touch2-10"); orientations = ("landscape", "portrait"); mountings = ("standard", "inverted")
+        profile = profiles[min(self.touch_profile.get_selected(), len(profiles) - 1)]; orientation = orientations[min(self.touch_orientation.get_selected(), len(orientations) - 1)]; mounting = mountings[min(self.touch_mounting.get_selected(), len(mountings) - 1)]
         self.apply_display_button.set_sensitive(False); self.device_status.set_text("Applying display settings…")
-        threading.Thread(target=self._request_display_settings, args=(profile, transform), daemon=True).start()
+        threading.Thread(target=self._request_display_settings, args=(profile, orientation, mounting), daemon=True).start()
 
-    def _request_display_settings(self, profile, transform):
-        result = post_json(BUS + "/api/admin/system-action", {"action": "set_display", "profile": profile, "transform": transform})
-        GLib.idle_add(self.device_status.set_text, "Applying display settings…" if result else "Could not apply display settings")
+    def _request_display_settings(self, profile, orientation, mounting):
+        result = post_json(BUS + "/api/admin/system-action", {"action": "set_display", "profile": profile, "orientation": orientation, "mounting": mounting}, timeout=15)
+        GLib.idle_add(self.device_status.set_text, "Display saved · restarting Pi Home…" if result else "Could not apply display settings")
         if not result: GLib.idle_add(self.apply_display_button.set_sensitive, True)
 
 
 if __name__ == "__main__":
+    publish_display_source()
     Display().run(None)

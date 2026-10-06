@@ -1,0 +1,34 @@
+#!/sbin/openrc-run
+description="Seed the Pi Home clock on hardware without a battery RTC"
+
+seed=/var/lib/pi-home/clock-seed
+
+depend() {
+    need localmount
+    before networkmanager chronyd pi-home-api pi-home-roon
+}
+
+start() {
+    ebegin "Restoring a usable Pi Home clock"
+    if [ -r "$seed" ]; then
+        saved=$(cat "$seed")
+        now=$(date +%s)
+        case "$saved" in
+            *[!0-9]*|'') saved=0 ;;
+        esac
+        if [ "$saved" -gt "$now" ] && [ "$saved" -ge 1704067200 ]; then
+            date -u -s "@$saved" >/dev/null
+        fi
+    fi
+    eend $?
+}
+
+stop() {
+    ebegin "Saving the Pi Home clock"
+    umask 022
+    current=$(date +%s)
+    if [ "$current" -ge 1704067200 ]; then
+        printf '%s\n' "$current" > "$seed"
+    fi
+    eend $?
+}

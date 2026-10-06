@@ -1,0 +1,15 @@
+.git
+.venv
+**/node_modules
+**/__pycache__
+**/*.pyc
+.env
+.env.*
+!.env.example
+config.toml
+secrets.env
+roon.env
+roon-controller/config.json
+.state
+dist
+build

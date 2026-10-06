@@ -25,6 +25,7 @@ class Config:
     roon_zone_name: str = ""
     roon_display_name: str = "Roon"
     display_theme: str = "fresh-mint"
+    portrait_discovery_columns: int = 2
     roon_now_playing_name: str = "Now Playing"
     roon_queue_name: str = "Queue"
     sleep_when_roon_idle: bool = False
@@ -79,6 +80,8 @@ def load_config(path: Path) -> Config:
     if "bluos_input_names" in data:
         data["bluos_input_names"] = tuple(str(item) for item in data["bluos_input_names"])
     config = Config(**data)
+    if type(config.portrait_discovery_columns) is not int or config.portrait_discovery_columns not in {2, 3}:
+        raise ValueError("portrait_discovery_columns must be 2 or 3")
     if config.release_channel not in {"stable", "beta"}:
         raise ValueError("release_channel must be stable or beta")
     if config.display_theme not in {"fresh-mint", "roon"}:

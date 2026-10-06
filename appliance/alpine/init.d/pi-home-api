@@ -1,0 +1,14 @@
+#!/sbin/openrc-run
+description="Pi Home dashboard API"
+supervisor=supervise-daemon
+command=/opt/pi-home/.venv/bin/pi-home
+command_args="--config /etc/pi-home/config.toml --env /etc/pi-home/secrets.env --state-dir /var/lib/pi-home --host 0.0.0.0"
+command_user=morningbus:morningbus
+directory=/opt/pi-home
+respawn_delay=3
+respawn_max=0
+output_log=/var/log/pi-home/api.log
+error_log=/var/log/pi-home/api-error.log
+export PYTHONUNBUFFERED=1
+export PI_HOME_APPLIANCE_PLATFORM=alpine-prototype
+depend() { need pi-home-firstboot; after networkmanager chronyd; }

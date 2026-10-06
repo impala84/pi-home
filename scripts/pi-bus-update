@@ -105,6 +105,16 @@ progress "Checking touchscreen graphics dependencies…"
 python3 -c 'import gi; gi.require_version("Gtk", "4.0"); gi.require_foreign("cairo"); from gi.repository import Gtk, Gdk, Gio, GLib, Pango'
 
 progress "Installing Pi Home application files…"
+for parent in /opt /etc /var/lib; do
+  canonical="${parent}/pi-home"
+  legacy="${parent}/pi-bus-time-display"
+  if [[ -e ${canonical} && -e ${legacy} ]]; then
+    [[ $(readlink -f "${canonical}") == $(readlink -f "${legacy}") ]] || { echo "Conflicting installations at ${canonical} and ${legacy}."; exit 1; }
+  elif [[ -e ${legacy} && ! -L ${canonical} ]]; then
+    ln -s "${legacy}" "${canonical}"
+  fi
+  [[ -e ${canonical} ]] || { echo "Missing or broken installation path: ${canonical}"; exit 1; }
+done
 update_stage="installing the Python application"
 timeout --signal=TERM --kill-after=10s 3m "${app_dir}/.venv/bin/pip" install --disable-pip-version-check --no-deps "${app_dir}"
 package_lock_hash=$(sha256sum "${app_dir}/roon-controller/package-lock.json" | cut -d' ' -f1)

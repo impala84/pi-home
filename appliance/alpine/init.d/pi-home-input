@@ -1,0 +1,8 @@
+#!/sbin/openrc-run
+description="Calibrate and recover built-in touch before starting Cage"
+depend() { need udev-trigger localmount; after hwdrivers; before pi-home-display; }
+start() {
+    ebegin "Preparing Pi Home touch calibration"
+    python3 /opt/pi-home/appliance/alpine/input_mapping.py
+    eend $?
+}

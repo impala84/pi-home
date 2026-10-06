@@ -10,6 +10,14 @@ const source = fs.readFileSync(path.join(__dirname, 'server.js'), 'utf8');
 const start = source.indexOf('function serveStatic(');
 const end = source.indexOf('\nhttp.createServer', start);
 const serveStatic = vm.runInNewContext(`${source.slice(start, end)}\nserveStatic`, {fs, path, staticDir, URL});
+test('bundled genre SVGs are served without granting arbitrary file access', () => {
+  for (const name of fs.readdirSync(path.join(staticDir,'icons'))) {
+    const response=request('/icons/'+name);
+    assert.equal(response.status,200);assert.match(response.headers['Content-Type'],/^image\/svg\+xml/);
+    assert.doesNotMatch(response.data.toString(),/<text\b/);
+  }
+  assert.equal(request('/icons/unknown-symbolic.svg').served,false);
+});
 function request(url) {
   const response = {writeHead(status, headers) {this.status = status; this.headers = headers;}, end(data) {this.data = data;}};
   return {served: serveStatic({url}, response), ...response};

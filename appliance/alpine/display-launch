@@ -1,0 +1,11 @@
+#!/bin/sh
+set -eu
+export XDG_RUNTIME_DIR=/run/pi-home
+export XDG_SESSION_TYPE=wayland
+export GDK_BACKEND=wayland
+export LIBSEAT_BACKEND=seatd
+export PYTHONUNBUFFERED=1
+python3 /opt/pi-home/appliance/alpine/cursor_theme.py
+export XCURSOR_PATH=/run/pi-home/cursors
+export XCURSOR_THEME=pi-home-touch
+exec dbus-run-session cage -d -s -- /opt/pi-home/appliance/alpine/display-session

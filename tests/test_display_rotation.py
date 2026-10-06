@@ -6,6 +6,12 @@ ROOT = Path(__file__).parents[1]
 
 
 class DisplayRotationTests(unittest.TestCase):
+    def test_native_settings_dropdown_popup_has_explicit_readable_colours(self):
+        display = (ROOT / "native-display/pi_bus_native.py").read_text(encoding="utf-8")
+        self.assertIn(".settings-select popover contents { background: #e4e3e8; color: #17171a;", display)
+        self.assertIn(".settings-select popover listview row label { color: #17171a; }", display)
+        self.assertIn(".settings-select popover listview row:selected { background: #c9c5ff; color: #111116; }", display)
+
     def test_native_browse_is_vertical_only_and_back_is_not_an_overlay(self):
         display = (ROOT / "native-display/pi_bus_native.py").read_text()
         self.assertNotIn('browser.add_overlay(self.browser_back)', display)
@@ -25,9 +31,50 @@ class DisplayRotationTests(unittest.TestCase):
         self.assertIn('class="system-tabs" aria-label="System settings" role="tablist"', html)
         self.assertEqual(html.count('data-system-panel='), 6)
         self.assertIn('aria-controls="system-web"', html)
-        self.assertIn('data-system-anchor="system-web">Password</button>', html)
+        self.assertIn('data-system-anchor="system-web">Access</button>', html)
         self.assertIn('.system-tabs button[aria-selected="true"]', css)
         self.assertIn('.system-tab-panel>summary{display:none}', css)
+
+    def test_diagnostics_can_select_physical_views_and_theme_the_favicon(self):
+        html = (ROOT / "src/pi_bus_time_display/static/admin.html").read_text()
+        javascript = (ROOT / "src/pi_bus_time_display/static/admin.js").read_text()
+        self.assertIn('data-display-view="recent"', html)
+        self.assertIn('data-display-view="daily"', html)
+        self.assertIn('data-display-view="releases"', html)
+        self.assertIn("view:button.dataset.displayView", javascript)
+        self.assertIn("'/favicon-roon.svg':'/favicon.svg'", javascript)
+        self.assertIn('>Check and install</button>', html)
+
+    def test_netdata_accepts_the_official_generated_command_not_raw_token_fields(self):
+        html = (ROOT / "src/pi_bus_time_display/static/admin.html").read_text()
+        javascript = (ROOT / "src/pi_bus_time_display/static/admin.js").read_text()
+        self.assertIn('id="netdata-command"', html)
+        self.assertIn('https://get.netdata.cloud/kickstart.sh', html)
+        self.assertNotIn('id="netdata-token"', html)
+        self.assertIn("action:'netdata_official_install'", javascript)
+        self.assertIn("command.value=''", javascript)
+        self.assertIn('Install and connect Agent', html)
+        self.assertIn('installs curl when needed', html)
+
+    def test_netdata_actions_share_one_responsive_row_and_tools_have_a_heading(self):
+        html = (ROOT / "src/pi_bus_time_display/static/admin.html").read_text()
+        css = (ROOT / "src/pi_bus_time_display/static/admin.css").read_text()
+        actions = html[html.index('class="action-buttons netdata-actions"'):html.index('id="netdata-connect"')]
+        self.assertIn('id="netdata-open"', actions)
+        self.assertIn('id="netdata-connect-toggle"', actions)
+        self.assertIn('id="netdata-disconnect"', actions)
+        self.assertIn('<div id="alpine-tools" hidden><h3>System tools</h3>', html)
+        self.assertIn('.netdata-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))', css)
+        self.assertIn('@media(max-width:620px){.netdata-actions{grid-template-columns:1fr}}', css)
+
+    def test_missing_roon_bridge_offers_an_appliance_installer(self):
+        html = (ROOT / "src/pi_bus_time_display/static/admin.html").read_text()
+        javascript = (ROOT / "src/pi_bus_time_display/static/admin.js").read_text()
+        self.assertIn('id="roon-install"', html)
+        self.assertIn('data-action="roon_install"', html)
+        self.assertIn('id="roon-controls"', html)
+        self.assertIn('watchRoonBridgeInstall()', javascript)
+        self.assertIn("data.roon_bridge_operation_status", javascript)
 
     def test_bus_colours_are_keyed_by_route_not_row_position(self):
         css = (ROOT / "src/pi_bus_time_display/static/bus-refinements.css").read_text()
@@ -78,18 +125,59 @@ class DisplayRotationTests(unittest.TestCase):
 
     def test_landscape_profile_has_dedicated_large_touch_layout(self):
         display = (ROOT / "native-display" / "pi_bus_native.py").read_text(encoding="utf-8")
-        self.assertIn('self.window.add_css_class("touch-landscape")', display)
+        self.assertIn('(\"touch-landscape\", width >= 1200 and not portrait)', display)
         self.assertIn(".touch-landscape .settings-title", display)
         self.assertIn(".touch-landscape .roon-subnav button", display)
         self.assertIn('self.stack.add_named(self.build_boot_splash(), "boot")', display)
         self.assertIn('.boot-logo { color: #6ef0be', display)
 
+    def test_portrait_reflows_shared_gtk_components_from_the_viewport(self):
+        display = (ROOT / "native-display" / "pi_bus_native.py").read_text(encoding="utf-8")
+        self.assertIn('portrait = height > width', display)
+        self.assertIn('self.now_playing_content.set_orientation', display)
+        self.assertIn('self.settings_controls.set_orientation', display)
+        self.assertIn('self.browser_body.set_orientation', display)
+        self.assertIn('self.discovery_body.set_orientation', display)
+        self.assertIn('self.detail_panel.set_orientation', display)
+        self.assertIn('self.browser_search_columns.set_orientation', display)
+        self.assertIn('.portrait .now-playing-content', display)
+        self.assertIn('.portrait .queue-row', display)
+
+    def test_visual_review_captures_real_landscape_and_portrait_viewports(self):
+        workflow = (ROOT / ".github/workflows/alpine-image.yml").read_text(encoding="utf-8")
+        visual = (ROOT / "appliance/alpine/discover_visual_review.py").read_text(encoding="utf-8")
+        self.assertIn("PI_HOME_SCREEN_WIDTH=1280 PI_HOME_SCREEN_HEIGHT=720", workflow)
+        self.assertIn("PI_HOME_SCREEN_WIDTH=720 PI_HOME_SCREEN_HEIGHT=1280", workflow)
+        self.assertIn('display.adapt_display()', visual)
+
+    def test_web_and_touchscreen_share_semantic_display_orientation(self):
+        html = (ROOT / "src/pi_bus_time_display/static/admin.html").read_text(encoding="utf-8")
+        javascript = (ROOT / "src/pi_bus_time_display/static/admin.js").read_text(encoding="utf-8")
+        display = (ROOT / "native-display/pi_bus_native.py").read_text(encoding="utf-8")
+        self.assertIn('<option value="landscape">Landscape</option>', html)
+        self.assertIn('<option value="portrait">Portrait</option>', html)
+        self.assertIn('<option value="inverted">180°</option>', html)
+        self.assertIn("orientation:document.getElementById('display-orientation').value", javascript)
+        self.assertIn("mounting:document.getElementById('display-mounting').value", javascript)
+        self.assertIn('{"action": "set_display", "profile": profile, "orientation": orientation, "mounting": mounting}', display)
+        self.assertIn('["Rotation · Standard", "Rotation · 180°"]', display)
+
+    def test_ten_inch_profile_uses_native_resolution_and_high_resolution_breakpoint(self):
+        html = (ROOT / "src/pi_bus_time_display/static/admin.html").read_text(encoding="utf-8")
+        appliance = (ROOT / "scripts/pi-bus-appliance-mode").read_text(encoding="utf-8")
+        display = (ROOT / "native-display/pi_bus_native.py").read_text(encoding="utf-8")
+        self.assertIn("Touch Display 2 · 10-inch · 1200×1920", html)
+        self.assertIn("[[ ${profile} == touch2-10 ]] && mode=1200x1920", appliance)
+        self.assertIn('(\"high-resolution\", max(width, height) >= 1200)', display)
+
     def test_landscape_artwork_is_fixed_smaller_and_detail_art_can_close(self):
         display = (ROOT / "native-display" / "pi_bus_native.py").read_text(encoding="utf-8")
         web_html = (ROOT / "roon-controller" / "static" / "index.html").read_text(encoding="utf-8")
         web_js = (ROOT / "roon-controller" / "static" / "app.js").read_text(encoding="utf-8")
-        self.assertIn("self.artwork.set_size_request(324, 324)", display)
-        self.assertIn("self.artwork_button.set_size_request(324, 324)", display)
+        self.assertIn("artwork_size = round(min(width - 64", display)
+        self.assertIn("* .8) if portrait else (324 if width >= 1200", display)
+        self.assertIn("self.artwork.set_size_request(artwork_size, artwork_size)", display)
+        self.assertIn("self.artwork_button.set_size_request(artwork_size, artwork_size)", display)
         self.assertIn('detail_artwork_button.connect("clicked", lambda *_: self.set_roon_view("now"))', display)
         self.assertIn('id="details-artwork-close"', web_html)
         self.assertIn("$('details-artwork-close').onclick = () => setMusicView('now')", web_js)
@@ -98,7 +186,10 @@ class DisplayRotationTests(unittest.TestCase):
 
     def test_touchscreen_settings_title_and_checkbox_spacing(self):
         display = (ROOT / "native-display" / "pi_bus_native.py").read_text(encoding="utf-8")
-        self.assertIn('title = self.label("Settings", "settings-title", .5)', display)
+        self.assertIn('self.label("Pi Home", "settings-title")', display)
+        self.assertIn('self.label("Settings", "settings-title")', display)
+        self.assertIn('actions.set_homogeneous(True)', display)
+        self.assertIn('self.settings_row_sizes = Gtk.SizeGroup', display)
         self.assertIn(".setting-line checkbutton label { margin-left: 12px;", display)
 
     def test_mobile_roon_navigation_uses_compact_uppercase_labels(self):
@@ -173,6 +264,12 @@ class DisplayRotationTests(unittest.TestCase):
         self.assertIn('id="system-maintenance"', html)
         self.assertIn("function openSystemSection(id)", javascript)
         self.assertIn("details[open]>summary::before", css)
+
+    def test_admin_reports_and_disables_an_absent_roon_bridge(self):
+        javascript = (ROOT / "src" / "pi_bus_time_display" / "static" / "admin.js").read_text(encoding="utf-8")
+        self.assertIn("data.roon_bridge!=='not_installed'", javascript)
+        self.assertIn("'[data-action^=\"roon_\"]'", javascript)
+        self.assertIn("'Not installed'", javascript)
 
     def test_long_now_playing_copy_pauses_and_scrolls_without_polling(self):
         app = (ROOT / "roon-controller" / "static" / "app.js").read_text(encoding="utf-8")
