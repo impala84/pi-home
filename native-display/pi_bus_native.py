@@ -1369,9 +1369,11 @@ class Display(Gtk.Application):
             docked = name == "search" and getattr(self, "responsive_portrait", False)
             destination = self.search_results_scroll if docked else self.browser_scroll
             parent = self.browser_list.get_parent()
-            if parent is not destination:
+            if self.browser_list.get_ancestor(Gtk.ScrolledWindow) is not destination:
                 if parent: parent.set_child(None)
                 destination.set_child(self.browser_list)
+                if docked:
+                    while child := self.browser_list.get_first_child(): self.browser_list.remove(child)
             self.search_results_scroll.set_visible(docked)
             if docked:
                 self.browser_artist_scroll.set_visible(False)
@@ -2048,6 +2050,8 @@ class Display(Gtk.Application):
         items = data.get("items") or []
         grouped_results = bool(data.get("search_routes"))
         grouped_search = grouped_results and not getattr(self, "responsive_portrait", False)
+        if grouped_results and getattr(self, "responsive_portrait", False) and hasattr(self, "search_results_scroll"):
+            self.search_results_scroll.get_vadjustment().set_value(0)
         self.browser_list.set_spacing(12 if data.get("artist_profile") and getattr(self, "responsive_portrait", False) else 2)
         self.browser_list.set_orientation(Gtk.Orientation.VERTICAL)
         while child := self.browser_search_columns.get_first_child(): self.browser_search_columns.remove(child)
