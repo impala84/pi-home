@@ -221,7 +221,15 @@ capture("now-playing")
 assert window.get_width() == screen_width and window.get_height() == screen_height, (window.get_width(), window.get_height(), screen_width, screen_height)
 footer_bounds = page.get_last_child().compute_bounds(page)[1]
 assert footer_bounds.get_y() + footer_bounds.get_height() <= screen_height - 4
-if screen_height > screen_width: assert display.artwork.get_width() == display.artwork.get_height()
+if screen_height > screen_width:
+    assert display.artwork.get_width() == display.artwork.get_height()
+    assert display.portrait_music_tabs.get_margin_bottom() >= 16
+    artwork_bounds = display.artwork_button.compute_bounds(page)[1]
+    menu_bounds = display.portrait_music_tabs.compute_bounds(page)[1]
+    metadata_bounds = display.now_playing_centre.compute_bounds(page)[1]
+    above = artwork_bounds.get_y() - menu_bounds.get_y() - menu_bounds.get_height()
+    below = metadata_bounds.get_y() - artwork_bounds.get_y() - artwork_bounds.get_height()
+    assert above > below >= 16, (above, below)
 
 bus = display.build_bus(); window.set_child(bus)
 display.render_bus({"status": "ok", "stop_name": "Flamingo Valley", "stop_code": "83249", "services": [{"service": number, "arrivals": [{"minutes": value, "monitored": True} for value in (1, 14, 28)]} for number in ("40", "42")]})
@@ -229,6 +237,10 @@ capture("bus-times")
 if screen_height > screen_width:
     assert display.services.get_first_child().get_orientation() == Gtk.Orientation.VERTICAL
     assert not display.services.get_first_child().get_vexpand()
+    last_panel = display.services.get_last_child().compute_bounds(display.bus_content)[1]
+    status_bounds = display.bus_status.get_parent().compute_bounds(display.bus_content)[1]
+    gap = status_bounds.get_y() - last_panel.get_y() - last_panel.get_height()
+    assert 0 <= gap <= 20, gap
 assert window.get_width() == screen_width and window.get_height() == screen_height, (window.get_width(), window.get_height(), screen_width, screen_height)
 display.render_bus({"status": "ok", "stop_name": "Flamingo Valley", "stop_code": "83249", "services": [{"service": number, "arrivals": [{"minutes": value} for value in (1, 14, 28)]} for number in ("40", "42", "401", "14")]})
 capture("bus-times-four-routes")
