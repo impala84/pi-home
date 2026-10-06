@@ -42,11 +42,16 @@ touch can wake the screen again.
 Display orientation is a shared appliance setting in both touchscreen and web
 Settings. Landscape and Portrait are translated to the correct physical panel
 rotation (the original display is natively landscape; Touch Display 2 panels
-are natively portrait), then Cage and touch calibration reload together when
-the hardware profile is unchanged. GTK lays out Now Playing, Queue, Browse,
+are natively portrait). Apply Display automatically restarts the appliance to
+apply Cage orientation and touch calibration together. GTK lays out Now Playing, Queue, Browse,
 Discover, navigation and Settings from the resulting viewport dimensions. Auto
 orientation is intentionally omitted because the supported panels do not expose
 a dependable orientation sensor.
+
+Portrait uses compact two-row music navigation, centred smaller Now Playing
+artwork, bounded three-column Browse covers and a visible alphabet scrubber.
+Surprise Me stacks its actions above and below the cover. Bus cards keep natural
+heights, with larger route numbers and scrolling when several routes need space.
 
 Active branch: `alpine-beta`, based on Discover beta.7. The former
 `alpine-appliance-prototype` branch is a temporary update bridge for beta.14

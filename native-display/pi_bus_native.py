@@ -548,7 +548,8 @@ class Display(Gtk.Application):
         page = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=7); page.add_css_class("page"); page.add_css_class("bus-page")
         self.bus_clock = self.label("--:--", "clock", 1); self.stop = self.label("Connecting…", "stop"); self.stop_code = self.label("", "stop-code")
         stop_heading = Gtk.Box(spacing=14); stop_heading.append(self.stop); stop_heading.append(self.stop_code); page.append(self.header(stop_heading, self.bus_clock))
-        self.services = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14); self.services.set_vexpand(True); page.append(self.services)
+        self.services = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14); self.services.set_vexpand(True)
+        self.bus_scroll = Gtk.ScrolledWindow(); self.bus_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.NEVER); self.bus_scroll.set_propagate_natural_height(False); self.bus_scroll.set_propagate_natural_width(False); self.bus_scroll.set_min_content_height(1); self.bus_scroll.set_vexpand(True); self.bus_scroll.set_child(self.services); page.append(self.bus_scroll)
         footer = Gtk.Box(); footer.add_css_class("bus-footer"); self.bus_status = self.label("Starting", "muted"); self.updated = self.label("", "muted", 1); self.updated.set_hexpand(True); footer.append(self.bus_status); footer.append(self.updated); page.append(footer)
         page.append(self.navigation("bus")); return page
 
@@ -1065,6 +1066,7 @@ class Display(Gtk.Application):
 
     def render_home(self, home):
         portrait = self.window.has_css_class("portrait")
+        self.bus_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC if portrait else Gtk.PolicyType.NEVER)
         signature = json.dumps({"status": home.get("status"), "entities": home.get("entities", []), "theme": self.settings_data.get("display_theme"), "portrait": portrait}, sort_keys=True, default=str)
         if signature == self.home_signature: return
         self.home_signature = signature

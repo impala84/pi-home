@@ -225,6 +225,9 @@ if screen_height > screen_width:
     assert display.services.get_first_child().get_orientation() == Gtk.Orientation.VERTICAL
     assert not display.services.get_first_child().get_vexpand()
 assert window.get_width() == screen_width and window.get_height() == screen_height
+display.render_bus({"status": "ok", "stop_name": "Flamingo Valley", "stop_code": "83249", "services": [{"service": number, "arrivals": [{"minutes": value} for value in (1, 14, 28)]} for number in ("40", "42", "401", "14")]})
+capture("bus-times-four-routes")
+assert window.get_width() == screen_width and window.get_height() == screen_height
 
 home = display.build_home(); window.set_child(home)
 display.settings_data["display_theme"] = "roon"
