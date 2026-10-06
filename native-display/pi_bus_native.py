@@ -248,7 +248,7 @@ CSS += b"""
 .portrait .page { padding: 22px 24px 16px; }
 .portrait .roon-page { padding-right: 24px; }
 .portrait .roon-header, .portrait .roon-page .nav, .portrait .now-playing-content, .portrait .queue-scroll, .portrait .source-view { margin-right: 0; }
-.portrait .now-playing-content { margin: 32px 24px 8px 0; }
+.portrait .now-playing-content { margin: 32px 0 8px 0; }
 .portrait.compact-portrait .now-playing-content { margin-top: 24px; }
 .portrait .browser-view { padding-right: 0; }
 .portrait .artwork { min-width: 0; min-height: 0; }
@@ -1684,6 +1684,7 @@ class Display(Gtk.Application):
             square.set_min_content_width(size); square.set_max_content_width(size)
             square.set_min_content_height(size); square.set_max_content_height(size)
             square.set_size_request(size, size)
+            square.set_valign(Gtk.Align.CENTER)
             self.browser_artist_scroll.set_min_content_height(size + 40)
             self.browser_artist_scroll.set_max_content_height(size + 40)
         else:
