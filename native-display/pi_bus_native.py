@@ -586,7 +586,7 @@ class Display(Gtk.Application):
             tabs.set_halign(Gtk.Align.FILL if portrait else Gtk.Align.CENTER)
             # Equal cells multiply the longest label's minimum width by five.
             # Share the spare space instead, keeping every full label readable.
-            tabs.set_homogeneous(False); tabs.set_spacing(6 if portrait and width < 600 else 8)
+            tabs.set_homogeneous(False); tabs.set_spacing(8)
             child = tabs.get_first_child()
             while child:
                 child.set_hexpand(portrait); child = child.get_next_sibling()
