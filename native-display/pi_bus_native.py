@@ -573,7 +573,7 @@ class Display(Gtk.Application):
             tabs.set_halign(Gtk.Align.FILL if portrait else Gtk.Align.CENTER)
             # Equal cells multiply the longest label's minimum width by five.
             # Share the spare space instead, keeping every full label readable.
-            tabs.set_homogeneous(False); tabs.set_spacing(0 if portrait else 8)
+            tabs.set_homogeneous(False); tabs.set_spacing(8)
             child = tabs.get_first_child()
             while child:
                 child.set_hexpand(portrait); child = child.get_next_sibling()
@@ -1294,7 +1294,9 @@ class Display(Gtk.Application):
             while child := self.roon_subnav.get_first_child(): self.roon_subnav.remove(child)
             self.bluos_source_buttons = {}
             for input_id, name in signature:
-                button = self.button(name.upper(), lambda _button, value=input_id: self.select_bluos_input(value), ""); self.bluos_source_buttons[input_id] = button; self.roon_subnav.append(button)
+                button = self.button(name.upper(), lambda _button, value=input_id: self.select_bluos_input(value), "")
+                button.set_hexpand(getattr(self, "responsive_portrait", False))
+                self.bluos_source_buttons[input_id] = button; self.roon_subnav.append(button)
             self.roon_subnav.append(self.now_playing_tab); self.roon_subnav.append(self.queue_tab); self.roon_subnav.append(self.browser_tab)
         active_id = str((amplifier.get("active_input") or {}).get("id") or "")
         for input_id, button in self.bluos_source_buttons.items():

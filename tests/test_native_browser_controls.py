@@ -58,6 +58,19 @@ LAYOUT_GTK = SimpleNamespace(Box=LayoutWidget, Picture=LayoutWidget, ScrolledWin
 
 
 class NativeBrowserControlsTests(unittest.TestCase):
+    def test_late_loaded_source_buttons_follow_current_orientation(self):
+        for portrait in (True, False):
+            owner = SimpleNamespace(responsive_portrait=portrait, roon_subnav=LayoutWidget(),
+                now_playing_tab=LayoutWidget(), queue_tab=LayoutWidget(), browser_tab=LayoutWidget(),
+                requested_audio_view="source", button=lambda *args: LayoutWidget())
+            method = native_method("render_bluos_inputs")
+            method(owner, {"inputs": [{"id": "tv", "name": "Watch TV"}, {"id": "rega", "name": "Rega P3"}],
+                "active_input": {"id": "tv"}}, True)
+            for button in owner.bluos_source_buttons.values():
+                self.assertEqual(button.properties["hexpand"], (portrait,))
+            self.assertIn("active", owner.bluos_source_buttons["tv"].classes)
+            self.assertNotIn("active", owner.bluos_source_buttons["rega"].classes)
+
     def test_music_clock_redraws_on_minute_change_not_every_tick(self):
         from datetime import datetime
         clock = Mock()

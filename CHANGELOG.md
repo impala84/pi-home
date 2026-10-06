@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.1-beta.3 — 6 October 2026
+
+- Fixes portrait source-menu labels touching when amplifier inputs arrive after the screen layout. Source buttons now use the same expanding slots as existing tabs, with a consistent minimum gap.
+- Tests the real late-loading order in native GTK screenshot checks.
+
 ## 1.1.1-beta.2 — 6 October 2026
 
 - Applies the sketch-aligned portrait header consistently across Now Playing, Queue, sources and Discover: Settings, contextual menu and Sleep clock on one row.
