@@ -37,6 +37,11 @@ class Entry:
 
 
 class PortraitRefinementTests(unittest.TestCase):
+    def test_utility_icon_receives_each_css_class(self):
+        gtk = SimpleNamespace(Button=LayoutWidget, Image=SimpleNamespace(new_from_icon_name=lambda _: LayoutWidget()))
+        button = native_method("icon_button", {"Gtk": gtk})(SimpleNamespace(), "clock", lambda *_: None, "discover-utility discover-sleep")
+        self.assertEqual(button.classes, {"discover-utility", "discover-sleep"})
+
     def test_grid_margins_and_gaps_are_thirty_pixels(self):
         monitor = SimpleNamespace(get_geometry=lambda: SimpleNamespace(width=720))
         monitors = SimpleNamespace(get_n_items=lambda: 1, get_item=lambda _: monitor)
