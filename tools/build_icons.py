@@ -58,6 +58,7 @@ ICONS = {
     'power': '<path d="M32 6v23 M20 12a23 23 0 1 0 24 0"/>',
     'orientation': '<rect x="19" y="8" width="26" height="48" rx="3"/><path d="M8 24a25 25 0 0 1 9-13 M8 14v10h10 M56 40a25 25 0 0 1-9 13 M56 50V40H46"/>',
     'check': '<path d="m14 32 12 12 25-25"/>',
+    'erase': '<path d="M24 15h34v34H24L7 32Z M32 24l16 16 M32 40l16-16"/>',
 }
 
 def svg(name):
