@@ -205,7 +205,8 @@ def browse_fixture(section, labels):
         for picture in pictures: picture.set_filename(str(fixture_art(key, "LOADED COVER")))
     settle()
     if window.get_width() != screen_width:
-        for name in ("music_header_overlay", "discover_subnav", "browser_body", "browser_sidebar", "browser_scroll", "browser_scrubber", "browser_list"):
+        print("Page width diagnostic:", tuple(page.measure(Gtk.Orientation.HORIZONTAL, -1)), flush=True)
+        for name in ("music_header_overlay", "discover_toolbar", "discover_toolbar_tabs", "discover_subnav", "roon_views", "browser_body", "browser_sidebar", "browser_scroll", "browser_scrubber", "browser_list"):
             widget = getattr(display, name)
             print("Width diagnostic:", name, widget.get_width(), tuple(widget.measure(Gtk.Orientation.HORIZONTAL, -1)), flush=True)
         capture("browse-overflow")
@@ -263,6 +264,67 @@ display.render_browser({"status": "ready", "section": "genres", "layout": "tiles
 capture("genres")
 assert window.get_width() == screen_width
 
+display.render_browser({"status": "ready", "section": "playlists", "layout": "tiles", "show_labels": True,
+    "items": [{"title": name, "item_key": name} for name in ("Evening vibes", "Entertain", "South Africa", "Braai Vibes", "Vocal Jazz", "Jazz Vibes")]})
+capture("playlists")
+if screen_height > screen_width:
+    assert display.browser_tile_size == (screen_width - 120) // 3, display.browser_tile_size
+
+if screen_height > screen_width:
+    display.set_roon_view("search")
+    search_items = []
+    for group in ("TOP RESULTS", "ARTISTS", "ALBUMS", "TRACKS"):
+        search_items.append({"hint": "header", "title": group})
+        search_items.extend({"title": f"{group.title()} result with a longer readable title {index}", "subtitle": "Oasis", "item_key": f"{group}-{index}"} for index in range(5))
+        search_items.append({"title": "View all " + group.title(), "subtitle": "39 Results", "item_key": group})
+    display.render_browser({"status": "ready", "section": "search", "layout": "list", "search_routes": {"fixture": {}}, "items": search_items})
+    capture("search-docked")
+    assert display.browser_list.get_ancestor(Gtk.ScrolledWindow) is display.search_results_scroll
+    results_bounds = display.search_results_scroll.compute_bounds(page)[1]
+    entry_bounds = display.browser_search_entry.compute_bounds(page)[1]
+    assert results_bounds.get_y() + results_bounds.get_height() <= entry_bounds.get_y()
+    assert entry_bounds.get_y() > screen_height * (.25 if screen_width < 600 else .4)
+    assert window.get_width() == screen_width and window.get_height() == screen_height
+    display.set_roon_view("browse")
+    assert display.browser_list.get_ancestor(Gtk.ScrolledWindow) is display.browser_scroll
+    # Leaving the keyboard cancels both delayed and queued search work.
+    display.set_roon_view("search")
+    display.browser_search_entry.set_text("Oasis")
+    assert display.browser_search_timer is not None
+    display.browser_pending_request = ("search", {"query": "Oasis"})
+    display.set_roon_view("browse")
+    assert display.browser_search_timer is None
+    assert display.browser_pending_request is None
+    # Exercise the real worker -> GLib -> rendering path, including a slow
+    # search superseded by navigation, rather than calling render directly.
+    import threading
+    gate = threading.Event()
+    original_post_json = native.post_json
+    def fixture_post_json(_url, payload, **_kwargs):
+        if payload["action"] == "search":
+            assert gate.wait(5), "fixture search was not released"
+            return {"status": "ready", "section": "search", "layout": "list",
+                    "search_routes": {"fixture": {}}, "items": search_items}
+        return {"status": "ready", "section": "albums", "layout": "covers",
+                "items": [{"title": "Album after search", "item_key": "after-search"}]}
+    native.post_json = fixture_post_json
+    try:
+        settle()
+        display.set_roon_view("search")
+        display.request_browser("search", query="Oasis", source="all")
+        assert display.browser_loading
+        display.set_roon_view("browse")
+        display.request_browser("section", section="albums")
+        gate.set()
+        settle(100)
+        assert display.browser_state["section"] == "albums", display.browser_state
+        assert not display.browser_loading
+        assert display.browser_list.get_ancestor(Gtk.ScrolledWindow) is display.browser_scroll
+        assert window.get_width() == screen_width
+    finally:
+        gate.set()
+        native.post_json = original_post_json
+
 display.render_browser({"status": "ready", "section": "albums", "layout": "covers", "surprise_preview": True, "items": [{"title": "Based on a True Story", "subtitle": "Fat Freddy's Drop", "item_key": "surprise", "image_key": "surprise-art"}]})
 for picture in display.browser_pictures.get("surprise-art", []): picture.set_filename(str(fixture_art("surprise-art", "SURPRISE")))
 capture("surprise")
@@ -318,12 +380,10 @@ if screen_height > screen_width:
 bus = display.build_bus(); window.set_child(bus)
 display.render_bus({"status": "ok", "stop_name": "Flamingo Valley", "stop_code": "83249", "services": [{"service": number, "arrivals": [{"minutes": value, "monitored": True} for value in (1, 14, 28)]} for number in ("40", "42")]})
 capture("bus-times")
-arrivals_row = display.services.get_first_child().get_last_child()
-arrival_count = 0
-arrival = arrivals_row.get_first_child()
-while arrival:
-    arrival_count += 1
-    arrival = arrival.get_next_sibling()
+first_arrivals = display.services.get_first_child().get_last_child()
+arrival_count = 0; arrival_child = first_arrivals.get_first_child()
+while arrival_child:
+    arrival_count += 1; arrival_child = arrival_child.get_next_sibling()
 assert arrival_count == (2 if screen_height > screen_width else 3), arrival_count
 if screen_height > screen_width:
     assert display.services.get_first_child().get_orientation() == Gtk.Orientation.VERTICAL

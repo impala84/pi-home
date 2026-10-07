@@ -2,8 +2,17 @@
 
 const PAGE_SIZE = 30;
 
-function request(service, method, options) {
-  return new Promise((resolve, reject) => service[method](options, (error, result) => error ? reject(new Error(String(error))) : resolve(result || {})));
+function request(service, method, options, timeoutMs = 8000) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('Roon Browse request timed out')), timeoutMs);
+    try {
+      service[method](options, (error, result) => {
+        clearTimeout(timer);
+        if (error) reject(new Error(String(error)));
+        else resolve(result || {});
+      });
+    } catch (error) { clearTimeout(timer); reject(error); }
+  });
 }
 
 function safeSession(value) {

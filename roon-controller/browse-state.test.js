@@ -3,6 +3,25 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const {BrowseManager, browserLayout, formatDuration, libraryItems, publicItem, rootItems, safeSession, withAlbumArtist, withFallbackImage} = require('./browse-state');
 
+test('a missing Roon callback has a deadline and releases the serialized queue', async () => {
+  const fs = require('node:fs'), vm = require('node:vm'), path = require('node:path');
+  const source = fs.readFileSync(path.join(__dirname, 'browse-state.js'), 'utf8');
+  const start = source.indexOf('function request('), end = source.indexOf('\nfunction safeSession', start);
+  let deadline;
+  const request = vm.runInNewContext(source.slice(start, end) + '\nrequest', {
+    setTimeout(callback) { deadline = callback; return 1; }, clearTimeout() {}
+  });
+  let calls = 0;
+  const manager = new BrowseManager(() => ({}), () => ({}));
+  manager._run = () => ++calls === 1 ? request({browse() {}}, 'browse', {}) : Promise.resolve({status: 'ready', items: [{title: 'Recovered'}]});
+  const stalled = manager.run('deadline', 'current');
+  await new Promise(resolve => setImmediate(resolve));
+  deadline();
+  await assert.rejects(stalled, /timed out/);
+  const recovered = await manager.run('deadline', 'current');
+  assert.equal(recovered.items[0].title, 'Recovered');
+});
+
 test('grouped search previews keep independent keys, show five matches, and return to groups', async () => {
   const paths = new Map();
   const service = {
