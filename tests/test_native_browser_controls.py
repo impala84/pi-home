@@ -31,6 +31,16 @@ class Entry:
 
 
 class PortraitRefinementTests(unittest.TestCase):
+    def test_decoded_thumbnail_only_updates_widgets_on_ui_thread(self):
+        picture = SimpleNamespace(set_paintable=Mock())
+        texture = object()
+        owner = SimpleNamespace(queue_thumbnail_pending={"cover"}, queue_thumbnail_cache={}, queue_thumbnail_order=[], queue_pictures={"cover": [picture]}, browser_pictures={}, discovery_pictures={}, decode_artwork=Mock())
+        self.assertFalse(native_method("apply_queue_thumbnail")(owner, "cover", texture, True))
+        owner.decode_artwork.assert_not_called()
+        picture.set_paintable.assert_called_once_with(texture)
+        self.assertIs(owner.queue_thumbnail_cache["cover"], texture)
+        self.assertNotIn("cover", owner.queue_thumbnail_pending)
+
     def test_large_preview_avoids_thumbnail_cache_and_requests_900px(self):
         code = SOURCE.read_text()
         render = code.split('if items and data.get("surprise_preview"):', 1)[1].split('title = self.label', 1)[0]

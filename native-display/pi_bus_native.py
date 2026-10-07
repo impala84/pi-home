@@ -2619,27 +2619,32 @@ class Display(Gtk.Application):
             key = self.queue_thumbnail_jobs.get()
             url = f"{ROON}/api/discovery/image?key={quote(key[9:], safe='')}" if key.startswith("discover:") else f"{ROON}/api/image?key={quote(key, safe='')}&size=256"
             image = get_bytes(url, timeout=2.5)
-            GLib.idle_add(self.apply_queue_thumbnail, key, image)
+            GLib.idle_add(self.apply_queue_thumbnail, key, self.decode_artwork(image), True)
+
+    def decode_artwork(self, image):
+        # Gdk.Texture loading is thread-safe. Keep image decoding out of the
+        # touch/animation loop; only widget updates belong on the UI thread.
+        if not image: return None
+        try: return Gdk.Texture.new_from_bytes(GLib.Bytes.new(image))
+        except GLib.Error: return None
 
     def load_preview_artwork(self, picture, key):
-        def apply(image):
-            if image:
-                try: picture.set_paintable(Gdk.Texture.new_from_bytes(GLib.Bytes.new(image)))
-                except GLib.Error: pass
+        def apply(texture):
+            if texture: picture.set_paintable(texture)
             return False
         def load():
             url = f"{ROON}/api/discovery/image?key={quote(key[9:], safe='')}" if key.startswith("discover:") else f"{ROON}/api/image?key={quote(key, safe='')}&size=900"
-            GLib.idle_add(apply, get_bytes(url, timeout=5))
+            GLib.idle_add(apply, self.decode_artwork(get_bytes(url, timeout=5)))
         threading.Thread(target=load, daemon=True).start()
 
-    def apply_queue_thumbnail(self, key, image):
+    def apply_queue_thumbnail(self, key, image, decoded=False):
         self.queue_thumbnail_pending.discard(key)
         if not image:
             failures = getattr(self, "thumbnail_failures", {}); self.thumbnail_failures = failures; failures[key] = failures.get(key, 0) + 1
             if failures[key] <= 3: GLib.timeout_add(1500, self.retry_visible_thumbnail, key)
             return False
-        try: texture = Gdk.Texture.new_from_bytes(GLib.Bytes.new(image))
-        except GLib.Error: return False
+        texture = image if decoded else self.decode_artwork(image)
+        if texture is None: return False
         self.queue_thumbnail_cache[key] = texture
         getattr(self, "thumbnail_failures", {}).pop(key, None)
         if key in self.queue_thumbnail_order: self.queue_thumbnail_order.remove(key)

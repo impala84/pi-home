@@ -8,7 +8,7 @@
 - Enlarges Watch TV volume numerals and Mute, with purple-on-gray Roon increment controls.
 - Preserves the enlarged play/pause icon through playback refreshes; retains a record-cover placeholder even after repeated artwork failures.
 - Centers portrait volume at 88% width, with more spacing above volume and below it before Mute.
-- Synchronizes elastic spring frames to the widget frame clock, avoids rebuilding unchanged play icons and throttles alphabetical scroll scans. Actual Pi rendering performance still requires hardware diagnosis; no refresh-rate or gradient-banding fix is claimed.
+- Decodes scrolling thumbnails and large preview artwork in workers rather than blocking touch frames. Synchronizes elastic springs to the widget frame clock, avoids rebuilding unchanged play icons and throttles alphabetical scroll scans. Actual Pi rendering performance still requires hardware diagnosis; no refresh-rate or gradient-banding fix is claimed.
 - Beta only; stable and working touch rotation remain unchanged.
 
 ## 1.1.3-beta.1 Alpine — 7 October 2026
