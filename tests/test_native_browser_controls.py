@@ -468,7 +468,7 @@ class NativeBrowserControlsTests(unittest.TestCase):
         message.set_text.assert_not_called()
         code=SOURCE.read_text(encoding='utf-8')
         self.assertNotIn('Gtk.Expander(label="VIEW TRACKS")',code)
-        self.assertIn('"PLAY THIS MIX"',code)
+        self.assertIn('"▶  PLAY THIS MIX"',code)
 
     def test_grouped_results_have_separate_scrollers_not_nested_in_browser_viewport(self):
         code = SOURCE.read_text(encoding="utf-8")

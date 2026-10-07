@@ -194,6 +194,14 @@ if screen_height > screen_width:
     first = display.discovery_cards[0][0]
     assert first.get_width() > screen_width * .3
 
+display.discovery_mix = "aabb"
+display.discovery_signature = None
+display.render_discover(display.discovery_request, {"status": "ready", "mix": {"title": "Creed Mix"},
+    "items": [item("Is This The End?", "Creed", 91, "track")]})
+capture("mix-detail")
+mix_controls = display.discovery_list.get_first_child().get_next_sibling()
+assert mix_controls.get_first_child().get_label().startswith("▶")
+display.discovery_mix = ""
 display.discovery_active = True
 display.discovery_section = "browse"
 display.set_roon_view("browse")
@@ -409,6 +417,15 @@ assert icon.get_pixel_size() == round(original_icon_size * .75)
 assert icon.get_width() >= original_icon_size
 if screen_height > screen_width:
     assert display.home_grid.get_first_child().get_orientation() == Gtk.Orientation.HORIZONTAL
+
+settings = display.build_settings()
+window.set_child(settings)
+display.configure_settings_layout(screen_width, screen_height)
+display.device_status.set_text("v1.1.1-beta.9 Alpine")
+display.touch_diagnostics.set_text("Memory 6.1%  ·  Load 0.65  ·  62.8°C  ·  Controller ready  ·  Bridge offline")
+capture("settings")
+assert window.get_width() == screen_width and window.get_height() == screen_height, (window.get_width(), window.get_height())
+assert display.settings_actions.get_last_child().has_css_class("reboot-action")
 
 window.set_child(None)
 display.root_overlay = Gtk.Overlay(); display.root_overlay.set_child(home); window.set_child(display.root_overlay)
