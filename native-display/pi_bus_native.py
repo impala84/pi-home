@@ -316,6 +316,10 @@ CSS += b"""
 .portrait .discover-toolbar { padding: 4px 0 0; }
 .discover-utility { background: transparent; border: 0; padding: 0; min-width: 36px; min-height: 42px; color: #817aeb; }
 .discover-sleep { color: #888; }
+.display-landscape .discover-toolbar { padding-top: 4px; }
+.display-landscape .discover-toolbar .roon-subnav button { border-top: 0; border-bottom: 3px solid transparent; }
+.display-landscape .discover-toolbar .roon-subnav button.active { border-bottom-color: #5bcbd6; }
+.display-landscape.theme-roon .discover-toolbar .roon-subnav button.active { border-bottom-color: #817aeb; }
 .portrait .discover-toolbar .roon-subnav button { font-weight: 500; letter-spacing: 0; padding: 4px 0; min-height: 38px; }
 .portrait .discover-toolbar .roon-subnav button.active { color: #fff; }
 .portrait .browser-sidebar { padding: 0 0 14px; }
@@ -615,7 +619,7 @@ class Display(Gtk.Application):
                 child.set_hexpand(portrait); child = child.get_next_sibling()
         exploring = self.discovery_active and self.roon_views.get_visible_child_name() in {"discover", "browse", "search"}
         self.discover_toolbar.set_visible(True)
-        self.discover_toolbar.set_margin_end(0)
+        self.discover_toolbar.set_margin_end(28 if not portrait and width >= 1200 else 0)
         self.discover_toolbar.set_spacing(8 if portrait and width < 600 else 12)
         self.music_header_overlay.set_visible(False)
         self.portrait_music_tabs.set_visible(False)
