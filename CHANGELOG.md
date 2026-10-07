@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.1-beta.14 — 7 October 2026
+
+- Establishes one bespoke currentColor SVG family across native and web controls, with a central catalogue and reusable adapters.
+- Redraws all 21 genres from the final reference concepts, including trumpet Blues, palm-tree Reggae and Comedy.
+- Consolidates browse, playback, queue/library, settings and Home icons; retains existing interactions, colour states, touch targets and live clock hands.
+- Adds asset-generation/vector validation and all-genre native visual fixtures. Preserves beta.13 layout polish. Source-only beta, no disk image.
+
 ## 1.1.1-beta.13 — 7 October 2026
 
 - Adds trailing breathing room to landscape Daily carousels equal to their leading content margin; preserves first-card position.

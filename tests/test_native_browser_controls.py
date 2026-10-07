@@ -61,7 +61,7 @@ class PortraitRefinementTests(unittest.TestCase):
 
     def test_utility_icon_receives_each_css_class(self):
         gtk = SimpleNamespace(Button=LayoutWidget, Image=SimpleNamespace(new_from_icon_name=lambda _: LayoutWidget()))
-        button = native_method("icon_button", {"Gtk": gtk})(SimpleNamespace(), "clock", lambda *_: None, "discover-utility discover-sleep")
+        button = native_method("icon_button", {"Gtk": gtk, "FamilyIcon": lambda *_: LayoutWidget()})(SimpleNamespace(), "clock", lambda *_: None, "discover-utility discover-sleep")
         self.assertEqual(button.classes, {"discover-utility", "discover-sleep"})
 
     def test_grid_margins_and_gaps_are_thirty_pixels(self):
@@ -186,7 +186,8 @@ class NativeBrowserControlsTests(unittest.TestCase):
         self.assertIn('self.library_add = self.button("", self.add_current_album)', code)
         self.assertIn('self.library_add.set_visible(has_album)', code)
         self.assertIn('self.set_library_icon(self.library_favorite is True)', code)
-        self.assertIn('Gtk.Image.new_from_icon_name("list-add-symbolic")', code)
+        self.assertIn('FamilyIcon("add", 28)', code)
+        self.assertIn('FamilyIcon("heart", 28, filled=filled)', code)
         self.assertIn('self.library_add.set_valign(Gtk.Align.CENTER)', code)
         self.assertIn('self.library_add.set_halign(Gtk.Align.CENTER)', code)
         self.assertIn('self.library_pending = True', code)
@@ -478,7 +479,8 @@ class NativeBrowserControlsTests(unittest.TestCase):
         message.set_text.assert_not_called()
         code=SOURCE.read_text(encoding='utf-8')
         self.assertNotIn('Gtk.Expander(label="VIEW TRACKS")',code)
-        self.assertIn('"▶  PLAY THIS MIX"',code)
+        self.assertIn('"PLAY THIS MIX"',code)
+        self.assertIn('self.labelled_icon_button("play"', code)
 
     def test_grouped_results_have_separate_scrollers_not_nested_in_browser_viewport(self):
         code = SOURCE.read_text(encoding="utf-8")

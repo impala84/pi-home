@@ -228,7 +228,7 @@ display.render_discover(display.discovery_request, {"status": "ready", "mix": {"
     "items": [item("Is This The End?", "Creed", 91, "track")]})
 capture("mix-detail")
 mix_controls = display.discovery_list.get_first_child().get_next_sibling()
-assert mix_controls.get_first_child().get_label().startswith("▶")
+assert mix_controls.get_first_child().get_child().get_first_child().icon_name == "play"
 display.discovery_mix = ""
 display.discovery_active = True
 display.discovery_section = "browse"
@@ -313,6 +313,10 @@ if screen_height > screen_width:
 display.render_browser({"status": "ready", "section": "genres", "layout": "tiles", "show_labels": True,
     "items": [{"title": name, "item_key": name} for name in ("Pop/Rock", "Classical", "Electronic", "Jazz", "Stage & Screen", "International", "Vocal", "Blues", "Easy Listening")]})
 capture("genres")
+for batch, names in enumerate((("R&B", "Rap", "Avant-Garde", "Folk", "New Age", "Reggae"), ("Country", "Latin", "Religious", "Holiday", "Children’s", "Comedy")), 2):
+    display.render_browser({"status": "ready", "section": "genres", "layout": "tiles", "show_labels": True,
+        "items": [{"title": name, "item_key": name} for name in names]})
+    capture("genres-" + str(batch))
 assert window.get_width() == screen_width
 
 display.render_browser({"status": "ready", "section": "playlists", "layout": "tiles", "show_labels": True,
@@ -479,7 +483,7 @@ if screen_height > screen_width:
 settings = display.build_settings()
 window.set_child(settings)
 display.configure_settings_layout(screen_width, screen_height)
-display.device_status.set_text("v1.1.1-beta.13 Alpine")
+display.device_status.set_text("v1.1.1-beta.14 Alpine")
 display.touch_diagnostics.set_text("Memory 6.1%  ·  Load 0.65  ·  62.8°C  ·  Controller ready  ·  Bridge offline")
 capture("settings")
 assert window.get_width() == screen_width and window.get_height() == screen_height, (window.get_width(), window.get_height())

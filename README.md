@@ -1,6 +1,6 @@
 # Pi Home
 
-The next testing release is **1.1.1-beta.13**: trailing carousel breathing room and native touch boundary feedback, plus a shared Home/Bus Times content grid and 2px panel stroke. Retains all previous refinements and loading safeguards. Select Beta in System → Software to receive it; Stable remains on 1.1.0.
+The next testing release is **1.1.1-beta.14**: one bespoke monoline SVG family across genres, browse, playback, queue/library, settings and Home controls. Includes all 21 final genre concepts. Retains all previous refinements and loading safeguards. Select Beta in System → Software to receive it; Stable remains on 1.1.0.
 
 Beta updates are source-only releases: automated backend, controller, update-safety and native layout checks still run, but no downloadable disk image is built. For stable releases or explicit fresh-install testing, run the Alpine verification workflow on the release branch with **build_image** enabled, verify the image, then attach it to the release. The existing Alpine updater continues to require a successful verification run for the exact release commit.
 
