@@ -68,23 +68,25 @@ horizontal, vertical = scroller.get_policy()
 assert horizontal == Gtk.PolicyType.AUTOMATIC and vertical == Gtk.PolicyType.NEVER
 heading = scroller.get_next_sibling()
 assert heading.get_text() == "BECAUSE YOU LISTENED TO…"
-recommendations = heading.get_next_sibling()
+seed_title = heading.get_next_sibling()
+assert isinstance(seed_title, Gtk.Label)
+assert seed_title.get_text() == groups[0]["seed"]["title"].upper()
+assert seed_title.has_css_class("recommendation-album")
+recommendations = seed_title.get_next_sibling()
 assert isinstance(recommendations, Gtk.ScrolledWindow)
 recommendation_track = recommendations.get_child()
 if not isinstance(recommendation_track, Gtk.Box): recommendation_track = recommendation_track.get_child()
-seed_card = recommendation_track.get_first_child()
-assert seed_card.has_css_class("recommendation-seed-card")
-seed_shell = seed_card.get_child()
-seed_body = seed_shell.get_child()
-if not isinstance(seed_body, Gtk.Box): seed_body = seed_body.get_child()
-seed_art = seed_body.get_first_child()
-seed_title = seed_art.get_next_sibling()
-seed_artist = seed_title.get_next_sibling()
-assert seed_title.get_text() == "Sad Wings of Destiny (50th Anniversary Remixed & Remastered)"
-assert seed_artist.get_text() == "Judas Priest"
-assert seed_art.get_min_content_width() == art.get_min_content_width()
-assert seed_card.get_width() == seed_card.get_next_sibling().get_width(), (seed_card.get_width(), seed_card.get_next_sibling().get_width())
-assert display.discovery_pictures["discover:seed-art"]
+recommendation_cards = []; child = recommendation_track.get_first_child()
+while child: recommendation_cards.append(child); child = child.get_next_sibling()
+assert len(recommendation_cards) == len(items)
+assert all(not card.has_css_class("recommendation-seed-card") for card in recommendation_cards)
+assert "discover:seed-art" not in display.discovery_pictures
+for label in (heading, seed_title):
+    label_bounds = label.compute_bounds(window)[1]
+    card_bounds = recommendation_cards[0].compute_bounds(window)[1]
+    assert abs(label_bounds.get_x() - card_bounds.get_x()) <= 1
+for row in (track, recommendation_track):
+    assert row.get_margin_end() == native.CAROUSEL_END_SPACE == 30
 assert display.discovery_daily_sections.keys() == {"mixes", "recommendations"}
 assert display.discovery_daily_sections["mixes"] is scroller
 for swipe in (scroller, recommendations):

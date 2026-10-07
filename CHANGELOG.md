@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.1-beta.18 — 7 October 2026
+
+- Packages the beta.17 application as a full ARM64 Alpine appliance image for fresh Raspberry Pi 5 flashing, with checksum and exact source/package manifests.
+- Updates fresh-image Daily validation to check aligned heading/title context without the intentionally removed duplicate seed cover, plus the 30px carousel trailing margin.
+- Preserves the application UI, 30-track history, library-button pulse and prior display refinements.
+
 ## 1.1.1-beta.17 — 7 October 2026
 
 - Replaces the native library/favourite “Updating Roon…” row with a softly pulsing accent ring around the button; keeps confirmed results, errors and duplicate-request protection.
