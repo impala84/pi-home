@@ -479,6 +479,14 @@ if screen_height > screen_width:
     below = metadata_bounds.get_y() - artwork_bounds.get_y() - artwork_bounds.get_height()
     assert above > below >= 16, (above, below)
 
+display.set_roon_view("source")
+display.source_title.set_text("WATCH TV"); display.source_volume.set_text("77")
+capture("watch-tv")
+assert window.get_width() == screen_width and window.get_height() == screen_height
+if min(screen_width, screen_height) >= 1000:
+    assert display.source_volume.get_height() > 350
+display.set_roon_view("now")
+
 bus = display.build_bus(); window.set_child(bus)
 display.render_bus({"status": "ok", "stop_name": "Flamingo Valley", "stop_code": "83249", "services": [{"service": number, "arrivals": [{"minutes": value, "monitored": True} for value in (1, 14, 28)]} for number in ("40", "42")]})
 capture("bus-times")
@@ -530,7 +538,7 @@ if screen_height > screen_width:
 settings = display.build_settings()
 window.set_child(settings)
 display.configure_settings_layout(screen_width, screen_height)
-display.device_status.set_text("v1.1.1 Alpine")
+display.device_status.set_text("v1.1.3-beta.2 Alpine")
 display.touch_diagnostics.set_text("Memory 6.1%  ·  Load 0.65  ·  62.8°C  ·  Controller ready  ·  Bridge offline")
 capture("settings")
 assert window.get_width() == screen_width and window.get_height() == screen_height, (window.get_width(), window.get_height())

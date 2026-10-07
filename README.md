@@ -1,6 +1,6 @@
 # Pi Home
 
-Alpine testing release: **1.1.3-beta.1**, for 10-inch layout, Wi-Fi controls and scrolling refinements. Select Beta explicitly to test; Stable remains 1.1.2.
+Alpine testing release: **1.1.3-beta.2**, for sharper Surprise Me artwork, readable settings and refined 10-inch controls. Select Beta explicitly to test; Stable remains 1.1.2.
 
 The current Alpine stable release is **1.1.2**: an in-place correction for 10-inch Touch Display 2 touch rotation. Update through System → Software on the Stable channel, then reboot manually to apply input calibration. Physical touch acceptance is still required. The 1.1.1 full image remains available for fresh installs. Raspberry Pi OS releases remain separate.
 

@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.1.3-beta.2 Alpine — 7 October 2026
+
+- Fetches Surprise Me artwork at 900px instead of stretching the shared 256px thumbnail; keeps the scrolling cache small.
+- Corrects settings font specificity: larger title, version, diagnostics, Back/Sleep, bus labels and theme choices on 10-inch displays.
+- Adds 5px menu-label padding, slightly enlarges cog/clock and nudges the 10-inch music header up 3px.
+- Enlarges Watch TV volume numerals and Mute, with purple-on-gray Roon increment controls.
+- Preserves the enlarged play/pause icon through playback refreshes; retains a record-cover placeholder even after repeated artwork failures.
+- Centers portrait volume at 88% width, with more spacing above volume and below it before Mute.
+- Synchronizes elastic spring frames to the widget frame clock, avoids rebuilding unchanged play icons and throttles alphabetical scroll scans. Actual Pi rendering performance still requires hardware diagnosis; no refresh-rate or gradient-banding fix is claimed.
+- Beta only; stable and working touch rotation remain unchanged.
+
 ## 1.1.3-beta.1 Alpine — 7 October 2026
 
 - Connects authenticated web Wi-Fi/name controls to the Alpine helper; permits validated network/name changes after onboarding and allows time for Wi-Fi association.

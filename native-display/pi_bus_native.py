@@ -57,20 +57,20 @@ class ElasticCarouselTrack(Gtk.Box):
 
     def cancel_spring(self, *_):
         if self.spring_timer is not None:
-            GLib.source_remove(self.spring_timer); self.spring_timer = None
+            self.remove_tick_callback(self.spring_timer); self.spring_timer = None
         self.elastic_offset = 0.0; self.queue_draw()
 
     def spring_back(self):
         initial = self.elastic_offset
         self.cancel_spring(); self.elastic_offset = initial
         started = time.monotonic()
-        def frame():
+        def frame(_widget, _clock):
             elapsed = time.monotonic() - started
             if elapsed >= .55:
                 self.elastic_offset = 0.0; self.spring_timer = None; self.queue_draw(); return False
             self.elastic_offset = initial * math.exp(-9 * elapsed) * math.cos(20 * elapsed)
             self.queue_draw(); return True
-        self.spring_timer = GLib.timeout_add(16, frame)
+        self.spring_timer = self.add_tick_callback(frame)
 
     def attach_touch_pull(self, scroller, vertical=False):
         self.elastic_vertical = vertical
@@ -497,8 +497,20 @@ scrolledwindow overshoot, scrolledwindow undershoot { background: transparent; b
 .large-display .transport .play { min-width: 150px; min-height: 150px; border-radius: 75px; }
 .large-display .utility, .large-display .browser-back { min-width: 150px; min-height: 72px; font-size: 21px; padding: 12px 24px; }
 .large-display .transport button.library-action { min-width: 120px; min-height: 120px; padding: 0; border-radius: 60px; }
-.large-display .settings-title { font-size: 44px; }
-.large-display .settings-version, .large-display .settings-diagnostic { font-size: 21px; }
+.large-display .settings-page .settings-title { font-size: 44px; }
+.large-display .settings-page .settings-version, .large-display .settings-page .settings-diagnostic { font-size: 23px; }
+.large-display .settings-header .settings-utilities button { font-size: 23px; }
+.large-display .settings-page .setting-line label, .large-display .settings-page .setting-line checkbutton { font-size: 23px; }
+.large-display .settings-page .settings-theme-choice { font-size: 24px; min-height: 72px; }
+.large-display .settings-page scale value { font-size: 21px; }
+.large-display .roon-subnav button { padding-left: 5px; padding-right: 5px; }
+.large-display .source-volume { font-size: 400px; }
+.large-display .source-mute { min-width: 240px; min-height: 82px; font-size: 26px; }
+.theme-roon .source-step { color: #817aeb; }
+.large-display.portrait .now-volume-row { margin-top: 30px; }
+.large-display.portrait .now-mute { margin-top: 36px; }
+.portrait.large-portrait .roon-page { padding-top: 21px; }
+.large-display.display-landscape .roon-page { padding-top: 5px; }
 .large-display .settings-select, .large-display .setting-line { min-height: 72px; font-size: 22px; }
 .large-display .settings-action { min-height: 82px; font-size: 22px; }
 .large-display .discovery-card .queue-title { font-size: 27px; }
@@ -687,13 +699,13 @@ class Display(Gtk.Application):
 
     def discover_utility_icon(self, clock=False):
         if not clock:
-            icon = FamilyIcon("settings", 34)
+            icon = FamilyIcon("settings", 38)
             icon.add_css_class("settings-icon")
             return icon
         # Draw outlines directly: symbolic theme recolouring can fill SVG holes.
-        icon = Gtk.DrawingArea(); icon.set_size_request(30 if clock else 34, 34)
+        icon = Gtk.DrawingArea(); icon.set_size_request(36, 38)
         def draw(_area, cr, width, height):
-            cr.save(); cr.translate(width / 2, height / 2)
+            cr.save(); cr.translate(width / 2, height / 2); cr.scale(1.12, 1.12)
             colour = (.53, .55, .56) if clock else ((.506, .478, .922) if self.settings_data.get("display_theme") == "roon" else (.431, .851, .682))
             cr.set_source_rgb(*colour); cr.set_line_width(2); cr.set_line_join(1); cr.set_line_cap(1)
             if clock:
@@ -819,6 +831,8 @@ class Display(Gtk.Application):
         reserved = max(560, 120 + sum(widget.measure(Gtk.Orientation.VERTICAL, max(1, width - 64))[0] for widget in (self.discover_toolbar, self.now_playing_centre, self.music_navigation))) if portrait else 0
         artwork_size = round(min(width - 64, max(160, height - reserved)) * .8) if portrait else (324 if width >= 1200 else min(280, max(220, height - 190)))
         self.artwork.set_size_request(artwork_size, artwork_size); self.artwork_button.set_size_request(artwork_size, artwork_size)
+        self.volume_row.set_halign(Gtk.Align.CENTER if portrait else Gtk.Align.FILL)
+        self.volume_row.set_size_request(round((width - 60) * .88) if portrait else -1, -1)
         if portrait:
             if self.artwork.get_parent() is self.artwork_button:
                 self.artwork_button.set_child(None); self.artwork_viewport.set_child(self.artwork); self.artwork_button.set_child(self.artwork_viewport)
@@ -933,7 +947,7 @@ class Display(Gtk.Application):
         self.prev.set_size_request(50, 50); self.prev.set_valign(Gtk.Align.CENTER); self.play.set_size_request(68, 68); self.play.set_valign(Gtk.Align.CENTER); self.next.set_size_request(50, 50); self.next.set_valign(Gtk.Align.CENTER)
         self.controls.append(self.library_add); self.controls.append(self.prev); self.controls.append(self.play); self.controls.append(self.next); centre.append(self.controls)
         self.library_message = self.label("", "browser-message", .5); self.library_message.set_wrap(True); self.library_message.set_visible(False); centre.append(self.library_message)
-        volume_row = Gtk.Box(spacing=10); self.volume_row = volume_row; self.mute = self.button("MUTE", self.toggle_audio_mute, "utility"); self.mute.set_size_request(62, 38); volume_row.append(self.mute); self.volume = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0, 100, 1); self.volume.add_css_class("volume"); self.volume.set_hexpand(True); self.volume.set_draw_value(False); self.volume.connect("value-changed", self.change_volume); volume_row.append(self.volume); self.volume_value = self.label("—", "time", 1); self.volume_value.add_css_class("volume-number"); volume_row.append(self.volume_value); centre.append(volume_row)
+        volume_row = Gtk.Box(spacing=10); volume_row.add_css_class("now-volume-row"); self.volume_row = volume_row; self.mute = self.button("MUTE", self.toggle_audio_mute, "utility"); self.mute.add_css_class("now-mute"); self.mute.set_size_request(62, 38); volume_row.append(self.mute); self.volume = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0, 100, 1); self.volume.add_css_class("volume"); self.volume.set_hexpand(True); self.volume.set_draw_value(False); self.volume.connect("value-changed", self.change_volume); volume_row.append(self.volume); self.volume_value = self.label("—", "time", 1); self.volume_value.add_css_class("volume-number"); volume_row.append(self.volume_value); centre.append(volume_row)
         content.append(centre); self.roon_views.add_named(content, "now")
         source = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12); source.add_css_class("source-view"); source.set_halign(Gtk.Align.CENTER); source.set_valign(Gtk.Align.CENTER); source.set_hexpand(True); source.set_vexpand(True)
         self.source_title = self.label("EXTERNAL INPUT", "source-title", .5); source.append(self.source_title)
@@ -1537,7 +1551,12 @@ class Display(Gtk.Application):
         else:
             self.image_misses = 0
         self.zone.set_text(zone.get("name") or "ROON"); self.title.set_text(lines.get("line1") or "Nothing playing"); self.artist.set_text(playing.get("display_artist") or re.split(r"\s+/\s+|\s*;\s*", lines.get("line2") or "Roon")[0])
-        play_icon = FamilyIcon("play" if external or zone.get("state") != "playing" else "pause", 42); self.play.set_child(play_icon); self.prev.set_sensitive(not external and bool(zone.get("can_previous"))); self.next.set_sensitive(not external and bool(zone.get("can_next"))); self.play.set_sensitive(bool(zone.get("can_play") or zone.get("can_pause")))
+        icon_name = "play" if external or zone.get("state") != "playing" else "pause"
+        icon_size = 80 if self.window.has_css_class("large-display") else 42
+        current_icon = self.play.get_child()
+        if not isinstance(current_icon, FamilyIcon) or current_icon.icon_name != icon_name or current_icon.get_pixel_size() != icon_size:
+            self.play.set_child(FamilyIcon(icon_name, icon_size))
+        self.prev.set_sensitive(not external and bool(zone.get("can_previous"))); self.next.set_sensitive(not external and bool(zone.get("can_next"))); self.play.set_sensitive(bool(zone.get("can_play") or zone.get("can_pause")))
         elapsed = int(zone.get("seek_position") or 0); length = int(playing.get("length") or 0); self.seek_updating = True; self.progress.set_range(0, max(1, length)); self.progress.set_value(min(elapsed, length) if length else 0); self.progress.set_sensitive(bool(zone.get("can_seek") and length)); self.seek_updating = False; self.elapsed.set_text(self.format_time(elapsed)); self.remaining.set_text("−" + self.format_time(max(0, length - elapsed)))
         output = zone.get("output") or {}; volume = output.get("volume") or {}; value = volume.get("value"); self.volume_updating = True; self.volume.set_sensitive(value is not None); self.volume.set_value(float(value or 0)); self.volume_value.set_text(str(value) if value is not None else "FIXED"); self.mute.set_sensitive(value is not None); self.mute.set_label("UNMUTE" if volume.get("is_muted") else "MUTE"); self.volume_updating = False
         text_layout = (self.title.get_text(), self.artist.get_text())
@@ -2342,9 +2361,8 @@ class Display(Gtk.Application):
             preview.append(stage)
             key = album.get("image_key"); self.browser_artwork_keys.append(key)
             if key:
-                self.browser_pictures.setdefault(key, []).append(picture)
-                if texture := self.queue_thumbnail_cache.get(key): picture.set_paintable(texture)
-                self.retry_visible_thumbnail(key)
+                # Large previews must not share the 256px scrolling-thumbnail cache.
+                self.load_preview_artwork(picture, key)
             else: square.set_child(self.browser_svg_icon("music"))
             title = self.label(album.get("title") or "Untitled", "surprise-title", .5); title.set_wrap(True); title.set_lines(2); title.set_max_width_chars(40); title.set_ellipsize(Pango.EllipsizeMode.END); title.set_justify(Gtk.Justification.CENTER); preview.append(title)
             artist = self.label(album.get("subtitle") or "", "surprise-artist", .5); artist.set_ellipsize(Pango.EllipsizeMode.END); artist.set_max_width_chars(40); preview.append(artist)
@@ -2453,6 +2471,10 @@ class Display(Gtk.Application):
     def browser_scrolled(self, *_):
         if self.browser_rendering or self.browser_loading or self.browser_scroll_restore is not None or getattr(self, "browser_scrub_timer", None): return
         self.schedule_scroll_artwork("browser", self.load_visible_browser_artwork)
+        self.schedule_scroll_artwork("scrubber", self.update_scrolled_scrubber)
+        if not self.browser_rendering: self.maybe_load_more_browser()
+
+    def update_scrolled_scrubber(self):
         if self.browser_state and self.browser_state.get("alpha_scrub"):
             value = self.browser_scroll.get_vadjustment().get_value()
             for card, item in getattr(self, "browser_cards", []):
@@ -2460,7 +2482,7 @@ class Display(Gtk.Application):
                 if valid and bounds.get_y() + bounds.get_height() > value:
                     self.sync_browser_scrubber(item); break
             if value < 40 and self.browser_state.get("offset", 0) > 0: self.request_browser("previous")
-        if not self.browser_rendering: self.maybe_load_more_browser()
+        return False
 
     def browser_previous_scroll(self, _controller, _dx, dy):
         if dy < 0 and self.browser_scroll.get_vadjustment().get_value() < 40 and (self.browser_state or {}).get("offset", 0) > 0 and not self.browser_loading:
@@ -2596,6 +2618,17 @@ class Display(Gtk.Application):
             image = get_bytes(url, timeout=2.5)
             GLib.idle_add(self.apply_queue_thumbnail, key, image)
 
+    def load_preview_artwork(self, picture, key):
+        def apply(image):
+            if image:
+                try: picture.set_paintable(Gdk.Texture.new_from_bytes(GLib.Bytes.new(image)))
+                except GLib.Error: pass
+            return False
+        def load():
+            url = f"{ROON}/api/discovery/image?key={quote(key[9:], safe='')}" if key.startswith("discover:") else f"{ROON}/api/image?key={quote(key, safe='')}&size=900"
+            GLib.idle_add(apply, get_bytes(url, timeout=5))
+        threading.Thread(target=load, daemon=True).start()
+
     def apply_queue_thumbnail(self, key, image):
         self.queue_thumbnail_pending.discard(key)
         if not image:
@@ -2630,7 +2663,7 @@ class Display(Gtk.Application):
     def note_missing_artwork(self):
         self.image_misses += 1
         if self.image_misses >= 5:
-            self.artwork.set_paintable(None)
+            self.set_browser_placeholder(self.artwork)
             self.image_key = None
 
     def open_settings(self, *_): self.settings_open = True; self.last_system_fetch = 0; self.stack.set_visible_child_name("settings"); self.start_poll()

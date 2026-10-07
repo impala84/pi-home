@@ -31,6 +31,21 @@ class Entry:
 
 
 class PortraitRefinementTests(unittest.TestCase):
+    def test_large_preview_avoids_thumbnail_cache_and_requests_900px(self):
+        code = SOURCE.read_text()
+        render = code.split('if items and data.get("surprise_preview"):', 1)[1].split('title = self.label', 1)[0]
+        self.assertIn('self.load_preview_artwork(picture, key)', render)
+        self.assertNotIn('queue_thumbnail_cache', render)
+        preview = code.split('def load_preview_artwork', 1)[1].split('def apply_queue_thumbnail', 1)[0]
+        self.assertIn('&size=900', preview)
+
+    def test_large_settings_and_dynamic_play_icon_keep_their_size(self):
+        code = SOURCE.read_text()
+        self.assertIn('.large-display .settings-page .settings-title { font-size: 44px;', code)
+        self.assertIn('.large-display .settings-header .settings-utilities button { font-size: 23px;', code)
+        self.assertIn('icon_size = 80 if self.window.has_css_class("large-display") else 42', code)
+        self.assertIn('self.volume_row.set_size_request(round((width - 60) * .88) if portrait else -1', code)
+
     def test_carousel_end_changes_only_the_trailing_margin(self):
         track = Mock()
         scroller = SimpleNamespace(get_mapped=lambda: True, compute_bounds=lambda _: (True, SimpleNamespace(get_x=lambda: 165)))
@@ -44,14 +59,15 @@ class PortraitRefinementTests(unittest.TestCase):
         import math
         now = [0.0]; callbacks = []
         owner = SimpleNamespace(elastic_offset=15.0, spring_timer=None, queue_draw=Mock())
+        owner.add_tick_callback = lambda callback: callbacks.append(callback) or 1
         owner.cancel_spring = lambda: setattr(owner, "elastic_offset", 0.0)
         glib = SimpleNamespace(timeout_add=lambda ms, callback: callbacks.append(callback) or 1)
         native_method("spring_back", {"GLib": glib, "time": SimpleNamespace(monotonic=lambda: now[0]), "math": math})(owner)
-        now[0] = .08; self.assertTrue(callbacks[0]())
+        now[0] = .08; self.assertTrue(callbacks[0](None, None))
         self.assertLess(abs(owner.elastic_offset), 15)
-        now[0] = .2; self.assertTrue(callbacks[0]())
+        now[0] = .2; self.assertTrue(callbacks[0](None, None))
         self.assertLess(owner.elastic_offset, 0)
-        now[0] = .56; self.assertFalse(callbacks[0]())
+        now[0] = .56; self.assertFalse(callbacks[0](None, None))
         self.assertEqual(owner.elastic_offset, 0)
         self.assertIsNone(owner.spring_timer)
 
