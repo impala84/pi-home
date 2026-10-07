@@ -158,7 +158,9 @@ if screen_width >= 1200 and screen_height < screen_width:
     child = display.discovery_list.get_first_child()
     while child:
         if child.has_css_class("recommendation-heading") or child.has_css_class("recommendation-album"):
-            assert abs(child.compute_bounds(page)[1].get_x() - first_cover.get_x()) <= 1
+            # GTK bounds include the label's CSS margin; text begins inside it.
+            text_left = child.compute_bounds(page)[1].get_x() + child.get_style_context().get_margin().left
+            assert abs(text_left - first_cover.get_x()) <= 1, (text_left, first_cover.get_x())
         child = child.get_next_sibling()
     for row in display.discovery_daily_sections.values():
         bounds = row.compute_bounds(page)[1]
