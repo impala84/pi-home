@@ -62,7 +62,10 @@ class ElasticCarouselTrack(Gtk.Box):
 
     def spring_back(self):
         initial = self.elastic_offset
-        self.cancel_spring(); self.elastic_offset = initial
+        self.cancel_spring()
+        # Hidden pages have no frame clock; leave them at rest immediately.
+        if not self.get_mapped(): return
+        self.elastic_offset = initial
         started = time.monotonic()
         def frame(_widget, _clock):
             elapsed = time.monotonic() - started

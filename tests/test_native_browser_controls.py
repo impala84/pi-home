@@ -58,7 +58,7 @@ class PortraitRefinementTests(unittest.TestCase):
     def test_carousel_spring_animates_then_returns_exactly_to_rest(self):
         import math
         now = [0.0]; callbacks = []
-        owner = SimpleNamespace(elastic_offset=15.0, spring_timer=None, queue_draw=Mock())
+        owner = SimpleNamespace(elastic_offset=15.0, spring_timer=None, queue_draw=Mock(), get_mapped=lambda: True)
         owner.add_tick_callback = lambda callback: callbacks.append(callback) or 1
         owner.cancel_spring = lambda: setattr(owner, "elastic_offset", 0.0)
         glib = SimpleNamespace(timeout_add=lambda ms, callback: callbacks.append(callback) or 1)
