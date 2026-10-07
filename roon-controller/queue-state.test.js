@@ -16,13 +16,13 @@ test('keeps a subscribed queue in order and exposes compact display fields', () 
   assert.equal(queue[1].is_current, false);
 });
 
-test('shows up to ten previous items before the current queue', () => {
-  const history = Array.from({length: 12}, (_, index) => ({queue_item_id: index, title: `Past ${index}`}));
-  const queue = publicQueueItems([{queue_item_id: 20, title: 'Current'}], history);
-  assert.equal(queue.length, 11);
+test('shows up to thirty previous items before the current queue', () => {
+  const history = Array.from({length: 32}, (_, index) => ({queue_item_id: index, title: `Past ${index}`}));
+  const queue = publicQueueItems([{queue_item_id: 40, title: 'Current'}], history);
+  assert.equal(queue.length, 31);
   assert.equal(queue[0].queue_item_id, 2);
-  assert.equal(queue[9].is_previous, true);
-  assert.equal(queue[10].is_current, true);
+  assert.equal(queue[29].is_previous, true);
+  assert.equal(queue[30].is_current, true);
 });
 
 test('retains a departed current item as bounded history', () => {
@@ -30,10 +30,11 @@ test('retains a departed current item as bounded history', () => {
   state = updateQueueState('Subscribed', {items: [{queue_item_id: 2}, {queue_item_id: 3}]}, state.items, state.history);
   assert.deepEqual(state.items.map(item => item.queue_item_id), [2, 3]);
   assert.deepEqual(state.history.map(item => item.queue_item_id), [1]);
-  for (let id = 3; id < 15; id += 1) {
+  for (let id = 3; id < 45; id += 1) {
     state = updateQueueState('Subscribed', {items: [{queue_item_id: id}]}, state.items, state.history);
   }
-  assert.equal(state.history.length, 10);
+  assert.equal(state.history.length, 30);
+  assert.equal(state.history[0].queue_item_id, 14);
 });
 
 test('accepts incremental queue changes without disturbing order', () => {

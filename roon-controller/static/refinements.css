@@ -48,6 +48,12 @@ h1 {
 }
 .transport .library-action svg { fill: transparent; stroke: currentColor; stroke-width: 2.2; }
 .transport .library-action.filled svg { fill: var(--mint); stroke: var(--mint); }
+.transport .library-action.library-busy:disabled { opacity: 1; color: var(--mint); animation: library-pulse 900ms ease-in-out infinite alternate; }
+@keyframes library-pulse {
+  from { box-shadow: 0 0 0 1px color-mix(in srgb, var(--mint) 25%, transparent), 0 0 3px color-mix(in srgb, var(--mint) 10%, transparent); }
+  to { box-shadow: 0 0 0 3px color-mix(in srgb, var(--mint) 80%, transparent), 0 0 10px color-mix(in srgb, var(--mint) 35%, transparent); }
+}
+@media (prefers-reduced-motion: reduce) { .transport .library-action.library-busy:disabled { animation: none; box-shadow: 0 0 0 2px var(--mint); } }
 
 .transport .play svg {
   width: 42px;

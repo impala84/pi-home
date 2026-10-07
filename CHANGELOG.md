@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.1-beta.17 — 7 October 2026
+
+- Replaces the native library/favourite “Updating Roon…” row with a softly pulsing accent ring around the button; keeps confirmed results, errors and duplicate-request protection.
+- Adds equivalent web library-button feedback and accessible busy state; reduced-motion users get a steady ring.
+- Retains 30 previously played tracks, bounded by a shared controller history limit. Current/upcoming subscription remains 100 and artwork cache limits are unchanged.
+- Includes beta.16 scroll springs, stronger action icons and 30px keyboard margins on both platforms. Source-only beta.
+
 ## 1.1.1-beta.16 — 7 October 2026
 
 - Slightly increases resisted boundary pull to 26px with a gentler 550ms spring; adds the same paint-only return to vertical lists, Home and Settings.

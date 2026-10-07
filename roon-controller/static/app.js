@@ -504,7 +504,7 @@ function renderDetails(info) {
   const library = $('library-add');
   library.hidden = !(info.album || fallback.line3);
   library.classList.toggle('filled', info.library_status === 'in_library');
-  library.disabled = info.status === 'loading';
+  library.disabled = info.status === 'loading' || library.classList.contains('library-busy');
   library.title = info.library_status === 'in_library' ? 'Album is in your library' : 'Add to Library';
   const metadata = info.metadata || {}; const facts = $('details-facts'); facts.replaceChildren();
   $('details-writeup').textContent = metadata.writeup || '';
@@ -536,13 +536,14 @@ function renderDetails(info) {
 }
 
 $('library-add').onclick = async () => {
-  const button = $('library-add'); if (button.classList.contains('filled')) return; button.disabled = true;
+  const button = $('library-add'); if (button.classList.contains('filled') || button.classList.contains('library-busy')) return; button.disabled = true;
+  button.classList.add('library-busy'); button.setAttribute('aria-busy', 'true');
   try {
     const response = await fetch(api('/api/library/add'), {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'});
     if (!response.ok) throw new Error('Roon could not add this album');
     const result = await response.json();
     if (result.added || result.already_in_library) button.classList.add('filled');
-  } finally { button.disabled = false; }
+  } finally { button.classList.remove('library-busy'); button.removeAttribute('aria-busy'); button.disabled = false; }
 };
 
 initDiscover();

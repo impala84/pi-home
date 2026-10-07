@@ -426,6 +426,20 @@ display.artwork.set_filename(str(fixture_art("now-playing", "NOW PLAYING")))
 display.adapt_display()
 display.render_bluos_inputs({"inputs": [{"id": "tv", "name": "Watch TV"}, {"id": "rega", "name": "Rega P3"}]}, True)
 capture("now-playing")
+button_bounds = display.library_add.compute_bounds(window)[1]
+display.library_add.set_sensitive(False); display.set_library_busy(True)
+assert display.library_add.has_css_class("library-busy")
+capture("library-busy")
+capture("library-busy-next")
+if Gtk.Settings.get_default().get_property("gtk-enable-animations"):
+    crop = f"{int(button_bounds.get_width()) + 24}x{int(button_bounds.get_height()) + 24}+{int(button_bounds.get_x()) - 12}+{int(button_bounds.get_y()) - 12}"
+    frames = [subprocess.check_output(["convert", str(OUTPUT / f"{name}.png"), "-crop", crop, "rgb:-"]) for name in ("library-busy", "library-busy-next")]
+    assert frames[0] != frames[1], "Library ring must visibly animate, not just show a static outline"
+busy_bounds = display.library_add.compute_bounds(window)[1]
+assert button_bounds.get_y() == busy_bounds.get_y()
+assert not display.library_message.get_visible()
+display.set_library_busy(False); display.library_add.set_sensitive(True)
+assert not display.library_add.has_css_class("library-busy")
 capture_results = []
 native.post_json = lambda url, data, **kwargs: capture_results.append(data)
 display.capture_display("native-capture-check")
@@ -506,7 +520,7 @@ if screen_height > screen_width:
 settings = display.build_settings()
 window.set_child(settings)
 display.configure_settings_layout(screen_width, screen_height)
-display.device_status.set_text("v1.1.1-beta.16 Alpine")
+display.device_status.set_text("v1.1.1-beta.17 Alpine")
 display.touch_diagnostics.set_text("Memory 6.1%  ·  Load 0.65  ·  62.8°C  ·  Controller ready  ·  Bridge offline")
 capture("settings")
 assert window.get_width() == screen_width and window.get_height() == screen_height, (window.get_width(), window.get_height())
