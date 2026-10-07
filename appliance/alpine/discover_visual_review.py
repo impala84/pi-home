@@ -152,6 +152,7 @@ daily = {
 }
 render("daily", daily)
 capture("daily-mixes")
+assert "discover:" + daily["groups"][0]["seed"]["artwork_key"] not in display.discovery_pictures
 if screen_height > screen_width:
     assert "recommendations" not in display.discovery_daily_sections
     display.select_discovery_secondary("recommendations")
@@ -242,6 +243,19 @@ def browse_fixture(section, labels):
 browse_fixture("albums", False)
 settle()
 capture("browse")
+if screen_width >= 1000 and screen_height < screen_width:
+    tabs = display.discover_subnav.compute_bounds(page)[1]
+    cog = display.music_settings_button.compute_bounds(page)[1]
+    clock = display.music_clock_button.compute_bounds(page)[1]
+    assert abs(tabs.get_x() + tabs.get_width() / 2 - (cog.get_x() + cog.get_width() + clock.get_x()) / 2) <= 3
+    display.settings_data["landscape_music_clock"] = "full"
+    display.configure_music_clock()
+    display.music_full_clock.set_text("09:12")
+    capture("browse-full-clock")
+    assert display.music_clock_button.get_child() is display.music_full_clock
+    assert window.get_width() == screen_width
+    display.settings_data["landscape_music_clock"] = "icon"
+    display.configure_music_clock()
 while child := display.browser_list.get_first_child(): display.browser_list.remove(child)
 display.browser_list.append(display.loading_notice())
 capture("browse-loading")
@@ -390,6 +404,9 @@ if screen_height > screen_width:
 bus = display.build_bus(); window.set_child(bus)
 display.render_bus({"status": "ok", "stop_name": "Flamingo Valley", "stop_code": "83249", "services": [{"service": number, "arrivals": [{"minutes": value, "monitored": True} for value in (1, 14, 28)]} for number in ("40", "42")]})
 capture("bus-times")
+bus_clock_bounds = display.bus_clock.compute_bounds(bus)[1]
+bus_clock_right = bus_clock_bounds.get_x() + bus_clock_bounds.get_width()
+bus_clock_top = bus_clock_bounds.get_y()
 assert bus.get_first_child().get_first_child().get_tooltip_text() == "Settings"
 assert bus.get_first_child().get_last_child().get_child() is display.bus_clock
 first_arrivals = display.services.get_first_child().get_last_child()
@@ -415,6 +432,9 @@ home = display.build_home(); window.set_child(home)
 display.settings_data["display_theme"] = "roon"
 display.render_home({"status": "ok", "entities": [{"entity_id": f"{domain}.fixture{index}", "domain": domain, "name": name, "state": "on", "supports_level": domain in ("fan", "light"), "percentage": 50} for index, (domain, name) in enumerate((("fan", "Living Room Fan"), ("light", "Living Room"), ("switch", "Pi-Hole Master"), ("switch", "Pi-Hole Slave")))]})
 capture("home")
+home_clock_bounds = display.home_clock.compute_bounds(home)[1]
+assert abs(home_clock_bounds.get_x() + home_clock_bounds.get_width() - bus_clock_right) <= 1
+assert abs(home_clock_bounds.get_y() - bus_clock_top) <= 1
 assert home.get_first_child().get_first_child().get_tooltip_text() == "Settings"
 assert home.get_first_child().get_last_child().get_child() is display.home_clock
 icon = display.home_grid.get_first_child().get_first_child().get_first_child().get_child()
@@ -427,7 +447,7 @@ if screen_height > screen_width:
 settings = display.build_settings()
 window.set_child(settings)
 display.configure_settings_layout(screen_width, screen_height)
-display.device_status.set_text("v1.1.1-beta.10 Alpine")
+display.device_status.set_text("v1.1.1-beta.11 Alpine")
 display.touch_diagnostics.set_text("Memory 6.1%  ·  Load 0.65  ·  62.8°C  ·  Controller ready  ·  Bridge offline")
 capture("settings")
 assert window.get_width() == screen_width and window.get_height() == screen_height, (window.get_width(), window.get_height())

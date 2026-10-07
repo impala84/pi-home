@@ -299,6 +299,7 @@ def write_config(path: Path, config: Config) -> None:
         f"roon_display_name = {json.dumps(config.roon_display_name)}",
         f"display_theme = {json.dumps(config.display_theme)}",
         f"portrait_discovery_columns = {config.portrait_discovery_columns}",
+        f"landscape_music_clock = {json.dumps(config.landscape_music_clock)}",
         f"bus_enabled = {str(config.bus_enabled).lower()}",
         f"roon_now_playing_name = {json.dumps(config.roon_now_playing_name)}",
         f"roon_queue_name = {json.dumps(config.roon_queue_name)}",
@@ -878,6 +879,7 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
                     "roon_display_name": config.roon_display_name,
                     "display_theme": config.display_theme,
                     "portrait_discovery_columns": config.portrait_discovery_columns,
+                    "landscape_music_clock": config.landscape_music_clock,
                     "bus_enabled": config.bus_enabled,
                     "roon_now_playing_name": config.roon_now_playing_name,
                     "roon_queue_name": config.roon_queue_name,
@@ -1255,6 +1257,7 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
                     roon_display_name=str(data.get("roon_display_name", current.roon_display_name)).strip() or "Roon",
                     display_theme=str(data.get("display_theme", current.display_theme)),
                     portrait_discovery_columns=int(data.get("portrait_discovery_columns", current.portrait_discovery_columns)),
+                    landscape_music_clock=str(data.get("landscape_music_clock", current.landscape_music_clock)),
                     bus_enabled=bool(data.get("bus_enabled", current.bus_enabled)),
                     roon_now_playing_name=str(data.get("roon_now_playing_name", current.roon_now_playing_name)).strip() or "Now Playing",
                     roon_queue_name=str(data.get("roon_queue_name", current.roon_queue_name)).strip() or "Queue",
@@ -1288,6 +1291,8 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
                     raise ValueError("Choose Fresh Mint or Roon for the display style")
                 if candidate.portrait_discovery_columns not in {2, 3}:
                     raise ValueError("Choose 2 or 3 portrait Discover columns")
+                if candidate.landscape_music_clock not in {"icon", "full"}:
+                    raise ValueError("Choose Full clock or Clock icon")
                 if candidate.release_channel not in {"stable", "beta"}:
                     raise ValueError("Choose Stable or Beta for the release channel")
                 if len(candidate.roon_display_name) > 16:

@@ -1,6 +1,6 @@
 # Pi Home
 
-The next testing release is **1.1.1-beta.10**: consistent settings cog and analogue clock icons on music pages in portrait and landscape, plus a settings cog on Bus Times and Home with their full digital clocks retained. Includes all beta.9 refinements and loading safeguards. Select Beta in System → Software to receive it; Stable remains on 1.1.0.
+The next testing release is **1.1.1-beta.11**: centred landscape music menus, a saved full-clock/icon preference, aligned Bus Times/Home clocks, text-only Daily recommendation context and balanced landscape content spacing. Retains previous portrait refinements and loading safeguards. Select Beta in System → Software to receive it; Stable remains on 1.1.0.
 
 Beta updates are source-only releases: automated backend, controller, update-safety and native layout checks still run, but no downloadable disk image is built. For stable releases or explicit fresh-install testing, run the Alpine verification workflow on the release branch with **build_image** enabled, verify the image, then attach it to the release. The existing Alpine updater continues to require a successful verification run for the exact release commit.
 

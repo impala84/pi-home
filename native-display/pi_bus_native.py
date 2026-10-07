@@ -320,6 +320,9 @@ CSS += b"""
 .display-landscape .discover-toolbar .roon-subnav button { border-top: 0; border-bottom: 3px solid transparent; }
 .display-landscape .discover-toolbar .roon-subnav button.active { border-bottom-color: #5bcbd6; }
 .display-landscape.theme-roon .discover-toolbar .roon-subnav button.active { border-bottom-color: #817aeb; }
+.display-landscape .bus-page, .display-landscape .home-page { padding-top: 10px; padding-left: 28px; padding-right: 28px; }
+.recommendation-album { color: #fff; font-size: 18px; }
+.display-landscape .recommendation-heading { margin-left: 0; margin-right: 0; }
 .portrait .discover-toolbar .roon-subnav button { font-weight: 500; letter-spacing: 0; padding: 4px 0; min-height: 38px; }
 .portrait .discover-toolbar .roon-subnav button.active { color: #fff; }
 .portrait .browser-sidebar { padding: 0 0 14px; }
@@ -622,6 +625,7 @@ class Display(Gtk.Application):
         self.discover_toolbar.set_margin_end(28 if not portrait and width >= 1200 else 0)
         self.discover_toolbar.set_spacing(8 if portrait and width < 600 else 12)
         self.music_header_overlay.set_visible(False)
+        if hasattr(self, "configure_music_clock"): self.configure_music_clock()
         self.portrait_music_tabs.set_visible(False)
         self.portrait_music_tabs.set_margin_end(24 if portrait else 0)
         self.portrait_music_tabs.set_margin_bottom((16 if width < 600 else 24) if portrait else 0)
@@ -713,9 +717,12 @@ class Display(Gtk.Application):
         settings.set_child(self.discover_utility_icon())
         settings.set_tooltip_text("Settings"); self.discover_toolbar.append(settings)
         self.discover_toolbar_tabs = Gtk.Box(); self.discover_toolbar_tabs.set_hexpand(True)
+        self.discover_toolbar_tabs.set_halign(Gtk.Align.CENTER)
         self.discover_toolbar.append(self.discover_toolbar_tabs)
         sleep = self.icon_button("preferences-system-time-symbolic", lambda *_: self.sleep(), "discover-utility discover-sleep")
         sleep.set_child(self.discover_utility_icon(clock=True))
+        self.music_settings_button = settings; self.music_clock_button = sleep
+        self.music_full_clock = self.label("--:--", "clock", 1)
         sleep.set_tooltip_text("Sleep"); self.discover_toolbar.append(sleep)
         self.discover_toolbar.set_visible(False); page.append(self.discover_toolbar)
         self.roon_views = Gtk.Stack(transition_type=Gtk.StackTransitionType.NONE, transition_duration=0); self.roon_views.set_vexpand(True)
@@ -978,6 +985,7 @@ class Display(Gtk.Application):
         current = datetime.now(TZ)
         now = current.strftime("%H:%M") if current.year >= 2024 else "--:--"
         self.bus_clock.set_text(now); self.roon_clock.set_text(now); self.home_clock.set_text(now); self.sleep_clock.set_text(now)
+        if hasattr(self, "music_full_clock"): self.music_full_clock.set_text(now)
         if now != getattr(self, "last_clock_time", None):
             self.last_clock_time = now
             if icon := getattr(self, "music_clock_icon", None): icon.queue_draw()
@@ -1372,6 +1380,15 @@ class Display(Gtk.Application):
         value = ((((self.state or {}).get("amplifier") or {}).get("volume")) or {}).get("value")
         if value is not None: threading.Thread(target=post_json, args=(ROON + "/api/bluos/volume", {"value": round(float(value) + amount)}), daemon=True).start()
 
+    def configure_music_clock(self):
+        if not hasattr(self, "music_clock_button"): return
+        full = not getattr(self, "responsive_portrait", False) and getattr(self, "viewport_width", 800) >= 1000 and self.settings_data.get("landscape_music_clock", "icon") == "full"
+        child = self.music_full_clock if full else self.music_clock_icon
+        if self.music_clock_button.get_child() is not child: self.music_clock_button.set_child(child)
+        reserve = 140 if full else 36
+        self.music_settings_button.set_size_request(reserve, -1)
+        self.music_clock_button.set_size_request(reserve, -1)
+
     def sync_music_navigation(self, name=None):
         name = name or self.roon_views.get_visible_child_name()
         exploring = self.discovery_active and name in {"discover", "browse", "search"}
@@ -1380,6 +1397,7 @@ class Display(Gtk.Application):
         portrait = getattr(self, "responsive_portrait", False)
         self.discover_toolbar.set_visible(True)
         self.music_header_overlay.set_visible(False)
+        if hasattr(self, "configure_music_clock"): self.configure_music_clock()
         self.portrait_music_tabs.set_visible(False)
 
     def set_roon_view(self, name):
@@ -1496,8 +1514,8 @@ class Display(Gtk.Application):
         self.discovery_cards = []
         self.discovery_card_scrollers = {}
         self.sync_discovery_sidebar()
-        self.discovery_body.set_margin_end(0)
-        self.discovery_list.set_margin_top(10 if portrait_grid and self.discovery_section == "releases" else 0)
+        self.discovery_body.set_margin_end(0 if portrait_grid else 28 if getattr(self, "viewport_width", 800) >= 1200 else 0)
+        self.discovery_list.set_margin_top(10 if portrait_grid and self.discovery_section == "releases" else 5 if not portrait_grid and getattr(self, "discovery_section", "") in {"recent", "daily", "releases"} else 0)
         if data.get("status") != "ready":
             self.discovery_list.append(self.loading_notice() if data.get("status") == "loading" else self.label(data.get("message", "Discover is unavailable."), "browser-message")); return False
         if self.discovery_mix:
@@ -1522,12 +1540,12 @@ class Display(Gtk.Application):
                 for item in items: content.append(self.discovery_track_row(item))
                 return
             daily = self.discovery_section == "daily"
-            if daily and seed and portrait_grid:
+            if daily and seed:
                 context = self.label(seed.get("title", "").upper(), "recommendation-album")
                 context.set_wrap(True); context.set_halign(Gtk.Align.FILL)
                 context.set_margin_bottom(14); content.append(context)
-            visible_items = ([dict(seed, _context_seed=True)] if daily and seed and not portrait_grid else []) + list(items)
-            column_spacing = 30 if portrait_grid else 18 if daily else 36 if self.discovery_section == "releases" else 24
+            visible_items = list(items)
+            column_spacing = 30 if portrait_grid or self.discovery_section == "releases" else 18 if daily else 24
             grid = Gtk.Grid(column_spacing=column_spacing, row_spacing=18 if daily else 20); grid.set_column_homogeneous(False); grid.set_halign(Gtk.Align.START); grid.set_hexpand(True); grid.set_valign(Gtk.Align.START); grid.set_vexpand(False)
             track = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=18) if daily and not portrait_grid else None
             section_cards = []
@@ -1551,7 +1569,7 @@ class Display(Gtk.Application):
                 # widen a column or push the following covers off-grid.
                 shell = Gtk.ScrolledWindow(); shell.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.NEVER); shell.set_propagate_natural_width(False); shell.set_propagate_natural_height(False); shell.set_min_content_width(size); shell.set_max_content_width(size); shell.set_min_content_height(card_height); shell.set_max_content_height(card_height); shell.set_size_request(size, card_height); shell.set_child(body)
                 card.set_child(shell); card.connect("clicked", lambda _button, value=item: self.open_discover("daily", value.get("id", "")) if value.get("kind") == "mix" else self.open_discovery_item(value.get("key")))
-                card.set_size_request(size if portrait_grid else size + 8, card_height if portrait_grid else card_height + 8)
+                card.set_size_request(size, card_height)
                 if track is not None:
                     track.append(card)
                 else: grid.attach(card, index % columns, index // columns, 1, 1)
@@ -1855,13 +1873,13 @@ class Display(Gtk.Application):
             gap = 30
             return columns, max(64, (available - gap * (columns - 1)) // columns)
         sidebar = section == "recent"
-        available = max(300, width - (170 if sidebar else 30))
+        available = max(300, width - (198 if sidebar else 56))
         columns = 4 if width >= 1000 else 2
-        gap = 24
+        gap = 30 if section == "releases" else 24
         # Browse is the visual benchmark. Recent needs substantially more air
         # around its sidebar, while New Releases can remain a little larger.
-        cap = 236 if sidebar else 266
-        size = max(140, min(cap, (available - gap * (columns - 1)) // columns - 12))
+        cap = 236 if sidebar else 1000
+        size = max(140, min(cap, (available - gap * (columns - 1)) // columns))
         return columns, size
 
     def browser_scrub_changed(self, scale):
