@@ -320,7 +320,7 @@ CSS += b"""
 .display-landscape .discover-toolbar .roon-subnav button { border-top: 0; border-bottom: 3px solid transparent; }
 .display-landscape .discover-toolbar .roon-subnav button.active { border-bottom-color: #5bcbd6; }
 .display-landscape.theme-roon .discover-toolbar .roon-subnav button.active { border-bottom-color: #817aeb; }
-.display-landscape .bus-page, .display-landscape .home-page { padding-top: 10px; padding-left: 28px; padding-right: 28px; }
+.display-landscape .bus-page, .display-landscape .home-page { padding-top: 8px; padding-left: 28px; padding-right: 28px; }
 .recommendation-album { color: #fff; font-size: 18px; }
 .display-landscape .recommendation-heading { margin-left: 0; margin-right: 0; }
 .display-landscape .discovery-card, .display-landscape .discovery-card:hover, .display-landscape .discovery-card:active { padding: 0; }
@@ -1387,6 +1387,7 @@ class Display(Gtk.Application):
         child = self.music_full_clock if full else self.music_clock_icon
         if self.music_clock_button.get_child() is not child: self.music_clock_button.set_child(child)
         reserve = 140 if full else 36
+        self.music_settings_button.get_child().set_halign(Gtk.Align.START)
         self.music_settings_button.set_size_request(reserve, -1)
         self.music_clock_button.set_size_request(reserve, -1)
 
