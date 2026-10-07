@@ -261,6 +261,21 @@ class NativeBrowserControlsTests(unittest.TestCase):
         for name in ("heart.svg", "heart-filled.svg", "heart-roon.svg", "heart-filled-roon.svg"):
             self.assertTrue((SOURCE.parent / "icons" / name).is_file())
 
+    def test_library_busy_pulses_button_and_clears_accessible_state(self):
+        button = Mock()
+        owner = SimpleNamespace(library_add=button)
+        gtk = SimpleNamespace(AccessibleState=SimpleNamespace(BUSY="busy"))
+        method = native_method("set_library_busy", {"Gtk": gtk})
+        method(owner, True)
+        button.add_css_class.assert_called_once_with("library-busy")
+        button.update_state.assert_called_with(["busy"], [True])
+        method(owner, False)
+        button.remove_css_class.assert_called_once_with("library-busy")
+        button.update_state.assert_called_with(["busy"], [False])
+        code = SOURCE.read_text()
+        self.assertNotIn('set_text("Updating Roon…")', code)
+        self.assertIn('self.library_pending = False\n                self.set_library_busy(False)', code)
+
     def test_now_playing_title_and_artist_fill_their_column_before_centering(self):
         code = SOURCE.read_text(encoding="utf-8")
         self.assertIn('self.title.set_hexpand(True); self.title.set_halign(Gtk.Align.FILL)', code)

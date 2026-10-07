@@ -1,5 +1,6 @@
 'use strict';
 const {displayArtist} = require('./artist-name');
+const QUEUE_HISTORY_LIMIT = 30;
 
 function queueItemsFromMessage(command, message, previous = []) {
   const data = message || {};
@@ -33,7 +34,7 @@ function queueItemsFromMessage(command, message, previous = []) {
 }
 
 function publicQueueItems(items, history = []) {
-  const previous = (history || []).slice(-10).map(item => ({...publicQueueItem(item), is_current: false, is_previous: true}));
+  const previous = (history || []).slice(-QUEUE_HISTORY_LIMIT).map(item => ({...publicQueueItem(item), is_current: false, is_previous: true}));
   return previous.concat((items || []).map((item, index) => ({
     ...publicQueueItem(item), is_current: index === 0, is_previous: false
   }))).filter(item => item.queue_item_id !== undefined && item.queue_item_id !== null);
@@ -59,7 +60,7 @@ function updateQueueState(command, message, items = [], history = [], limit = 10
       !nextItems.some(item => item.queue_item_id === previousCurrent.queue_item_id)) {
     nextHistory = nextHistory.filter(item => item.queue_item_id !== previousCurrent.queue_item_id);
     nextHistory.push(previousCurrent);
-    nextHistory = nextHistory.slice(-10);
+    nextHistory = nextHistory.slice(-QUEUE_HISTORY_LIMIT);
   }
   return {items: nextItems, history: nextHistory};
 }

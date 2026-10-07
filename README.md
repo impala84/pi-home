@@ -1,6 +1,6 @@
 # Pi Home
 
-The next testing release is **1.1.1-beta.16**: slightly bouncier horizontal and vertical touch boundaries without highlight lines, stronger/larger library and Surprise Me controls, and exact 30px keyboard side margins. Preserves queue limits and prior layouts. Select Beta in System → Software to receive it; Stable remains on 1.1.0.
+The next testing release is **1.1.1-beta.17**: library/favourite updates pulse the button ring without a loading text row; queue history now keeps 30 previous tracks. Includes beta.16 touch-scroll, action-icon and keyboard polish. Select Beta in System → Software to receive it; Stable remains on 1.1.0.
 
 Beta updates are source-only releases: automated backend, controller, update-safety and native layout checks still run, but no downloadable disk image is built. For stable releases or explicit fresh-install testing, run the Alpine verification workflow on the release branch with **build_image** enabled, verify the image, then attach it to the release. The existing Alpine updater continues to require a successful verification run for the exact release commit.
 Beta 4 also added an experimental Raspberry Pi OS Lite ARM64 appliance target alongside Alpine. See [Lite installation and A/B testing](appliance/raspberrypi/README.md) and [architecture review](docs/raspberrypi-lite-design.md).

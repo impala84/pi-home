@@ -487,6 +487,16 @@ CSS += ("""
 .home-grid { padding-top: 0; }
 .daily-track { padding-left: %dpx; }
 scrolledwindow overshoot, scrolledwindow undershoot { background: transparent; background-image: none; box-shadow: none; border: 0; }
+@keyframes library-pulse {
+  from { box-shadow: 0 0 0 1px alpha(#6ed9ae, .25), 0 0 3px alpha(#6ed9ae, .10); }
+  to { box-shadow: 0 0 0 3px alpha(#6ed9ae, .8), 0 0 10px alpha(#6ed9ae, .35); }
+}
+@keyframes library-pulse-roon {
+  from { box-shadow: 0 0 0 1px alpha(#817aeb, .25), 0 0 3px alpha(#817aeb, .10); }
+  to { box-shadow: 0 0 0 3px alpha(#817aeb, .8), 0 0 10px alpha(#817aeb, .35); }
+}
+.transport button.library-action.library-busy:disabled { opacity: 1; color: #6ed9ae; animation: library-pulse 900ms ease-in-out infinite alternate; }
+.theme-roon .transport button.library-action.library-busy:disabled { color: #817aeb; animation-name: library-pulse-roon; }
 """ % (APPLIANCE_PAGE_TOP, LANDSCAPE_PAGE_MARGIN, LANDSCAPE_PAGE_MARGIN,
        PORTRAIT_PAGE_MARGIN, PORTRAIT_PAGE_MARGIN, PANEL_STROKE, CAROUSEL_START_INSET)).encode()
 
@@ -2426,6 +2436,7 @@ class Display(Gtk.Application):
         has_album = bool(details.get("album")) and details.get("status") != "loading"
         self.library_add.set_visible(has_album)
         self.library_add.set_sensitive(has_album and self.library_status != "unknown" and not self.library_pending and not details.get("library_busy") and (self.library_status != "in_library" or self.library_favorite is not None))
+        self.set_library_busy(self.library_pending or bool(details.get("library_busy")))
         self.set_library_icon(self.library_favorite is True)
         metadata = details.get("metadata") or {}
         writeup = metadata.get("writeup") or ""; self.detail_writeup.set_text(writeup); self.detail_writeup.set_visible(bool(writeup))
@@ -2634,7 +2645,8 @@ class Display(Gtk.Application):
         if favorite_action and self.library_favorite is None: return
         payload = {"album_id": album_id}
         if favorite_action: payload["favorite"] = not self.library_favorite
-        self.library_pending = True; self.library_message.set_text("Updating Roon…"); self.library_message.set_visible(True)
+        self.library_pending = True; self.library_message.set_visible(False)
+        self.set_library_busy(True)
         self.library_add.set_sensitive(False)
         def run():
             try:
@@ -2646,6 +2658,7 @@ class Display(Gtk.Application):
             except Exception: result = {"error": "Roon did not confirm the change. Check Roon before retrying."}
             def finish():
                 self.library_pending = False
+                self.set_library_busy(False)
                 if album_id == self.library_album_id:
                     if result.get("library_status"):
                         self.library_status = result["library_status"]; self.library_favorite = result.get("favorite"); self.set_library_icon(self.library_favorite is True)
@@ -2655,6 +2668,10 @@ class Display(Gtk.Application):
                 return False
             GLib.idle_add(finish)
         threading.Thread(target=run, daemon=True).start()
+
+    def set_library_busy(self, busy):
+        (self.library_add.add_css_class if busy else self.library_add.remove_css_class)("library-busy")
+        self.library_add.update_state([Gtk.AccessibleState.BUSY], [busy])
 
     def set_library_icon(self, filled):
         if getattr(self, "library_status", "unknown") != "in_library":
