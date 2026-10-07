@@ -28,11 +28,15 @@ class FamilyIcon(Gtk.Image):
         self._refresh('#817aeb')
 
     def _refresh(self, colour):
-        key = (self.icon_name, colour, self.filled)
+        # Rasterise above the requested optical size, including large 10-inch
+        # portrait Home icons. Never upscale a fixed small texture.
+        resolution = max(128, self.get_pixel_size() * 2)
+        key = (self.icon_name, colour, self.filled, resolution)
         if key not in self._textures:
             path = ASSETS / (self.icon_name + '-symbolic.svg')
             if not path.exists(): path = ASSETS / 'music-symbolic.svg'
             svg = path.read_text().replace('currentColor', colour)
+            svg = svg.replace('width="128" height="128"', f'width="{resolution}" height="{resolution}"')
             if self.filled: svg = svg.replace('fill="none"', 'fill="' + colour + '"', 1)
             self._textures[key] = Gdk.Texture.new_from_bytes(GLib.Bytes.new(svg.encode()))
         self.set_from_paintable(self._textures[key])
