@@ -432,6 +432,10 @@ display.artwork.set_filename(str(fixture_art("now-playing", "NOW PLAYING")))
 display.adapt_display()
 display.render_bluos_inputs({"inputs": [{"id": "tv", "name": "Watch TV"}, {"id": "rega", "name": "Rega P3"}]}, True)
 capture("now-playing")
+if min(screen_width, screen_height) >= 1000:
+    for control in (display.library_add, display.prev, display.next):
+        assert control.get_width() == control.get_height(), (control.get_width(), control.get_height())
+        assert control.get_width() >= 120
 button_bounds = display.library_add.compute_bounds(window)[1]
 display.library_add.set_sensitive(False); display.set_library_busy(True)
 assert display.library_add.has_css_class("library-busy")

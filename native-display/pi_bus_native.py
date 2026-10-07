@@ -496,6 +496,7 @@ scrolledwindow overshoot, scrolledwindow undershoot { background: transparent; b
 .large-display .transport button { min-width: 120px; min-height: 120px; border-radius: 60px; }
 .large-display .transport .play { min-width: 150px; min-height: 150px; border-radius: 75px; }
 .large-display .utility, .large-display .browser-back { min-width: 150px; min-height: 72px; font-size: 21px; padding: 12px 24px; }
+.large-display .transport button.library-action { min-width: 120px; min-height: 120px; padding: 0; border-radius: 60px; }
 .large-display .settings-title { font-size: 44px; }
 .large-display .settings-version, .large-display .settings-diagnostic { font-size: 21px; }
 .large-display .settings-select, .large-display .setting-line { min-height: 72px; font-size: 22px; }
@@ -642,7 +643,8 @@ class Display(Gtk.Application):
         widget = Gtk.Button()
         if css:
             for name in css.split(): widget.add_css_class(name)
-        image = FamilyIcon(icon, 42 if "surprise-action" in css else 34); widget.set_child(image)
+        large = min(getattr(self, "viewport_width", 800), getattr(self, "viewport_height", 480)) >= 1000
+        image = FamilyIcon(icon, (64 if large else 42) if "surprise-action" in css else 34); widget.set_child(image)
         caption = {"previous": "Previous track", "next": "Next track", "play": "Play", "pause": "Pause", "refresh": "Refresh", "remove": "Volume down", "add": "Add"}.get(image.icon_name, image.icon_name.title())
         widget.set_tooltip_text(caption)
         widget.update_property([Gtk.AccessibleProperty.LABEL], [caption])
@@ -652,7 +654,8 @@ class Display(Gtk.Application):
     def labelled_icon_button(self, name, text, callback, css="utility"):
         widget = self.button(text, callback, css)
         row = Gtk.Box(spacing=8); row.set_halign(Gtk.Align.CENTER)
-        row.append(FamilyIcon(name, 24)); row.append(self.label(text))
+        large = min(getattr(self, "viewport_width", 800), getattr(self, "viewport_height", 480)) >= 1000
+        row.append(FamilyIcon(name, 36 if large else 24)); row.append(self.label(text))
         widget.set_child(row)
         widget.set_tooltip_text(text)
         widget.update_property([Gtk.AccessibleProperty.LABEL], [text])
