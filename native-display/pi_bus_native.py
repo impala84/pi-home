@@ -287,6 +287,9 @@ CSS += b"""
 .portrait .browser-search-panel { margin-left: 0; margin-right: 0; }
 .browser-search-entry { min-height: 60px; font-size: 28px; padding: 8px 14px; background: #18211f; color: #f4f0e6; border-radius: 8px; }
 .browser-key { min-height: 44px; min-width: 40px; padding: 6px; background: #18211f; color: #f4f0e6; font-size: 20px; border-radius: 7px; }
+.compact-landscape .browser-search-panel { padding-top: 6px; padding-bottom: 6px; }
+.compact-landscape .browser-key { min-height: 32px; padding: 4px; font-size: 16px; }
+.compact-landscape .browser-search-entry { min-height: 40px; padding-top: 6px; padding-bottom: 6px; font-size: 20px; }
 .queue-duration, .high-resolution .queue-duration { font-size: 26px; min-width: 72px; padding-right: 16px; }
 .queue-play-badge { min-width: 52px; min-height: 52px; border-radius: 26px; }
 .browser-view { padding-left: 0; }
