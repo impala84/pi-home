@@ -528,7 +528,6 @@ scrolledwindow overshoot, scrolledwindow undershoot { background: transparent; b
 .large-display.display-landscape .roon-page { padding-top: 5px; }
 .compact-portrait .source-step { min-width: 64px; min-height: 64px; border-radius: 32px; }
 .compact-portrait .source-volume { font-size: 84px; }
-.compact-portrait .browser-sidebar { border-spacing: 4px; }
 .compact-portrait .browser-filter { padding-left: 2px; padding-right: 2px; }
 .compact-portrait .browser-back { min-width: 56px; padding-left: 8px; padding-right: 8px; }
 .large-display .settings-select, .large-display .setting-line { min-height: 72px; font-size: 22px; }
@@ -821,7 +820,7 @@ class Display(Gtk.Application):
         self.browser_sidebar_spacer.set_hexpand(portrait); self.browser_sidebar_spacer.set_vexpand(not portrait)
         for sidebar in (self.browser_sidebar, self.browser_discovery_sidebar, self.discovery_sidebar):
             sidebar.set_vexpand(not portrait); sidebar.set_valign(Gtk.Align.START if portrait else Gtk.Align.FILL)
-            sidebar.set_spacing(round(width * .036) if portrait else 2)
+            sidebar.set_spacing(4 if portrait and width < 600 else round(width * .036) if portrait else 2)
         # Portrait tabs are a real second row, not an overlay on the clock.
         for tabs in (self.roon_subnav, self.discover_subnav):
             parent = tabs.get_parent()
