@@ -35,10 +35,25 @@ class PortraitRefinementTests(unittest.TestCase):
         track = Mock()
         scroller = SimpleNamespace(get_mapped=lambda: True, compute_bounds=lambda _: (True, SimpleNamespace(get_x=lambda: 165)))
         owner = SimpleNamespace(window=object())
-        method = native_method("configure_carousel_end", {"LANDSCAPE_PAGE_MARGIN": 28, "CAROUSEL_START_INSET": 10})
+        method = native_method("configure_carousel_end", {"CAROUSEL_END_SPACE": 30})
         self.assertFalse(method(owner, scroller, track))
-        track.set_margin_end.assert_called_once_with(175)
+        track.set_margin_end.assert_called_once_with(30)
         track.set_margin_start.assert_not_called()
+
+    def test_carousel_spring_animates_then_returns_exactly_to_rest(self):
+        import math
+        now = [0.0]; callbacks = []
+        owner = SimpleNamespace(elastic_offset=15.0, spring_timer=None, queue_draw=Mock())
+        owner.cancel_spring = lambda: setattr(owner, "elastic_offset", 0.0)
+        glib = SimpleNamespace(timeout_add=lambda ms, callback: callbacks.append(callback) or 1)
+        native_method("spring_back", {"GLib": glib, "time": SimpleNamespace(monotonic=lambda: now[0]), "math": math})(owner)
+        now[0] = .08; self.assertTrue(callbacks[0]())
+        self.assertLess(abs(owner.elastic_offset), 15)
+        now[0] = .2; self.assertTrue(callbacks[0]())
+        self.assertLess(owner.elastic_offset, 0)
+        now[0] = .46; self.assertFalse(callbacks[0]())
+        self.assertEqual(owner.elastic_offset, 0)
+        self.assertIsNone(owner.spring_timer)
 
     def test_http_error_is_preserved_only_for_browse(self):
         import io, json, urllib.error
@@ -218,7 +233,8 @@ class NativeBrowserControlsTests(unittest.TestCase):
         code = SOURCE.read_text(encoding="utf-8")
         self.assertIn('scroller.set_kinetic_scrolling(True)', code)
         self.assertIn('scroller.set_overlay_scrolling(True)', code)
-        self.assertIn('Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=18)', code)
+        self.assertIn('super().__init__(orientation=Gtk.Orientation.HORIZONTAL, spacing=18)', code)
+        self.assertIn('track.attach_touch_pull(scroller)', code)
         self.assertIn('self.discovery_daily_sections.setdefault(section_key, scroller)', code)
         self.assertNotIn('"go-previous-symbolic"', code)
         self.assertNotIn('"go-next-symbolic"', code)

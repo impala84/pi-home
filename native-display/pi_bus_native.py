@@ -44,6 +44,68 @@ LANDSCAPE_PAGE_MARGIN = 28
 PORTRAIT_PAGE_MARGIN = 30
 PORTRAIT_CONTENT_GAP = 16
 CAROUSEL_START_INSET = 10
+CAROUSEL_END_SPACE = 30
+
+
+class ElasticCarouselTrack(Gtk.Box):
+    """Paint-only resisted touch pull; allocations and resting scroll stay intact."""
+    def __init__(self):
+        super().__init__(orientation=Gtk.Orientation.HORIZONTAL, spacing=18)
+        self.elastic_offset = 0.0
+        self.spring_timer = None
+        self.connect("unmap", self.cancel_spring)
+
+    def cancel_spring(self, *_):
+        if self.spring_timer is not None:
+            GLib.source_remove(self.spring_timer); self.spring_timer = None
+        self.elastic_offset = 0.0; self.queue_draw()
+
+    def spring_back(self):
+        initial = self.elastic_offset
+        self.cancel_spring(); self.elastic_offset = initial
+        started = time.monotonic()
+        def frame():
+            elapsed = time.monotonic() - started
+            if elapsed >= .45:
+                self.elastic_offset = 0.0; self.spring_timer = None; self.queue_draw(); return False
+            self.elastic_offset = initial * math.exp(-14 * elapsed) * math.cos(20 * elapsed)
+            self.queue_draw(); return True
+        self.spring_timer = GLib.timeout_add(16, frame)
+
+    def attach_touch_pull(self, scroller):
+        drag = Gtk.GestureDrag(); drag.set_touch_only(True)
+        drag.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
+        state = {"last": 0.0, "pull": 0.0, "claimed": False}
+        def begin(*_):
+            self.cancel_spring(); state.update(last=0.0, pull=0.0, claimed=False)
+        def update(gesture, x, y):
+            delta = x - state["last"]; state["last"] = x
+            if not state["claimed"] and (abs(x) < 6 or abs(x) <= abs(y)): return
+            adjustment = scroller.get_hadjustment()
+            lower = adjustment.get_lower(); upper = max(lower, adjustment.get_upper() - adjustment.get_page_size())
+            value = adjustment.get_value()
+            outward = (value <= lower + .5 and delta > 0) or (value >= upper - .5 and delta < 0)
+            if not state["claimed"]:
+                if not outward or upper <= lower: return
+                gesture.set_state(Gtk.EventSequenceState.CLAIMED); state["claimed"] = True
+            if outward or state["pull"]:
+                previous = state["pull"]; state["pull"] += delta
+                if previous and previous * state["pull"] < 0: state["pull"] = 0.0
+                pull = state["pull"]
+                self.elastic_offset = math.copysign(18 * (1 - math.exp(-abs(pull) / 60)), pull) if pull else 0.0
+                self.queue_draw()
+            else:
+                adjustment.set_value(max(lower, min(upper, value - delta)))
+        drag.connect("drag-begin", begin); drag.connect("drag-update", update)
+        drag.connect("drag-end", lambda *_: self.spring_back())
+        drag.connect("cancel", lambda *_: self.spring_back())
+        scroller.add_controller(drag)
+        self.touch_pull = drag
+
+    def do_snapshot(self, snapshot):
+        snapshot.save()
+        point = Graphene.Point(); point.init(self.elastic_offset, 0)
+        snapshot.translate(point); Gtk.Box.do_snapshot(self, snapshot); snapshot.restore()
 
 def publish_display_source():
     """Identify the source tree actually executing on the physical display."""
@@ -395,8 +457,7 @@ CSS += ("""
 .service, .home-tile { border-width: %dpx; }
 .home-grid { padding-top: 0; }
 .daily-track { padding-left: %dpx; }
-.daily-scroll overshoot.left { background: transparent; box-shadow: inset 5px 0 6px -4px rgba(129,122,235,.28); }
-.daily-scroll overshoot.right { background: transparent; box-shadow: inset -5px 0 6px -4px rgba(129,122,235,.28); }
+.daily-scroll overshoot, .daily-scroll undershoot { background: transparent; background-image: none; box-shadow: none; border: 0; }
 """ % (APPLIANCE_PAGE_TOP, LANDSCAPE_PAGE_MARGIN, LANDSCAPE_PAGE_MARGIN,
        PORTRAIT_PAGE_MARGIN, PORTRAIT_PAGE_MARGIN, PANEL_STROKE, CAROUSEL_START_INSET)).encode()
 
@@ -1551,9 +1612,7 @@ class Display(Gtk.Application):
     def configure_carousel_end(self, scroller, track):
         # Only the trailing margin changes. The leading CSS inset stays intact.
         if not scroller.get_mapped(): return False
-        bounds = scroller.compute_bounds(self.window)
-        if bounds[0]:
-            track.set_margin_end(max(LANDSCAPE_PAGE_MARGIN, round(bounds[1].get_x()) + CAROUSEL_START_INSET))
+        track.set_margin_end(CAROUSEL_END_SPACE)
         return False
 
     def render_discover(self, request, data):
@@ -1602,7 +1661,7 @@ class Display(Gtk.Application):
             visible_items = list(items)
             column_spacing = 30 if portrait_grid or self.discovery_section == "releases" else 18 if daily else 24
             grid = Gtk.Grid(column_spacing=column_spacing, row_spacing=18 if daily else 20); grid.set_column_homogeneous(False); grid.set_halign(Gtk.Align.START); grid.set_hexpand(True); grid.set_valign(Gtk.Align.START); grid.set_vexpand(False)
-            track = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=18) if daily and not portrait_grid else None
+            track = ElasticCarouselTrack() if daily and not portrait_grid else None
             section_cards = []
             if track: track.add_css_class("daily-track"); track.set_margin_end(0)
             for index, item in enumerate(visible_items):
@@ -1636,6 +1695,7 @@ class Display(Gtk.Application):
             if track is not None:
                 scroller = Gtk.ScrolledWindow(); scroller.add_css_class("daily-scroll"); scroller.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.NEVER); scroller.set_kinetic_scrolling(True); scroller.set_overlay_scrolling(True); scroller.set_propagate_natural_width(False); scroller.set_hexpand(True); scroller.set_margin_end(0); scroller.set_child(track)
                 scroller.get_hadjustment().connect("value-changed", self.load_visible_discovery_artwork)
+                track.attach_touch_pull(scroller)
                 scroller.connect("map", lambda widget, row=track: GLib.idle_add(self.configure_carousel_end, widget, row))
                 for card in section_cards: self.discovery_card_scrollers[id(card)] = scroller
                 content.append(scroller)

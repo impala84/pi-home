@@ -169,16 +169,25 @@ if screen_width >= 1200 and screen_height < screen_width:
         track = row.get_child()
         if isinstance(track, Gtk.Viewport): track = track.get_child()
         start_x = track.get_first_child().compute_bounds(page)[1].get_x()
-        assert abs(track.get_margin_end() - start_x) <= 1, (track.get_margin_end(), start_x)
+        assert track.get_margin_end() == native.CAROUSEL_END_SPACE == 30
         adjustment = row.get_hadjustment()
         adjustment.set_value(adjustment.get_upper() - adjustment.get_page_size())
         settle()
         final = track.get_last_child().compute_bounds(page)[1]
-        assert abs(screen_width - final.get_x() - final.get_width() - start_x) <= 2
+        assert abs(screen_width - final.get_x() - final.get_width() - 30) <= 2
         capture("daily-carousel-end-" + ("mixes" if row is display.discovery_daily_sections["mixes"] else "recommendations"))
         adjustment.set_value(adjustment.get_lower())
         settle()
         assert abs(track.get_first_child().compute_bounds(page)[1].get_x() - start_x) <= 1
+        # Exercise the actual GTK paint-only spring at both ends, independent
+        # of synthetic input delivery; physical touch feel still needs Pi testing.
+        for pull in (16.0, -16.0):
+            track.elastic_offset = pull; track.queue_draw(); track.spring_back()
+            settle()
+            assert abs(track.elastic_offset) < 16
+            time.sleep(.5); settle()
+            assert track.elastic_offset == 0
+            assert abs(track.get_first_child().compute_bounds(page)[1].get_x() - start_x) <= 1
 assert "discover:" + daily["groups"][0]["seed"]["artwork_key"] not in display.discovery_pictures
 if screen_height > screen_width:
     assert "recommendations" not in display.discovery_daily_sections
@@ -483,7 +492,7 @@ if screen_height > screen_width:
 settings = display.build_settings()
 window.set_child(settings)
 display.configure_settings_layout(screen_width, screen_height)
-display.device_status.set_text("v1.1.1-beta.14 Alpine")
+display.device_status.set_text("v1.1.1-beta.15 Alpine")
 display.touch_diagnostics.set_text("Memory 6.1%  ·  Load 0.65  ·  62.8°C  ·  Controller ready  ·  Bridge offline")
 capture("settings")
 assert window.get_width() == screen_width and window.get_height() == screen_height, (window.get_width(), window.get_height())
