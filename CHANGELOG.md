@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.1-beta.11 — 7 October 2026
+
+- Adds Display → Landscape music clock: icon or full digital clock when space permits.
+- Centres music menus between balanced utility areas; aligns Bus Times and Home clocks.
+- Uses text-only Daily recommendation context in landscape as well as portrait, with uppercase white album names.
+- Lowers landscape Recent, Daily and New Releases content by 5px and balances New Releases outer margins and column gaps.
+- Preserves portrait refinements and Browse sizing. Source-only beta, no disk image.
+
 ## 1.1.1-beta.10 — 7 October 2026
 
 - Keeps the same settings cog and analogue sleep clock visible on music pages in both landscape and portrait.

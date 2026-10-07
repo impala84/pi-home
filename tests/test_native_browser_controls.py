@@ -290,10 +290,10 @@ class NativeBrowserControlsTests(unittest.TestCase):
         self.assertEqual(columns,4)
         metrics=native_method("discovery_grid_metrics",{"Gdk":gdk})
         self.assertEqual(metrics(SimpleNamespace(),"recent"),(4,236))
-        self.assertEqual(metrics(SimpleNamespace(),"releases"),(4,266))
+        self.assertEqual(metrics(SimpleNamespace(),"releases"),(4,283))
         source=SOURCE.read_text(encoding="utf-8")
         self.assertIn('columns, size = self.discovery_grid_metrics(self.discovery_section)',source)
-        self.assertIn('36 if self.discovery_section == "releases" else 24',source)
+        self.assertIn('30 if portrait_grid or self.discovery_section == "releases"',source)
         self.assertIn('size = min(212, size)',source)
         self.assertNotIn('MORE RECOMMENDATIONS',source)
 
@@ -438,7 +438,7 @@ class NativeBrowserControlsTests(unittest.TestCase):
     def test_daily_context_uses_a_heading_and_seed_as_a_fixed_grid_card(self):
         code=SOURCE.read_text(encoding='utf-8')
         self.assertIn('"BECAUSE YOU LISTENED TO…"',code)
-        self.assertIn('dict(seed, _context_seed=True)',code)
+        self.assertNotIn('dict(seed, _context_seed=True)',code)
         self.assertIn('item.get("_context_seed", False)',code)
         self.assertIn('card.add_css_class("recommendation-seed-card")',code)
         self.assertNotIn('recommendation-cover-label',code)

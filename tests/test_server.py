@@ -11,6 +11,15 @@ from pi_bus_time_display.server import State, active_wifi_ssid, automatic_displa
 
 
 class DisplayModeTests(unittest.TestCase):
+    def test_landscape_music_clock_persists_and_validates(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "config.toml"
+            for style in ("icon", "full"):
+                write_config(path, Config(landscape_music_clock=style))
+                self.assertEqual(load_config(path).landscape_music_clock, style)
+            write_config(path, Config(landscape_music_clock="invalid"))
+            with self.assertRaises(ValueError): load_config(path)
+
     def test_portrait_discovery_columns_persist_and_validate(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "config.toml"
