@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.1 Alpine Stable — 7 October 2026
+
+- Promotes the verified beta.18 application and full Raspberry Pi 5 ARM64 appliance image to the Stable channel, without further UI or interaction changes.
+- Includes unified iconography, button-local library/favourite pulse feedback, 30 previous queue tracks, responsive layout refinements and elastic touch-scroll boundaries.
+- Existing Alpine installations update through the Stable updater without reflashing; a full image with checksum and source/package manifests is provided for fresh installs.
+
 ## 1.1.1-beta.18 — 7 October 2026
 
 - Packages the beta.17 application as a full ARM64 Alpine appliance image for fresh Raspberry Pi 5 flashing, with checksum and exact source/package manifests.

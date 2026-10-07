@@ -1,8 +1,8 @@
 # Pi Home
 
-The next testing release is **1.1.1-beta.18**: full ARM64 Alpine appliance image for fresh Raspberry Pi 5 installations, with all beta.17 UI refinements and 30-track history. Fresh-image validation covers the current Daily heading/title layout. Select Beta in System → Software to receive it; Stable remains on 1.1.0.
+The current Alpine stable release is **1.1.1**: full ARM64 appliance image for fresh Raspberry Pi 5 installations, with the verified beta.18 UI refinements and 30-track history. Existing Alpine devices can receive it through System → Software on the Stable channel without reflashing. Raspberry Pi OS releases remain separate.
 
-Beta updates are source-only releases: automated backend, controller, update-safety and native layout checks still run, but no downloadable disk image is built. For stable releases or explicit fresh-install testing, run the Alpine verification workflow on the release branch with **build_image** enabled, verify the image, then attach it to the release. The existing Alpine updater continues to require a successful verification run for the exact release commit.
+Beta updates are normally source-only releases; full images are built for stable releases and explicit fresh-install requests. Automated backend, controller, update-safety and native layout checks run, followed by complete image validation with **build_image** enabled. The Alpine updater requires a successful verification run for the exact release commit.
 
 Pi Home is an independent Raspberry Pi touchscreen interface for Roon, with optional Singapore bus arrivals and Home Assistant controls. It runs a native GTK4 display in Cage/Wayland, alongside a phone/desktop web interface. Chromium is not required.
 
