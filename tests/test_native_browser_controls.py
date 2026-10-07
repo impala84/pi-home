@@ -171,6 +171,13 @@ class NativeBrowserControlsTests(unittest.TestCase):
         owner.discover_toolbar.set_visible.assert_called_with(True)
         owner.music_header_overlay.set_visible.assert_called_with(False)
 
+    def test_landscape_keeps_music_utility_icons(self):
+        owner = SimpleNamespace(responsive_portrait=False, discovery_active=True, roon_views=SimpleNamespace(get_visible_child_name=lambda: "browse"), roon_subnav=Mock(), discover_subnav=Mock(), browser_tab=Mock(), discover_toolbar=Mock(), music_header_overlay=Mock(), portrait_music_tabs=Mock())
+        for view in ("browse", "discover", "now", "queue"):
+            native_method("sync_music_navigation")(owner, view)
+            owner.discover_toolbar.set_visible.assert_called_with(True)
+            owner.music_header_overlay.set_visible.assert_called_with(False)
+
     def test_now_playing_library_control_is_a_bundled_heart_and_remains_visible_for_an_album(self):
         code = SOURCE.read_text(encoding="utf-8")
         self.assertIn('self.library_add = self.button("", self.add_current_album)', code)

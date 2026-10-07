@@ -604,12 +604,11 @@ class Display(Gtk.Application):
         # Portrait tabs are a real second row, not an overlay on the clock.
         for tabs in (self.roon_subnav, self.discover_subnav):
             parent = tabs.get_parent()
-            target = self.discover_toolbar_tabs if portrait else self.music_header_overlay
+            target = self.discover_toolbar_tabs
             if parent is not target:
                 if parent is self.music_header_overlay: parent.remove_overlay(tabs)
                 else: parent.remove(tabs)
-                if portrait: target.append(tabs)
-                else: target.add_overlay(tabs)
+                target.append(tabs)
             tabs.set_halign(Gtk.Align.FILL if portrait else Gtk.Align.CENTER)
             # Equal cells multiply the longest label's minimum width by five.
             # Share the spare space instead, keeping every full label readable.
@@ -618,10 +617,10 @@ class Display(Gtk.Application):
             while child:
                 child.set_hexpand(portrait); child = child.get_next_sibling()
         exploring = self.discovery_active and self.roon_views.get_visible_child_name() in {"discover", "browse", "search"}
-        self.discover_toolbar.set_visible(portrait)
+        self.discover_toolbar.set_visible(True)
         self.discover_toolbar.set_margin_end(0)
         self.discover_toolbar.set_spacing(8 if portrait and width < 600 else 12)
-        self.music_header_overlay.set_visible(not portrait)
+        self.music_header_overlay.set_visible(False)
         self.portrait_music_tabs.set_visible(False)
         self.portrait_music_tabs.set_margin_end(24 if portrait else 0)
         self.portrait_music_tabs.set_margin_bottom((16 if width < 600 else 24) if portrait else 0)
@@ -656,7 +655,9 @@ class Display(Gtk.Application):
     def header(self, centre, clock):
         row = Gtk.Box(spacing=10)
         if isinstance(centre, Gtk.Label): centre.set_xalign(0)
-        title = Gtk.Button(); title.add_css_class("header-hotspot"); title.add_css_class("header-title"); title.set_child(centre); title.connect("clicked", self.open_settings); row.append(title)
+        settings = self.icon_button("emblem-system-symbolic", lambda *_: self.open_settings(), "discover-utility")
+        settings.set_child(self.discover_utility_icon()); settings.set_tooltip_text("Settings"); row.append(settings)
+        row.append(centre)
         spacer = Gtk.Box(); spacer.set_hexpand(True); row.append(spacer)
         clock.set_xalign(1)
         clock_button = Gtk.Button(); clock_button.add_css_class("header-hotspot"); clock_button.add_css_class("header-clock"); clock_button.set_child(clock); clock_button.connect("clicked", self.sleep); row.append(clock_button)
@@ -1375,8 +1376,8 @@ class Display(Gtk.Application):
         self.roon_subnav.set_visible(not exploring); self.discover_subnav.set_visible(exploring)
         self.browser_tab.set_visible(False)
         portrait = getattr(self, "responsive_portrait", False)
-        self.discover_toolbar.set_visible(portrait)
-        self.music_header_overlay.set_visible(not portrait)
+        self.discover_toolbar.set_visible(True)
+        self.music_header_overlay.set_visible(False)
         self.portrait_music_tabs.set_visible(False)
 
     def set_roon_view(self, name):

@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.1-beta.10 — 7 October 2026
+
+- Keeps the same settings cog and analogue sleep clock visible on music pages in both landscape and portrait.
+- Adds the settings cog to Bus Times and Home while retaining their full digital clocks and bus stop information.
+- Retains all beta.9 refinements. Source-only beta; no disk image rebuild.
+
 ## 1.1.1-beta.9 — 7 October 2026
 
 - Enlarges portrait settings title, version, diagnostics and Back/Sleep controls; adds more separation below the title row.

@@ -219,7 +219,9 @@ def browse_fixture(section, labels):
             print("Width diagnostic:", name, widget.get_width(), tuple(widget.measure(Gtk.Orientation.HORIZONTAL, -1)), flush=True)
         capture("browse-overflow")
     assert window.get_width() == screen_width, (section, window.get_width(), screen_width)
-    clock = display.roon_clock.compute_bounds(page)[1]
+    assert display.discover_toolbar.get_visible()
+    assert not display.music_header_overlay.get_visible()
+    clock = display.discover_toolbar.get_last_child().compute_bounds(page)[1]
     assert clock.get_x() + clock.get_width() <= screen_width
     scrub = display.browser_scrubber.compute_bounds(page)[1]
     assert scrub.get_x() >= 0 and scrub.get_x() + scrub.get_width() <= screen_width - 4
@@ -388,6 +390,8 @@ if screen_height > screen_width:
 bus = display.build_bus(); window.set_child(bus)
 display.render_bus({"status": "ok", "stop_name": "Flamingo Valley", "stop_code": "83249", "services": [{"service": number, "arrivals": [{"minutes": value, "monitored": True} for value in (1, 14, 28)]} for number in ("40", "42")]})
 capture("bus-times")
+assert bus.get_first_child().get_first_child().get_tooltip_text() == "Settings"
+assert bus.get_first_child().get_last_child().get_child() is display.bus_clock
 first_arrivals = display.services.get_first_child().get_last_child()
 arrival_count = 0; arrival_child = first_arrivals.get_first_child()
 while arrival_child:
@@ -411,6 +415,8 @@ home = display.build_home(); window.set_child(home)
 display.settings_data["display_theme"] = "roon"
 display.render_home({"status": "ok", "entities": [{"entity_id": f"{domain}.fixture{index}", "domain": domain, "name": name, "state": "on", "supports_level": domain in ("fan", "light"), "percentage": 50} for index, (domain, name) in enumerate((("fan", "Living Room Fan"), ("light", "Living Room"), ("switch", "Pi-Hole Master"), ("switch", "Pi-Hole Slave")))]})
 capture("home")
+assert home.get_first_child().get_first_child().get_tooltip_text() == "Settings"
+assert home.get_first_child().get_last_child().get_child() is display.home_clock
 icon = display.home_grid.get_first_child().get_first_child().get_first_child().get_child()
 original_icon_size = max(64, min(240, round((screen_height - 190) / 4 * .7))) if screen_height > screen_width else 108 if max(screen_width, screen_height) >= 1200 else 72
 assert icon.get_pixel_size() == round(original_icon_size * .75)
@@ -421,7 +427,7 @@ if screen_height > screen_width:
 settings = display.build_settings()
 window.set_child(settings)
 display.configure_settings_layout(screen_width, screen_height)
-display.device_status.set_text("v1.1.1-beta.9 Alpine")
+display.device_status.set_text("v1.1.1-beta.10 Alpine")
 display.touch_diagnostics.set_text("Memory 6.1%  ·  Load 0.65  ·  62.8°C  ·  Controller ready  ·  Bridge offline")
 capture("settings")
 assert window.get_width() == screen_width and window.get_height() == screen_height, (window.get_width(), window.get_height())
