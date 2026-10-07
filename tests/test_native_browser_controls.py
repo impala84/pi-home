@@ -31,6 +31,14 @@ class Entry:
 
 
 class PortraitRefinementTests(unittest.TestCase):
+    def test_http_error_is_preserved_only_for_browse(self):
+        import io, json, urllib.error
+        for path, expected in (("/api/browse", {"error": "Roon Browse request timed out"}), ("/api/control", None)):
+            error = urllib.error.HTTPError("http://localhost" + path, 500, "error", {}, io.BytesIO(b'{"error":"Roon Browse request timed out"}'))
+            urllib_mock = SimpleNamespace(error=urllib.error, request=SimpleNamespace(Request=Mock(), urlopen=Mock(side_effect=error)))
+            result = native_method("post_json", {"urllib": urllib_mock, "json": json})("http://localhost" + path, {})
+            self.assertEqual(result, expected)
+
     def test_render_failure_unlocks_browser_navigation(self):
         owner = SimpleNamespace(browser_pending_request=None,
             render_browser=Mock(side_effect=ValueError("bad view")),
