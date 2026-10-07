@@ -13,7 +13,10 @@ native = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(native)
 
 Gtk.init()
-window = Gtk.Window(default_width=1280, default_height=720); window.add_css_class("touch-landscape")
+window = Gtk.Window(default_width=1280, default_height=720)
+# This fixture builds widgets directly rather than launching Display.activate;
+# mirror the real application's landscape classes before checking alignment.
+window.add_css_class("touch-landscape"); window.add_css_class("display-landscape")
 provider = Gtk.CssProvider(); provider.load_from_data(native.CSS)
 Gtk.StyleContext.add_provider_for_display(window.get_display(), provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 display = native.Display()
