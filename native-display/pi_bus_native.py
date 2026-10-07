@@ -1307,21 +1307,29 @@ class Display(Gtk.Application):
             node = snapshot.to_node()
             if node is None:
                 raise ValueError("Display produced no render node")
-            texture = self.window.get_renderer().render_texture(node, None)
+            # Export without GPU readback; live display acceleration is unchanged.
+            renderer = Gsk.CairoRenderer.new()
+            try:
+                if not renderer.realize_for_display(self.window.get_display()):
+                    raise RuntimeError("Screenshot renderer could not be initialized")
+                texture = renderer.render_texture(node, None)
+            finally:
+                if renderer.is_realized(): renderer.unrealize()
             image = bytes(texture.save_to_png_bytes().get_data())
             if len(image) > 8_388_608 or not image.startswith(b"\x89PNG\r\n\x1a\n"):
                 raise ValueError("Invalid screenshot")
             data["image"] = base64.b64encode(image).decode("ascii")
-        except (OSError, RuntimeError, TypeError, ValueError) as error:
+        except Exception as error:
             print(f"Pi Home display capture failed: {error}", flush=True)
             data["error"] = "The live display could not be rendered. Ensure the touchscreen application is running and try again."
-        post_json(BUS + "/api/device/display-capture", data, timeout=5)
+        if post_json(BUS + "/api/device/display-capture", data, timeout=15) is None:
+            print("Pi Home display capture delivery failed", flush=True)
         return False
 
     def apply_display_view_request(self, request):
         view = str(request.get("view", ""))
         action = request.get("browse_action")
-        if action in {"open", "back", "current"}:
+        if action in {"open", "back", "current", "section"}:
             self.set_mode("roon"); self.set_roon_view("browse")
             self.browser_action_anchor = None
             child = self.browser_list.get_first_child()
@@ -1329,7 +1337,8 @@ class Display(Gtk.Application):
                 if getattr(child, "browse_item_key", None) == request.get("item_key"):
                     self.browser_action_anchor = child; break
                 child = child.get_next_sibling()
-            self.request_browser(action, **({"item_key": request.get("item_key", "")} if action == "open" else {}))
+            payload = {"item_key": request.get("item_key", "")} if action == "open" else {"section": request.get("section", "albums")} if action == "section" else {}
+            self.request_browser(action, **payload)
             return False
         if view == "now":
             self.show_roon_now()
@@ -1568,7 +1577,7 @@ class Display(Gtk.Application):
             for arrival in service.get("arrivals", [])[:2 if portrait else 3]:
                 col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL); col.set_valign(Gtk.Align.CENTER); minutes = arrival.get("minutes"); value = self.label("Due" if minutes == 0 else str(minutes), "arrival", .5)
                 if portrait:
-                    due_size = min(172 if self.window.has_css_class("large-display") else 112, max(32, round(route_size * .55 if self.window.has_css_class("large-display") else route_size * .68)))
+                    due_size = min(344 if self.window.has_css_class("large-display") else 112, max(32, round(route_size * 1.1 if self.window.has_css_class("large-display") else route_size * .68)))
                     attrs = Pango.AttrList(); attrs.insert(Pango.attr_size_new_absolute(due_size * Pango.SCALE)); value.set_attributes(attrs)
                 col.append(value); col.append(self.label("MIN · LIVE" if arrival.get("monitored") else "MIN · AFTER", "arrival-sub", .5)); col.set_hexpand(True); arrivals.append(col)
             row.append(arrivals); self.services.append(row)

@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.3-beta.5 Alpine — 8 October 2026
+
+- Doubles arrival numeral sizing on large portrait bus layouts while preserving the compact-screen limits.
+- Replaces the backend's browse button grid with a dropdown and explicit Open button; adds Albums, Artists, Genres and Playlists section buttons.
+- Uses a dedicated Cairo screenshot renderer, leaving live display GPU acceleration unchanged. Extends capture/delivery timeouts and logs delivery errors rather than silently dropping them. Physical-Pi acceptance remains required.
+- Beta only; does not alter boot configuration, touch rotation or Wi-Fi.
+
 ## 1.1.3-beta.4 Alpine — 8 October 2026
 
 - Restores rounded gray track play tiles with purple triangles and anchors dark, themed playback menus beside the selected row.

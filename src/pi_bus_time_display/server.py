@@ -101,15 +101,15 @@ class State:
             "display_view_request": view_request,
         }
 
-    def request_display_view(self, view: str, browse_action: str = "", item_key: str = "") -> dict:
+    def request_display_view(self, view: str, browse_action: str = "", item_key: str = "", section: str = "") -> dict:
         request = {"id": secrets.token_urlsafe(12), "view": view}
         if browse_action:
-            request.update(browse_action=browse_action, item_key=item_key)
+            request.update(browse_action=browse_action, item_key=item_key, section=section)
         with self.lock:
             self.display_view_request = request
         return dict(request)
 
-    def capture_display(self, timeout: float = 15) -> bytes:
+    def capture_display(self, timeout: float = 35) -> bytes:
         request = {"id": secrets.token_urlsafe(24), "event": threading.Event(), "image": None, "error": None}
         with self.lock:
             if self.display_capture is not None:
@@ -1229,9 +1229,12 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
                             raise ValueError("Unknown display view")
                         browse_action = str(data.get("browse_action", ""))
                         item_key = str(data.get("item_key", ""))
-                        if browse_action not in {"", "open", "back", "current"} or len(item_key) > 2048:
+                        section = str(data.get("section", ""))
+                        if browse_action not in {"", "open", "back", "current", "section"} or len(item_key) > 2048:
                             raise ValueError("Unknown preview navigation")
-                        state.request_display_view(view, browse_action, item_key)
+                        if browse_action == "section" and section not in {"albums", "artists", "genres", "playlists"}:
+                            raise ValueError("Unknown preview section")
+                        state.request_display_view(view, browse_action, item_key, section)
                     if events:
                         events.emit("display.mode.changed", mode=mode)
                     self.send_json(200, json.dumps({"ok": True, "display_mode": mode, "display_view": view or None}).encode())

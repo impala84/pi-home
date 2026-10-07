@@ -46,10 +46,19 @@ let captureObjectUrl = null;
 const previewControls = document.createElement('div'); previewControls.className = 'action-buttons';
 const previewRefresh = document.createElement('button'); previewRefresh.type = 'button'; previewRefresh.className = 'secondary'; previewRefresh.textContent = 'Load current album / browse items';
 const previewBack = document.createElement('button'); previewBack.type = 'button'; previewBack.className = 'secondary'; previewBack.textContent = 'Back on display';
-const previewItems = document.createElement('div'); previewItems.className = 'physical-view-buttons';
-previewControls.append(previewRefresh, previewBack); document.getElementById('capture-display').before(previewControls, previewItems);
-async function previewNavigate(action, itemKey = '') {
-  const response = await fetch('/api/admin/display-mode', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({mode:'roon',view:'browse',browse_action:action,item_key:itemKey})});
+const previewItems = document.createElement('select'); previewItems.setAttribute('aria-label','Album or browse item'); previewItems.disabled = true;
+const previewOpen = document.createElement('button'); previewOpen.type = 'button'; previewOpen.className = 'secondary'; previewOpen.textContent = 'Open on display'; previewOpen.disabled = true;
+const previewLabel = document.createElement('label'); previewLabel.textContent = 'Album / browse item'; previewLabel.append(previewItems);
+previewControls.append(previewRefresh, previewOpen, previewBack); document.getElementById('capture-display').before(previewLabel, previewControls);
+previewOpen.addEventListener('click', () => { if (previewItems.value) previewNavigate('open',previewItems.value).catch(error => notify(error.message,true)); });
+const previewSections = document.createElement('div'); previewSections.className = 'action-buttons';
+for (const section of ['albums','artists','genres','playlists']) {
+  const button = document.createElement('button'); button.type = 'button'; button.className = 'secondary'; button.textContent = section[0].toUpperCase()+section.slice(1);
+  button.addEventListener('click', async () => { previewItems.replaceChildren(); previewItems.disabled = previewOpen.disabled = true; try { await previewNavigate('section','',section); } catch(error) { notify(error.message,true); } }); previewSections.append(button);
+}
+previewLabel.before(previewSections);
+async function previewNavigate(action, itemKey = '', section = '') {
+  const response = await fetch('/api/admin/display-mode', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({mode:'roon',view:'browse',browse_action:action,item_key:itemKey,section})});
   const data = await response.json(); if (!response.ok) throw new Error(data.error || 'Could not open display item');
   notify('Display navigation requested. When it has loaded, refresh the items or capture the screen.');
 }
@@ -62,9 +71,9 @@ previewRefresh.addEventListener('click', async () => {
     previewItems.replaceChildren();
     for (const item of data.items || []) {
       if (!item.item_key || item.hint === 'header') continue;
-      const button = document.createElement('button'); button.type = 'button'; button.className = 'secondary'; button.textContent = item.title || 'Untitled';
-      button.addEventListener('click', () => previewNavigate('open',item.item_key).catch(error => notify(error.message,true))); previewItems.append(button);
+      const option = document.createElement('option'); option.value = item.item_key; option.textContent = item.title || 'Untitled'; previewItems.append(option);
     }
+    previewItems.disabled = !previewItems.options.length; previewOpen.disabled = previewItems.disabled;
   } catch(error) { notify(error.message,true); } finally { previewRefresh.disabled = false; }
 });
 document.getElementById('capture-display').addEventListener('click', async () => {
