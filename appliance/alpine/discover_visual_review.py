@@ -174,7 +174,12 @@ if screen_width >= 1200 and screen_height < screen_width:
         adjustment.set_value(adjustment.get_upper() - adjustment.get_page_size())
         settle()
         final = track.get_last_child().compute_bounds(page)[1]
-        assert abs(screen_width - final.get_x() - final.get_width() - 30) <= 2
+        if adjustment.get_upper() > adjustment.get_page_size() + 1:
+            assert abs(screen_width - final.get_x() - final.get_width() - 30) <= 2
+        else:
+            # A wider 10-inch fixture may fit every card without scrolling.
+            # Preserve the start position; do not spread cards to fill it.
+            assert screen_width - final.get_x() - final.get_width() >= 30
         capture("daily-carousel-end-" + ("mixes" if row is display.discovery_daily_sections["mixes"] else "recommendations"))
         adjustment.set_value(adjustment.get_lower())
         settle()
