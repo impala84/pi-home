@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.1-beta.15 — 7 October 2026
+
+- Corrects horizontal Daily carousel end space to exactly 30px, not the leading screen coordinate.
+- Removes GTK overshoot/undershoot highlight lines.
+- Adds a capped 18px resisted touch pull and a 450ms damped spring-back at both ends; paint-only offsets leave the first-card resting position unchanged.
+- Preserves ordinary kinetic scrolling, vertical gestures and all beta.14 icon/layout refinements. Native geometry and animation checks added; source-only beta.
+
 ## 1.1.1-beta.14 — 7 October 2026
 
 - Establishes one bespoke currentColor SVG family across native and web controls, with a central catalogue and reusable adapters.
