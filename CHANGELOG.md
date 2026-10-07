@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.1-beta.13 — 7 October 2026
+
+- Adds trailing breathing room to landscape Daily carousels equal to their leading content margin; preserves first-card position.
+- Restores subtle native GTK touch overscroll feedback at both horizontal boundaries.
+- Removes empty Home status space and grid-top padding; Home and Bus Times share content-top offsets and page margins.
+- Uses the Home 2px large-panel stroke for Home and Bus Times, retaining colours and radii.
+- Consolidates shared layout constants and adds native start/end, panel-top and stroke checks. Source-only beta, no disk image.
+
 ## 1.1.1-beta.12 — 7 October 2026
 
 - Aligns landscape Daily recommendation headings and uppercase album names with the artwork left edge.

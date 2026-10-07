@@ -34,6 +34,14 @@ BUS = "http://127.0.0.1:8765"
 ROON = "http://127.0.0.1:8766"
 TZ = ZoneInfo("Asia/Singapore")
 
+# Shared appliance page grid; rendered into GTK CSS for older GTK versions too.
+PANEL_STROKE = 2
+APPLIANCE_PAGE_TOP = 8
+LANDSCAPE_PAGE_MARGIN = 28
+PORTRAIT_PAGE_MARGIN = 30
+PORTRAIT_CONTENT_GAP = 16
+CAROUSEL_START_INSET = 10
+
 def publish_display_source():
     """Identify the source tree actually executing on the physical display."""
     try:
@@ -373,6 +381,19 @@ CSS += b"""
 .settings-page .settings-action.reboot-action, .confirm-reboot { background: #8a5b24; color: #fff1d2; }
 .settings-page .settings-action.reboot-action:hover, .confirm-reboot:hover { background: #a76f2b; }
 """
+
+
+CSS += ("""
+.bus-page, .home-page { padding-top: %dpx; }
+.display-landscape .bus-page, .display-landscape .home-page { padding-left: %dpx; padding-right: %dpx; }
+.portrait .bus-page, .portrait .home-page { padding-left: %dpx; padding-right: %dpx; }
+.service, .home-tile { border-width: %dpx; }
+.home-grid { padding-top: 0; }
+.daily-track { padding-left: %dpx; }
+.daily-scroll overshoot.left { background: transparent; box-shadow: inset 5px 0 6px -4px rgba(129,122,235,.28); }
+.daily-scroll overshoot.right { background: transparent; box-shadow: inset -5px 0 6px -4px rgba(129,122,235,.28); }
+""" % (APPLIANCE_PAGE_TOP, LANDSCAPE_PAGE_MARGIN, LANDSCAPE_PAGE_MARGIN,
+       PORTRAIT_PAGE_MARGIN, PORTRAIT_PAGE_MARGIN, PANEL_STROKE, CAROUSEL_START_INSET)).encode()
 
 
 def get_json(url: str, timeout: float = .8):
@@ -1251,6 +1272,8 @@ class Display(Gtk.Application):
         while child := self.home_grid.get_first_child(): self.home_grid.remove(child)
         entities = home.get("entities", [])[:8]
         self.home_status.set_text("Home Assistant offline" if home.get("status") == "offline" else ("Choose Home Assistant devices in web settings" if not entities else ""))
+        self.home_status.set_visible(bool(self.home_status.get_text()))
+        self.home_grid.set_margin_top(PORTRAIT_CONTENT_GAP if portrait else 0)
         for index, entity in enumerate(entities):
             box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL if portrait else Gtk.Orientation.VERTICAL, spacing=18 if portrait else 4); box.add_css_class("home-tile"); box.set_vexpand(True)
             state = str(entity.get("state", "unknown")); detail = state.upper()
@@ -1287,7 +1310,7 @@ class Display(Gtk.Application):
         self.services.set_valign(Gtk.Align.START if portrait else Gtk.Align.FILL)
         self.services.set_vexpand(not portrait)
         self.bus_content.set_valign(Gtk.Align.START if portrait else Gtk.Align.FILL)
-        self.services.set_margin_top(16 if portrait else 0)
+        self.services.set_margin_top(PORTRAIT_CONTENT_GAP if portrait else 0)
         for index, service in enumerate(visible):
             row = Gtk.Box(spacing=12); row.add_css_class("service"); row.add_css_class("service-" + (service.get("colour") or {"40": "blue", "42": "green", "401": "violet"}.get(str(service.get("service")), "amber"))); row.set_vexpand(True)
             if len(visible) == 3: row.add_css_class("compact")
@@ -1503,6 +1526,14 @@ class Display(Gtk.Application):
             GLib.timeout_add(600 if data and data.get("status") == "loading" else 1200, self.request_discovery, request)
         return False
 
+    def configure_carousel_end(self, scroller, track):
+        # Only the trailing margin changes. The leading CSS inset stays intact.
+        if not scroller.get_mapped(): return False
+        bounds = scroller.compute_bounds(self.window)
+        if bounds[0]:
+            track.set_margin_end(max(LANDSCAPE_PAGE_MARGIN, round(bounds[1].get_x()) + CAROUSEL_START_INSET))
+        return False
+
     def render_discover(self, request, data):
         if request != self.discovery_request or not self.discovery_active or self.roon_views.get_visible_child_name() != "discover": return False
         data = data or {"status": "unavailable", "message": "Discover is unavailable. Normal Roon controls are unaffected."}
@@ -1583,6 +1614,7 @@ class Display(Gtk.Application):
             if track is not None:
                 scroller = Gtk.ScrolledWindow(); scroller.add_css_class("daily-scroll"); scroller.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.NEVER); scroller.set_kinetic_scrolling(True); scroller.set_overlay_scrolling(True); scroller.set_propagate_natural_width(False); scroller.set_hexpand(True); scroller.set_margin_end(0); scroller.set_child(track)
                 scroller.get_hadjustment().connect("value-changed", self.load_visible_discovery_artwork)
+                scroller.connect("map", lambda widget, row=track: GLib.idle_add(self.configure_carousel_end, widget, row))
                 for card in section_cards: self.discovery_card_scrollers[id(card)] = scroller
                 content.append(scroller)
                 if section_key: self.discovery_daily_sections.setdefault(section_key, scroller)
