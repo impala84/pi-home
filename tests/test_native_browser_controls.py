@@ -37,6 +37,15 @@ class Entry:
 
 
 class PortraitRefinementTests(unittest.TestCase):
+    def test_carousel_end_changes_only_the_trailing_margin(self):
+        track = Mock()
+        scroller = SimpleNamespace(get_mapped=lambda: True, compute_bounds=lambda _: (True, SimpleNamespace(get_x=lambda: 165)))
+        owner = SimpleNamespace(window=object())
+        method = native_method("configure_carousel_end", {"LANDSCAPE_PAGE_MARGIN": 28, "CAROUSEL_START_INSET": 10})
+        self.assertFalse(method(owner, scroller, track))
+        track.set_margin_end.assert_called_once_with(175)
+        track.set_margin_start.assert_not_called()
+
     def test_http_error_is_preserved_only_for_browse(self):
         import io, json, urllib.error
         for path, expected in (("/api/browse", {"error": "Roon Browse request timed out"}), ("/api/control", None)):
