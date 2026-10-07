@@ -66,22 +66,25 @@ class ElasticCarouselTrack(Gtk.Box):
         started = time.monotonic()
         def frame():
             elapsed = time.monotonic() - started
-            if elapsed >= .45:
+            if elapsed >= .55:
                 self.elastic_offset = 0.0; self.spring_timer = None; self.queue_draw(); return False
-            self.elastic_offset = initial * math.exp(-14 * elapsed) * math.cos(20 * elapsed)
+            self.elastic_offset = initial * math.exp(-9 * elapsed) * math.cos(20 * elapsed)
             self.queue_draw(); return True
         self.spring_timer = GLib.timeout_add(16, frame)
 
-    def attach_touch_pull(self, scroller):
+    def attach_touch_pull(self, scroller, vertical=False):
+        self.elastic_vertical = vertical
         drag = Gtk.GestureDrag(); drag.set_touch_only(True)
         drag.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
         state = {"last": 0.0, "pull": 0.0, "claimed": False}
         def begin(*_):
             self.cancel_spring(); state.update(last=0.0, pull=0.0, claimed=False)
         def update(gesture, x, y):
+            if vertical and self.get_ancestor(Gtk.ScrolledWindow) is not scroller: return
+            if vertical: x, y = y, x
             delta = x - state["last"]; state["last"] = x
             if not state["claimed"] and (abs(x) < 6 or abs(x) <= abs(y)): return
-            adjustment = scroller.get_hadjustment()
+            adjustment = scroller.get_vadjustment() if vertical else scroller.get_hadjustment()
             lower = adjustment.get_lower(); upper = max(lower, adjustment.get_upper() - adjustment.get_page_size())
             value = adjustment.get_value()
             outward = (value <= lower + .5 and delta > 0) or (value >= upper - .5 and delta < 0)
@@ -92,7 +95,7 @@ class ElasticCarouselTrack(Gtk.Box):
                 previous = state["pull"]; state["pull"] += delta
                 if previous and previous * state["pull"] < 0: state["pull"] = 0.0
                 pull = state["pull"]
-                self.elastic_offset = math.copysign(18 * (1 - math.exp(-abs(pull) / 60)), pull) if pull else 0.0
+                self.elastic_offset = math.copysign(26 * (1 - math.exp(-abs(pull) / 60)), pull) if pull else 0.0
                 self.queue_draw()
             else:
                 adjustment.set_value(max(lower, min(upper, value - delta)))
@@ -104,8 +107,28 @@ class ElasticCarouselTrack(Gtk.Box):
 
     def do_snapshot(self, snapshot):
         snapshot.save()
-        point = Graphene.Point(); point.init(self.elastic_offset, 0)
+        point = Graphene.Point(); point.init(0, self.elastic_offset) if getattr(self, "elastic_vertical", False) else point.init(self.elastic_offset, 0)
         snapshot.translate(point); Gtk.Box.do_snapshot(self, snapshot); snapshot.restore()
+
+class ElasticVerticalTrack(ElasticCarouselTrack):
+    def __init__(self, spacing=0):
+        super().__init__()
+        self.set_orientation(Gtk.Orientation.VERTICAL)
+        self.set_spacing(spacing)
+
+    def connect_scroll(self, scroller):
+        self.attach_touch_pull(scroller, vertical=True)
+        return self
+
+def elastic_vertical_scroll(scroller):
+    """Wrap non-track content without changing its layout or interaction targets."""
+    child = scroller.get_child()
+    if isinstance(child, Gtk.Viewport):
+        viewport = child; child = viewport.get_child(); viewport.set_child(None)
+    scroller.set_child(None)
+    track = ElasticVerticalTrack()
+    track.set_hexpand(True); track.set_vexpand(True)
+    track.append(child); scroller.set_child(track); track.connect_scroll(scroller)
 
 def publish_display_source():
     """Identify the source tree actually executing on the physical display."""
@@ -255,7 +278,9 @@ CSS += b"""
 .browser-scrubber { padding: 0; }
 .browser-surprise { font-size: 14px; }
 .surprise-action { min-width: 72px; min-height: 72px; padding: 8px; border-radius: 12px; background: #18211f; color: #6ed9ae; }
-.browser-search-panel { padding: 18px 24px; }
+.browser-search-panel { padding: 18px 0; margin-left: 2px; margin-right: 2px; }
+.touch-landscape .browser-search-panel { margin-left: 2px; margin-right: 30px; }
+.portrait .browser-search-panel { margin-left: 0; margin-right: 0; }
 .browser-search-entry { min-height: 60px; font-size: 28px; padding: 8px 14px; background: #18211f; color: #f4f0e6; border-radius: 8px; }
 .browser-key { min-height: 44px; min-width: 40px; padding: 6px; background: #18211f; color: #f4f0e6; font-size: 20px; border-radius: 7px; }
 .queue-duration, .high-resolution .queue-duration { font-size: 26px; min-width: 72px; padding-right: 16px; }
@@ -457,7 +482,7 @@ CSS += ("""
 .service, .home-tile { border-width: %dpx; }
 .home-grid { padding-top: 0; }
 .daily-track { padding-left: %dpx; }
-.daily-scroll overshoot, .daily-scroll undershoot { background: transparent; background-image: none; box-shadow: none; border: 0; }
+scrolledwindow overshoot, scrolledwindow undershoot { background: transparent; background-image: none; box-shadow: none; border: 0; }
 """ % (APPLIANCE_PAGE_TOP, LANDSCAPE_PAGE_MARGIN, LANDSCAPE_PAGE_MARGIN,
        PORTRAIT_PAGE_MARGIN, PORTRAIT_PAGE_MARGIN, PANEL_STROKE, CAROUSEL_START_INSET)).encode()
 
@@ -584,7 +609,7 @@ class Display(Gtk.Application):
         widget = Gtk.Button()
         if css:
             for name in css.split(): widget.add_css_class(name)
-        image = FamilyIcon(icon, 34); widget.set_child(image)
+        image = FamilyIcon(icon, 42 if "surprise-action" in css else 34); widget.set_child(image)
         caption = {"previous": "Previous track", "next": "Next track", "play": "Play", "pause": "Pause", "refresh": "Refresh", "remove": "Volume down", "add": "Add"}.get(image.icon_name, image.icon_name.title())
         widget.set_tooltip_text(caption)
         widget.update_property([Gtk.AccessibleProperty.LABEL], [caption])
@@ -831,9 +856,10 @@ class Display(Gtk.Application):
         self.discover_toolbar.set_visible(False); page.append(self.discover_toolbar)
         self.roon_views = Gtk.Stack(transition_type=Gtk.StackTransitionType.NONE, transition_duration=0); self.roon_views.set_vexpand(True)
         self.roon_views.set_hhomogeneous(False); self.roon_views.set_vhomogeneous(False)
-        self.discovery_list = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18)
+        self.discovery_list = ElasticVerticalTrack(spacing=18)
         self.discovery_scroll = Gtk.ScrolledWindow(); self.discovery_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC); self.discovery_scroll.set_kinetic_scrolling(True); self.discovery_scroll.set_overlay_scrolling(True); self.discovery_scroll.set_propagate_natural_height(False); self.discovery_scroll.set_min_content_height(1); self.discovery_scroll.set_size_request(-1, 1); self.discovery_scroll.set_vexpand(True); self.discovery_scroll.set_hexpand(True); self.discovery_scroll.set_child(self.discovery_list)
         self.discovery_scroll.add_css_class("discovery-scroll")
+        self.discovery_list.connect_scroll(self.discovery_scroll)
         self.discovery_scroll.get_vadjustment().connect("value-changed", self.discovery_scrolled)
         self.discovery_body = Gtk.Box(spacing=0); self.discovery_body.set_vexpand(True); self.discovery_body.set_hexpand(True)
         self.discovery_sidebar = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2); self.discovery_sidebar.add_css_class("browser-sidebar"); self.discovery_sidebar.set_vexpand(True)
@@ -867,9 +893,10 @@ class Display(Gtk.Application):
         self.source_volume = self.label("—", "source-volume", .5); self.source_volume.set_size_request(230, -1); source_volume.append(self.source_volume)
         source_up = self.icon_button("add", lambda *_: self.step_bluos_volume(2), "source-step"); source_up.set_tooltip_text("Volume up"); source_up.set_size_request(112, 112); source_up.set_halign(Gtk.Align.CENTER); source_up.set_valign(Gtk.Align.CENTER); source_volume.append(source_up); source.append(source_volume)
         self.source_mute = self.button("MUTE", self.toggle_audio_mute, "source-mute"); self.source_mute.set_halign(Gtk.Align.CENTER); source.append(self.source_mute); self.roon_views.add_named(source, "source")
-        self.queue_list = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2); self.queue_list.add_css_class("queue-list")
+        self.queue_list = ElasticVerticalTrack(spacing=2); self.queue_list.add_css_class("queue-list")
         queue_scroll = Gtk.ScrolledWindow(); queue_scroll.add_css_class("queue-scroll"); queue_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC); queue_scroll.set_kinetic_scrolling(True); queue_scroll.set_overlay_scrolling(True); queue_scroll.set_propagate_natural_height(False); queue_scroll.set_propagate_natural_width(False); queue_scroll.set_min_content_height(1); queue_scroll.set_size_request(-1, 1); queue_scroll.set_vexpand(True); queue_scroll.set_hexpand(True); queue_scroll.set_child(self.queue_list); self.queue_scroll = queue_scroll
         queue_scroll.get_vadjustment().connect("value-changed", self.load_visible_queue_artwork)
+        self.queue_list.connect_scroll(queue_scroll)
         self.roon_views.add_named(queue_scroll, "queue")
         browser = Gtk.Overlay(); browser.add_css_class("browser-view"); browser.set_vexpand(True); browser.set_hexpand(True)
         browser_body = Gtk.Box(spacing=0); browser_body.set_vexpand(True); browser_body.set_hexpand(True); browser.set_child(browser_body); self.browser_body = browser_body
@@ -884,9 +911,10 @@ class Display(Gtk.Application):
         browser_main = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2); browser_main.add_css_class("browser-main"); browser_main.set_vexpand(True); browser_main.set_hexpand(True)
         sidebar.set_vexpand(True); spacer = Gtk.Box(); spacer.set_vexpand(True); self.browser_sidebar_spacer = spacer; sidebar.append(spacer); sidebar.append(self.browser_back)
         self.browser_message = self.label("", "browser-message"); self.browser_message.set_ellipsize(Pango.EllipsizeMode.END); self.browser_message.set_visible(False); browser_main.append(self.browser_message)
-        self.browser_list = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2); self.browser_list.add_css_class("queue-list")
+        self.browser_list = ElasticVerticalTrack(spacing=2); self.browser_list.add_css_class("queue-list")
         browser_scroll = Gtk.ScrolledWindow(); browser_scroll.add_css_class("queue-scroll"); browser_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC); browser_scroll.set_kinetic_scrolling(True); browser_scroll.set_overlay_scrolling(True); browser_scroll.set_propagate_natural_height(False); browser_scroll.set_propagate_natural_width(False); browser_scroll.set_min_content_height(1); browser_scroll.set_size_request(-1, 1); browser_scroll.set_vexpand(True); browser_scroll.set_hexpand(True); browser_scroll.set_child(self.browser_list); self.browser_scroll = browser_scroll
         browser_scroll.get_vadjustment().connect("value-changed", self.browser_scrolled)
+        self.browser_list.connect_scroll(browser_scroll)
         previous_scroll = Gtk.EventControllerScroll.new(Gtk.EventControllerScrollFlags.VERTICAL)
         previous_scroll.connect("scroll", self.browser_previous_scroll); browser_scroll.add_controller(previous_scroll)
         previous_drag = Gtk.GestureDrag.new(); previous_drag.set_propagation_phase(Gtk.PropagationPhase.CAPTURE); previous_drag.connect("drag-update", lambda _gesture, x, y: self.browser_previous_scroll(None, 0, -1) if y > 30 and y > abs(x) * 2 else None); previous_drag.connect("drag-end", self.browser_swipe_back); browser_scroll.add_controller(previous_drag)
@@ -904,7 +932,9 @@ class Display(Gtk.Application):
         search_panel = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12); search_panel.add_css_class("browser-search-panel")
         self.search_results_scroll = Gtk.ScrolledWindow(); self.search_results_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC); self.search_results_scroll.set_vexpand(True); self.search_results_scroll.set_hexpand(True); self.search_results_scroll.set_propagate_natural_width(False); self.search_results_scroll.set_propagate_natural_height(False); self.search_results_scroll.set_min_content_height(1); self.search_results_scroll.set_visible(False); search_panel.append(self.search_results_scroll)
         self.browser_search_timer = None
+        elastic_vertical_scroll(self.browser_artist_scroll)
         self.search_results_scroll.get_vadjustment().connect("value-changed", lambda *_: self.load_visible_browser_artwork())
+        self.browser_list.attach_touch_pull(self.search_results_scroll, vertical=True)
         search_header = Gtk.Box(spacing=12); self.browser_search_entry = Gtk.Entry(); self.browser_search_entry.add_css_class("browser-search-entry"); self.browser_search_entry.set_placeholder_text("Search Roon"); self.browser_search_entry.set_hexpand(True); self.browser_search_entry.connect("activate", self.submit_browser_search); search_header.append(self.browser_search_entry); search_header.append(self.button("CANCEL", lambda *_: self.set_roon_view("browse"), "browser-key")); search_panel.append(search_header)
         for keys in ("QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM", "1234567890"):
             key_row = Gtk.Box(spacing=7); key_row.set_homogeneous(True)
@@ -933,6 +963,7 @@ class Display(Gtk.Application):
         self.detail_tracks = Gtk.Box(orientation=Gtk.Orientation.VERTICAL); self.detail_tracks.add_css_class("detail-tracks")
         detail_scroll = Gtk.ScrolledWindow(); detail_scroll.add_css_class("queue-scroll"); detail_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC); detail_scroll.set_kinetic_scrolling(True); detail_scroll.set_overlay_scrolling(True); detail_scroll.set_propagate_natural_height(True); detail_scroll.set_max_content_height(210); detail_scroll.set_child(self.detail_tracks); detail_content.append(detail_scroll)
         detail_copy.append(detail_content)
+        elastic_vertical_scroll(detail_scroll)
         detail_panel.append(detail_copy); page.append(self.roon_views); self.music_navigation = self.navigation("roon"); page.append(self.music_navigation)
         takeover = Gtk.Box(); takeover.add_css_class("detail-takeover"); takeover.set_hexpand(True); takeover.set_vexpand(True)
         takeover.append(detail_panel); takeover.set_visible(False); self.detail_takeover = takeover
@@ -944,6 +975,7 @@ class Display(Gtk.Application):
         self.home_status = self.label("Connecting to Home Assistant…", "muted", .5); page.append(self.home_status)
         self.home_grid = Gtk.Grid(column_spacing=11, row_spacing=11); self.home_grid.add_css_class("home-grid"); self.home_grid.set_column_homogeneous(True); self.home_grid.set_row_homogeneous(True); self.home_grid.set_vexpand(True)
         scroll = Gtk.ScrolledWindow(); scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC); scroll.set_propagate_natural_height(False); scroll.set_min_content_height(1); scroll.set_vexpand(True); scroll.set_child(self.home_grid); page.append(scroll)
+        elastic_vertical_scroll(scroll)
         page.append(self.navigation("home")); return page
 
     def configure_settings_layout(self, width, height):
@@ -979,6 +1011,7 @@ class Display(Gtk.Application):
         self.touch_orientation = Gtk.DropDown.new_from_strings(["Orientation · Landscape", "Orientation · Portrait"]); self.touch_orientation.add_css_class("settings-select"); display_column.append(self.touch_orientation); controls.append(display_column)
         scroll = Gtk.ScrolledWindow(); scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC); scroll.set_vexpand(True); scroll.set_child(controls); card.append(scroll)
         self.touch_mounting = Gtk.DropDown.new_from_strings(["Rotation · Standard", "Rotation · 180°"]); self.touch_mounting.add_css_class("settings-select"); display_column.append(self.touch_mounting)
+        elastic_vertical_scroll(scroll)
         brightness_row = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16); brightness_row.set_margin_top(8); brightness_row.append(self.label("DISPLAY BRIGHTNESS", "eyebrow")); self.touch_brightness = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 10, 100, 1); self.touch_brightness.set_draw_value(True); self.touch_brightness.set_value_pos(Gtk.PositionType.RIGHT); self.touch_brightness.connect("value-changed", self.change_brightness); brightness_row.append(self.touch_brightness); display_column.append(brightness_row)
         for row in (self.touch_profile, self.touch_orientation, self.touch_mounting): self.settings_row_sizes.add_widget(row)
         actions = Gtk.Box(spacing=18); actions.set_homogeneous(True); actions.set_valign(Gtk.Align.END); self.settings_actions = actions; self.apply_display_button = self.button("APPLY DISPLAY", self.request_display_settings, "settings-action"); self.apply_display_button.set_hexpand(True); self.update_button = self.button("INSTALL UPDATE", self.request_update, "settings-action"); self.update_button.set_hexpand(True); actions.append(self.update_button); actions.append(self.apply_display_button); reboot = self.button("REBOOT", self.confirm_reboot, "settings-action"); reboot.add_css_class("reboot-action"); actions.append(reboot); card.append(actions); page.append(card)
@@ -2281,8 +2314,9 @@ class Display(Gtk.Application):
             columns = []
             if grouped_search:
                 for _ in range(2):
-                    column = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2); column.add_css_class("search-column")
+                    column = ElasticVerticalTrack(spacing=2); column.add_css_class("search-column")
                     scroll = Gtk.ScrolledWindow(); scroll.add_css_class("queue-scroll"); scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC); scroll.set_kinetic_scrolling(True); scroll.set_hexpand(True); scroll.set_vexpand(True); scroll.set_propagate_natural_width(False); scroll.set_propagate_natural_height(False); scroll.set_min_content_width(1); scroll.set_size_request(1, 1); scroll.set_child(column); scroll.get_vadjustment().connect("value-changed", lambda *_: self.load_visible_browser_artwork()); self.browser_search_columns.append(scroll); columns.append(column)
+                    column.connect_scroll(scroll)
             else: self.browser_list.set_homogeneous(False)
             group_index = -1; group_count = 0; group_title = ""; target = self.browser_list
             for item in items:
@@ -2296,7 +2330,7 @@ class Display(Gtk.Application):
                 row = Gtk.Box(spacing=14); row.set_hexpand(True)
                 key = item.get("image_key")
                 if item.get("action"):
-                    action_icon = FamilyIcon(self.browser_action_icon(item.get("title")), 34)
+                    action_icon = FamilyIcon(self.browser_action_icon(item.get("title")), 42)
                     action_frame = Gtk.CenterBox(); action_frame.add_css_class("browser-action-icon"); action_frame.set_size_request(84, 84); action_frame.set_hexpand(False); action_frame.set_halign(Gtk.Align.START); action_frame.set_valign(Gtk.Align.CENTER); action_frame.set_center_widget(action_icon); row.append(action_frame)
                 else:
                     picture = Gtk.Picture(); picture.add_css_class("queue-art"); picture.set_can_shrink(True); picture.set_content_fit(Gtk.ContentFit.COVER)

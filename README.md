@@ -1,6 +1,6 @@
 # Pi Home
 
-The next testing release is **1.1.1-beta.15**: fixes Daily carousel trailing space to 30px, removes edge-highlight lines and adds resisted touch pull with animated spring-back at both ends. Keeps the first card resting position and all prior icon/layout refinements. Select Beta in System → Software to receive it; Stable remains on 1.1.0.
+The next testing release is **1.1.1-beta.16**: slightly bouncier horizontal and vertical touch boundaries without highlight lines, stronger/larger library and Surprise Me controls, and exact 30px keyboard side margins. Preserves queue limits and prior layouts. Select Beta in System → Software to receive it; Stable remains on 1.1.0.
 
 Beta updates are source-only releases: automated backend, controller, update-safety and native layout checks still run, but no downloadable disk image is built. For stable releases or explicit fresh-install testing, run the Alpine verification workflow on the release branch with **build_image** enabled, verify the image, then attach it to the release. The existing Alpine updater continues to require a successful verification run for the exact release commit.
 
