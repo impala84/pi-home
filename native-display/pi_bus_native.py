@@ -327,6 +327,7 @@ CSS += b"""
 .display-landscape .bus-page, .display-landscape .home-page { padding-top: 10px; padding-left: 28px; padding-right: 28px; }
 .recommendation-album { color: #fff; font-size: 18px; }
 .display-landscape .recommendation-heading { margin-left: 0; margin-right: 0; }
+.display-landscape .discovery-card, .display-landscape .discovery-card:hover, .display-landscape .discovery-card:active { padding: 0; }
 .portrait .discover-toolbar .roon-subnav button { font-weight: 500; letter-spacing: 0; padding: 4px 0; min-height: 38px; }
 .portrait .discover-toolbar .roon-subnav button.active { color: #fff; }
 .portrait .browser-sidebar { padding: 0 0 14px; }
