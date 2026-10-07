@@ -505,6 +505,8 @@ scrolledwindow overshoot, scrolledwindow undershoot { background: transparent; b
 .large-display .queue-row { min-height: 138px; }
 .large-display .queue-title { font-size: 30px; }
 .large-display .queue-meta, .large-display .queue-duration { font-size: 23px; }
+.large-display .browser-cover-title, .large-display .browser-cover-title.tile { font-size: 26px; }
+.large-display .browser-cover-subtitle { font-size: 21px; }
 .large-display .queue-art, .large-display .browser-action-icon { min-width: 116px; min-height: 116px; }
 .large-display .artist-name { font-size: 38px; }
 .large-display .artist-play { min-height: 72px; font-size: 25px; }
@@ -2269,7 +2271,8 @@ class Display(Gtk.Application):
                 title.set_wrap(True); title.set_lines(2); title.set_max_width_chars(18); title.set_justify(Gtk.Justification.CENTER); title.set_size_request(-1, 42)
             if item.get("subtitle") and not tile_kind:
                 subtitle = self.label(item.get("subtitle"), "browser-cover-subtitle", .5); subtitle.set_max_width_chars(22); subtitle.set_ellipsize(Pango.EllipsizeMode.END); content.append(subtitle)
-        shell = Gtk.ScrolledWindow(); shell.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.NEVER); shell.set_propagate_natural_width(False); shell.set_propagate_natural_height(False); shell.set_min_content_width(size); shell.set_max_content_width(size); shell.set_min_content_height(size + (60 if show_labels else 0)); shell.set_max_content_height(size + (60 if show_labels else 0)); shell.set_child(content)
+        caption_height = 96 if min(getattr(self, "viewport_width", 800), getattr(self, "viewport_height", 480)) >= 1000 else 60
+        shell = Gtk.ScrolledWindow(); shell.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.NEVER); shell.set_propagate_natural_width(False); shell.set_propagate_natural_height(False); shell.set_min_content_width(size); shell.set_max_content_width(size); shell.set_min_content_height(size + (caption_height if show_labels else 0)); shell.set_max_content_height(size + (caption_height if show_labels else 0)); shell.set_child(content)
         button = Gtk.Button(); button.add_css_class("browser-cover-card"); button.set_child(shell); button.set_sensitive(bool(item.get("item_key"))); button.connect("clicked", self.open_browser_item, item.get("item_key")); return button
 
     def render_browser(self, data):
@@ -2721,12 +2724,13 @@ class Display(Gtk.Application):
         self.library_add.update_state([Gtk.AccessibleState.BUSY], [busy])
 
     def set_library_icon(self, filled):
+        size = 64 if min(getattr(self, "viewport_width", 800), getattr(self, "viewport_height", 480)) >= 1000 else 28
         if getattr(self, "library_status", "unknown") != "in_library":
-            icon = FamilyIcon("add", 28); icon.set_size_request(28, 28)
+            icon = FamilyIcon("add", size); icon.set_size_request(size, size)
             self.library_add.set_child(icon); self.library_add.set_tooltip_text("Loading library status…" if getattr(self, "library_status", "unknown") == "unknown" else "Add album to library")
             return
-        icon = FamilyIcon("heart", 28, filled=filled)
-        icon.set_pixel_size(28); icon.set_size_request(28, 28)
+        icon = FamilyIcon("heart", size, filled=filled)
+        icon.set_pixel_size(size); icon.set_size_request(size, size)
         self.library_add.set_child(icon)
         self.library_add.set_tooltip_text("Unfavourite album" if filled else "Favourite album")
     def toggle_bridge(self, button):
