@@ -1532,7 +1532,7 @@ class Display(Gtk.Application):
                 card_budget = (getattr(self, "viewport_height", self.window.get_height()) - 240 - (count - 1) * 24) / count
                 large = self.window.has_css_class("large-display")
                 route_size = min(344 if large else 216, max(40, round((card_budget - 80) / (2.6 if large else 1.85))))
-            font_size = route_size if portrait else (123 if self.window.has_css_class("high-resolution") else 82)
+            font_size = (route_size if self.window.has_css_class("large-display") else round(route_size * .8)) if portrait else (123 if self.window.has_css_class("high-resolution") else 82)
             if not portrait and len(visible) > 2:
                 font_size = round(font_size / (1.8 if len(visible) >= 4 else 1.4))
             attrs = Pango.AttrList(); attrs.insert(Pango.attr_size_new_absolute(font_size * Pango.SCALE)); number.set_attributes(attrs)
