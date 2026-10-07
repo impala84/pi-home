@@ -334,6 +334,20 @@ capture("playlists")
 if screen_height > screen_width:
     assert display.browser_tile_size == (screen_width - 120) // 3, display.browser_tile_size
 
+display.set_roon_view("search")
+capture("keyboard")
+entry_bounds = display.browser_search_entry.compute_bounds(window)[1]
+keyboard = display.browser_search_entry.get_parent().get_parent()
+keyboard_bounds = keyboard.compute_bounds(window)[1]
+assert abs(entry_bounds.get_x() - 30) <= 1, entry_bounds.get_x()
+assert abs(screen_width - keyboard_bounds.get_x() - keyboard_bounds.get_width() - 30) <= 1
+
+for track in (display.browser_list, display.queue_list, display.discovery_list):
+    for offset in (24.0, -24.0):
+        track.elastic_offset = offset; track.spring_back()
+        time.sleep(.6); settle()
+        assert track.elastic_offset == 0
+
 if screen_height > screen_width:
     display.set_roon_view("search")
     search_items = []
@@ -492,7 +506,7 @@ if screen_height > screen_width:
 settings = display.build_settings()
 window.set_child(settings)
 display.configure_settings_layout(screen_width, screen_height)
-display.device_status.set_text("v1.1.1-beta.15 Alpine")
+display.device_status.set_text("v1.1.1-beta.16 Alpine")
 display.touch_diagnostics.set_text("Memory 6.1%  ·  Load 0.65  ·  62.8°C  ·  Controller ready  ·  Bridge offline")
 capture("settings")
 assert window.get_width() == screen_width and window.get_height() == screen_height, (window.get_width(), window.get_height())

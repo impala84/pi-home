@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.1-beta.16 — 7 October 2026
+
+- Slightly increases resisted boundary pull to 26px with a gentler 550ms spring; adds the same paint-only return to vertical lists, Home and Settings.
+- Removes vertical overshoot/undershoot highlight lines without changing resting positions or ordinary kinetic scrolling.
+- Enlarges album/library and Surprise Me action icons from 34px to 42px; brings shuffle into the thicker touchscreen control family.
+- Sets search keyboard margins to 30px on both sides across display sizes and orientations.
+- Leaves queue history at 10 previous tracks and upcoming subscription at 100. Source-only beta.
+
 ## 1.1.1-beta.15 — 7 October 2026
 
 - Restores the original smaller neutral album/artist loading placeholders and increases native playback/library/cog strokes from 2 to 3 units, keeping the new shapes.
