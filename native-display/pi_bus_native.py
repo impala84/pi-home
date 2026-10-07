@@ -506,7 +506,7 @@ scrolledwindow overshoot, scrolledwindow undershoot { background: transparent; b
 .large-display .settings-page .setting-line label, .large-display .settings-page .setting-line checkbutton { font-size: 23px; }
 .large-display .settings-page .settings-theme-choice { font-size: 24px; min-height: 72px; }
 .large-display .settings-page scale value { font-size: 21px; }
-.large-display .roon-subnav button { padding-left: 5px; padding-right: 5px; }
+.large-display.portrait .discover-toolbar .roon-subnav button { padding-left: 5px; padding-right: 5px; }
 .large-display .source-volume { font-size: 400px; }
 .large-display .source-mute { min-width: 240px; min-height: 82px; font-size: 26px; }
 .theme-roon .source-step { color: #817aeb; }
@@ -790,7 +790,7 @@ class Display(Gtk.Application):
             self.mute.set_halign(Gtk.Align.CENTER if large_display and portrait else Gtk.Align.FILL)
             self.controls.set_spacing(26 if large_display else 14)
             for control in (self.library_add, self.prev, self.play, self.next):
-                control.get_child().set_pixel_size(64 if large_display else 42 if control is self.play else 34)
+                control.get_child().set_pixel_size((80 if control is self.play else 64) if large_display else 42 if control is self.play else 34)
         self.zone.set_valign(Gtk.Align.START if portrait else Gtk.Align.CENTER)
         self.zone.set_margin_top(8 if portrait else 0)
         self.roon_clock.set_valign(Gtk.Align.START if portrait else Gtk.Align.CENTER)
