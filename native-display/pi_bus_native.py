@@ -514,6 +514,8 @@ scrolledwindow overshoot, scrolledwindow undershoot { background: transparent; b
 .large-display.portrait .now-mute { margin-top: 36px; }
 .portrait.large-portrait .roon-page { padding-top: 21px; }
 .large-display.display-landscape .roon-page { padding-top: 5px; }
+.compact-portrait .source-step { min-width: 64px; min-height: 64px; border-radius: 32px; }
+.compact-portrait .source-volume { font-size: 84px; }
 .large-display .settings-select, .large-display .setting-line { min-height: 72px; font-size: 22px; }
 .large-display .settings-action { min-height: 82px; font-size: 22px; }
 .large-display .discovery-card .queue-title { font-size: 27px; }
@@ -767,6 +769,9 @@ class Display(Gtk.Application):
         previous = getattr(self, "responsive_portrait", None)
         self.responsive_portrait = portrait
         self.viewport_width, self.viewport_height = width, height
+        for control in (self.source_down, self.source_up):
+            control.set_size_request(64 if portrait and width < 600 else 112, 64 if portrait and width < 600 else 112)
+        self.source_volume.set_size_request(180 if portrait and width < 600 else 230, -1)
         large_display = min(width, height) >= 1000
         (self.window.add_css_class if large_display else self.window.remove_css_class)("large-display")
         (self.window.add_css_class if portrait and width >= 1000 else self.window.remove_css_class)("large-portrait")
@@ -955,9 +960,9 @@ class Display(Gtk.Application):
         source = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12); source.add_css_class("source-view"); source.set_halign(Gtk.Align.CENTER); source.set_valign(Gtk.Align.CENTER); source.set_hexpand(True); source.set_vexpand(True)
         self.source_title = self.label("EXTERNAL INPUT", "source-title", .5); source.append(self.source_title)
         source_volume = Gtk.Box(spacing=28); source_volume.set_halign(Gtk.Align.CENTER); source_volume.set_valign(Gtk.Align.CENTER)
-        source_down = self.icon_button("remove", lambda *_: self.step_bluos_volume(-2), "source-step"); source_down.set_tooltip_text("Volume down"); source_down.set_size_request(112, 112); source_down.set_halign(Gtk.Align.CENTER); source_down.set_valign(Gtk.Align.CENTER); source_volume.append(source_down)
+        source_down = self.icon_button("remove", lambda *_: self.step_bluos_volume(-2), "source-step"); self.source_down = source_down; source_down.set_tooltip_text("Volume down"); source_down.set_size_request(112, 112); source_down.set_halign(Gtk.Align.CENTER); source_down.set_valign(Gtk.Align.CENTER); source_volume.append(source_down)
         self.source_volume = self.label("—", "source-volume", .5); self.source_volume.set_size_request(230, -1); source_volume.append(self.source_volume)
-        source_up = self.icon_button("add", lambda *_: self.step_bluos_volume(2), "source-step"); source_up.set_tooltip_text("Volume up"); source_up.set_size_request(112, 112); source_up.set_halign(Gtk.Align.CENTER); source_up.set_valign(Gtk.Align.CENTER); source_volume.append(source_up); source.append(source_volume)
+        source_up = self.icon_button("add", lambda *_: self.step_bluos_volume(2), "source-step"); self.source_up = source_up; source_up.set_tooltip_text("Volume up"); source_up.set_size_request(112, 112); source_up.set_halign(Gtk.Align.CENTER); source_up.set_valign(Gtk.Align.CENTER); source_volume.append(source_up); source.append(source_volume)
         self.source_mute = self.button("MUTE", self.toggle_audio_mute, "source-mute"); self.source_mute.set_halign(Gtk.Align.CENTER); source.append(self.source_mute); self.roon_views.add_named(source, "source")
         self.queue_list = ElasticVerticalTrack(spacing=2); self.queue_list.add_css_class("queue-list")
         queue_scroll = Gtk.ScrolledWindow(); queue_scroll.add_css_class("queue-scroll"); queue_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC); queue_scroll.set_kinetic_scrolling(True); queue_scroll.set_overlay_scrolling(True); queue_scroll.set_propagate_natural_height(False); queue_scroll.set_propagate_natural_width(False); queue_scroll.set_min_content_height(1); queue_scroll.set_size_request(-1, 1); queue_scroll.set_vexpand(True); queue_scroll.set_hexpand(True); queue_scroll.set_child(self.queue_list); self.queue_scroll = queue_scroll
