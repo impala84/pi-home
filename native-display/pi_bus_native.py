@@ -301,6 +301,7 @@ CSS += b"""
 .bus-footer .muted { color: #888; }
 .portrait .recommendation-heading { margin-left: 4px; }
 .portrait .stop, .portrait .stop-code { font-size: 26px; }
+.portrait.compact-portrait .stop, .portrait.compact-portrait .stop-code { font-size: 22px; }
 .portrait .service { padding: 18px 12px; }
 .portrait .service.compact, .portrait .service.dense { padding: 12px; }
 .portrait .roon-subnav button.active { border-bottom-color: #5bcbd6; }
@@ -682,6 +683,7 @@ class Display(Gtk.Application):
     def build_bus(self):
         page = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=7); page.add_css_class("page"); page.add_css_class("bus-page")
         self.bus_clock = self.label("--:--", "clock", 1); self.stop = self.label("Connecting…", "stop"); self.stop_code = self.label("", "stop-code")
+        self.stop.set_ellipsize(Pango.EllipsizeMode.END)
         stop_heading = Gtk.Box(spacing=14); stop_heading.append(self.stop); stop_heading.append(self.stop_code); page.append(self.header(stop_heading, self.bus_clock))
         self.services = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14); self.services.set_vexpand(True)
         self.bus_content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=7); self.bus_content.append(self.services)
