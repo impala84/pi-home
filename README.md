@@ -1,6 +1,6 @@
 # Pi Home
 
-The next testing release is **1.1.1-beta.7**: restores the beta.5 native music navigation and sizing after beta.6 regressions; keeps two larger portrait arrivals with smaller solid-white route numbers. Select Beta in System → Software to receive it; Stable remains on 1.1.0.
+The next testing release is **1.1.1-beta.8**: all portrait refinements restored—30px outer margins and column gaps, bottom-docked search with single-column results, revised Surprise placement, full-width playlists, right-aligned Back and artist spacing—with corrected loaded-card sizing and bounded Browse requests. Bus routes are smaller solid numerals in their route colours, with two larger portrait arrivals and three in landscape. Select Beta in System → Software to receive it; Stable remains on 1.1.0.
 
 Beta updates are source-only releases: automated backend, controller, update-safety and native layout checks still run, but no downloadable disk image is built. For stable releases or explicit fresh-install testing, run the Alpine verification workflow on the release branch with **build_image** enabled, verify the image, then attach it to the release. The existing Alpine updater continues to require a successful verification run for the exact release commit.
 Beta 4 also added an experimental Raspberry Pi OS Lite ARM64 appliance target alongside Alpine. See [Lite installation and A/B testing](appliance/raspberrypi/README.md) and [architecture review](docs/raspberrypi-lite-design.md).

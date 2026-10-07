@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1.1-beta.8 — 7 October 2026
+
+- Restores all beta.6 portrait refinements: consistent 30px margins/gaps, compact menu spacing, revised Surprise layout, bottom-docked search and single-column previews, right-aligned Back, full-width playlists and artist album spacing.
+- Fixes the 24px three-column overflow: portrait card requests now match the artwork width rather than adding the obsolete 8px padding allowance.
+- Cancels delayed/queued searches when leaving the keyboard. Bounds Roon Browse callbacks so a missing response cannot indefinitely block later requests; read-only navigation allows time for multi-step responses.
+- Preserves controller error messages rather than misrepresenting failures as an empty library; render exceptions release the navigation lock.
+- Uses smaller solid route-coloured numerals, retaining two larger arrivals in portrait and three in landscape.
+- Adds loaded-artwork width and asynchronous search/navigation checks. Source-only beta, no image rebuild.
+
 ## 1.1.1-beta.7 — 7 October 2026
 
 - Restores the beta.5 native music-screen navigation, search lifecycle and artwork sizing after beta.6 regressions. The beta.6 search docking and cosmetic refinements are withdrawn for this recovery release.
