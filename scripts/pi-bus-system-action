@@ -12,6 +12,7 @@ REQUEST = STATE / "system-action-request.json"
 QUEUE = STATE / "system-action-queue"
 STATUS = STATE / "system-action-status"
 UPDATE_STATUS = STATE / "update-status"
+ROON_STATUS = STATE / "roonbridge-install-status"
 LEDS_ENABLED = STATE / "leds-enabled"
 
 
@@ -27,6 +28,13 @@ def report_update(message: str) -> None:
     temporary.write_text(message + "\n", encoding="utf-8")
     os.chmod(temporary, 0o644)
     temporary.replace(UPDATE_STATUS)
+
+
+def report_roon(message: str) -> None:
+    temporary = ROON_STATUS.with_suffix(".tmp")
+    temporary.write_text(message + "\n", encoding="utf-8")
+    os.chmod(temporary, 0o644)
+    temporary.replace(ROON_STATUS)
 
 
 def run(command: list[str]) -> None:
@@ -172,6 +180,21 @@ def execute(data: dict) -> None:
         transform = orientation_transform(profile, orientation, mounting)
         run(["/usr/local/sbin/pi-bus-appliance-mode", "display", profile, transform])
         report("Display settings updated.")
+    elif action == "roon_install":
+        if Path("/opt/RoonBridge/start.sh").is_file():
+            report("Roon Bridge is already installed.")
+            return
+        report_roon("Installing Roon Bridge…")
+        run(["/opt/pi-home/scripts/install-roon-bridge.sh"])
+        dropin = Path("/etc/systemd/system/roonbridge.service.d")
+        dropin.mkdir(parents=True, exist_ok=True)
+        (dropin / "pi-home.conf").write_text("[Service]\nEnvironment=ROON_DATAROOT=/var/roon\nRestart=on-failure\nRestartSec=5\n", encoding="utf-8")
+        run(["systemctl", "daemon-reload"])
+        service = roon_service()
+        run(["systemctl", "enable", "--now", service])
+        message = "Roon Bridge installed and running. Enable this endpoint in Roon Settings → Audio."
+        report_roon(message)
+        report(message)
     elif action in {"roon_start", "roon_stop", "roon_restart"}:
         service = roon_service()
         verb = action.removeprefix("roon_")
@@ -228,6 +251,7 @@ def main() -> None:
     update_seen = False
     while requests := pending_requests():
         for request in requests:
+            data = {}
             try:
                 data = json.loads(request.read_text(encoding="utf-8"))
                 if data.get("action") == "update":
@@ -240,6 +264,8 @@ def main() -> None:
                 # One malformed or failed action must not strand later wake,
                 # brightness or service requests in the queue.
                 report(f"Failed: {error}")
+                if data.get("action") == "roon_install":
+                    report_roon(f"Failed: {error}")
                 print(f"System action failed: {error}", file=sys.stderr, flush=True)
             finally:
                 request.unlink(missing_ok=True)

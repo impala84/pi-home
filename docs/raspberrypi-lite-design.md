@@ -44,6 +44,7 @@ collector usable on both operating systems. Application code stays shared.
 - Memory/responsiveness targets are hardware evaluation goals, not measured results.
   Netdata absent; no service removal without before/after evidence.
 
-First validate a converted official Lite installation. Full unattended image build,
-shrink/compression pipeline and precise tap-to-frame instrumentation remain hardware
-and pipeline work; sealing prerequisites are documented separately.
+The beta image pipeline now customizes one checksum-pinned official Lite image in a
+disposable native ARM64 chroot, seals identity and credentials, checks filesystems,
+compresses the result and publishes provenance. Physical Pi 5 boot, 10-inch touch,
+audio and precise tap-to-frame instrumentation remain hardware acceptance work.

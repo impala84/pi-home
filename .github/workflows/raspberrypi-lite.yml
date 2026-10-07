@@ -1,11 +1,16 @@
 name: Lite ARM64 package checks
 on:
   push:
-    branches: [main]
+    branches: [main, rpi-lite-image-beta]
     paths: ['appliance/raspberrypi/**', '.github/workflows/raspberrypi-lite.yml']
   pull_request:
     paths: ['appliance/raspberrypi/**', '.github/workflows/raspberrypi-lite.yml']
   workflow_dispatch:
+    inputs:
+      build_image:
+        description: Build the pinned official Lite image
+        type: boolean
+        default: true
 jobs:
   runtime-packages:
     runs-on: ubuntu-24.04-arm
@@ -27,3 +32,31 @@ jobs:
             dpkg-query -W > /tmp/packages-resolved.txt
             cat /tmp/packages-resolved.txt
           '
+  image:
+    if: github.ref == 'refs/heads/rpi-lite-image-beta' || (github.event_name == 'workflow_dispatch' && inputs.build_image)
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install image construction tools
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends cloud-guest-utils dosfstools e2fsprogs util-linux xz-utils curl
+      - name: Build sealed Raspberry Pi OS Lite ARM64 image
+        run: sudo --preserve-env=GITHUB_WORKSPACE env PI_HOME_IMAGE_OUT="$GITHUB_WORKSPACE/dist/raspberrypi" bash appliance/raspberrypi/build-image.sh
+      - name: Verify artifact identity and safety metadata
+        run: |
+          test "$(cat dist/raspberrypi/source-commit-rpi.txt)" = "$GITHUB_SHA"
+          grep -Fq '2026-10-06-raspios-trixie-arm64-lite.img.xz' dist/raspberrypi/base-image-rpi.txt
+          grep -Fq '483db18a48da399b5b7022ffae9a07bc6d99daab30e593aedac09b69ff422843' dist/raspberrypi/base-image-rpi.txt
+          image=$(find dist/raspberrypi -maxdepth 1 -name 'pi-home-*-raspios-lite-arm64.img.xz' -print -quit)
+          test -n "$image"
+          (cd "$(dirname "$image")" && sha256sum -c "$(basename "$image").sha256")
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pi-home-raspios-lite-beta
+          path: |
+            dist/raspberrypi/pi-home-*-raspios-lite-arm64.img.xz
+            dist/raspberrypi/pi-home-*-raspios-lite-arm64.img.xz.sha256
+            dist/raspberrypi/packages-resolved-rpi.txt
+            dist/raspberrypi/source-commit-rpi.txt
+            dist/raspberrypi/base-image-rpi.txt
+          retention-days: 14

@@ -17,6 +17,30 @@ updater = load('rpi_updater', 'appliance/raspberrypi/updater.py')
 benchmark = load('benchmark', 'appliance/common/benchmark.py')
 
 class LiteTests(unittest.TestCase):
+    def test_image_builder_pins_official_base_and_never_bundles_bridge(self):
+        builder = (ROOT / 'appliance/raspberrypi/build-image.sh').read_text()
+        installer = (ROOT / 'appliance/raspberrypi/install.sh').read_text()
+        self.assertIn('2026-10-06-raspios-trixie-arm64-lite.img.xz', builder)
+        self.assertIn('483db18a48da399b5b7022ffae9a07bc6d99daab30e593aedac09b69ff422843', builder)
+        self.assertIn('PI_HOME_SKIP_ROON_BRIDGE=1', builder)
+        self.assertIn('touch2-10 90', builder)
+        self.assertIn('if [[ $image_build != 1 ]]', installer)
+
+    def test_sealed_image_defers_identity_and_storage_to_first_boot(self):
+        installer = (ROOT / 'appliance/raspberrypi/install.sh').read_text()
+        seal = (ROOT / 'appliance/raspberrypi/seal-image.sh').read_text()
+        self.assertIn('PI_HOME_SOURCE_COMMIT', installer)
+        self.assertIn('raspberrypi/firstboot.py', installer)
+        self.assertIn('rm -f /etc/ssh/ssh_host_*', seal)
+        self.assertIn('truncate -s 0 /etc/machine-id', seal)
+        self.assertIn('root-storage-expanded', seal)
+
+    def test_lite_system_action_can_install_separately_distributed_bridge(self):
+        helper = (ROOT / 'scripts/pi-bus-system-action').read_text()
+        self.assertIn('action == "roon_install"', helper)
+        self.assertIn('/opt/pi-home/scripts/install-roon-bridge.sh', helper)
+        self.assertIn('Environment=ROON_DATAROOT=/var/roon', helper)
+
     def test_firstboot_retries_after_expansion_failure(self):
         with tempfile.TemporaryDirectory() as folder:
             state = Path(folder) / 'state'

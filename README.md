@@ -1,6 +1,6 @@
 # Pi Home
 
-Alpine testing release: **1.1.3-beta.2**, for sharper Surprise Me artwork, readable settings and refined 10-inch controls. Select Beta explicitly to test; Stable remains 1.1.2.
+Testing release **1.1.3-beta.3** adds a separately built Raspberry Pi OS Lite ARM64 image for Pi 5 and the 10-inch Touch Display 2, carrying the latest responsive UI. Alpine remains a separate distribution; Stable remains 1.1.2.
 
 The current Alpine stable release is **1.1.2**: an in-place correction for 10-inch Touch Display 2 touch rotation. Update through System → Software on the Stable channel, then reboot manually to apply input calibration. Physical touch acceptance is still required. The 1.1.1 full image remains available for fresh installs. Raspberry Pi OS releases remain separate.
 

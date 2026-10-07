@@ -70,8 +70,10 @@ configure_input() {
   } >"${input_rules}.tmp"
   install -m 0644 "${input_rules}.tmp" "${input_rules}"
   rm -f "${input_rules}.tmp"
-  udevadm control --reload-rules
-  udevadm trigger --subsystem-match=input
+  if [[ ${PI_HOME_IMAGE_BUILD:-0} != 1 ]]; then
+    udevadm control --reload-rules
+    udevadm trigger --subsystem-match=input
+  fi
 }
 
 configure_touch2_overlay() {

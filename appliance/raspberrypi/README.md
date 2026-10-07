@@ -1,41 +1,31 @@
 # Experimental Raspberry Pi OS Lite appliance
 
 This is a second target alongside Alpine. It has not yet been boot-tested on Pi
-hardware. No RAM, boot-time or performance claim is made. Start from the current
-**Raspberry Pi OS Lite (64-bit), Debian Trixie**, never Desktop.
+hardware. No RAM, boot-time or performance claim is made. The beta image starts
+from pinned official **Raspberry Pi OS Lite (64-bit), Debian Trixie**, never Desktop.
 
 ## First installation
 
-1. In Raspberry Pi Imager choose Pi 4/5 and Raspberry Pi OS Lite (64-bit). Record
-   the exact image date/SHA256. Set a unique admin account/password, hostname,
-   Wi-Fi country/network if needed, timezone and SSH. Flash a spare card; keep
-   the working Alpine card. Boot Lite and connect over Ethernet or configured Wi-Fi.
-2. From SSH, run:
-
-   ```sh
-   sudo apt-get update
-   sudo apt-get install -y --no-install-recommends git
-   git clone --branch v1.1.1-beta.4 https://github.com/impala84/pi-home.git
-   cd pi-home
-   sudo bash appliance/raspberrypi/install.sh touch2-10 90
-   sudo reboot
-   ```
-
-   `touch2-10 90` is the 10-inch Touch Display 2 in landscape. Use `touch2-10 normal`
+1. Download the `pi-home-1.1.3-beta.3-raspios-lite-arm64.img.xz` release asset and
+   verify it against the adjacent SHA-256 file.
+2. In Raspberry Pi Imager choose **Use custom**, select that compressed image, and
+   set a unique username/password, hostname, Wi-Fi country/network if needed,
+   timezone and SSH public key or password. The image deliberately contains no
+   universal login. Flash a spare card; keep the working Alpine card.
+3. Boot with the 10-inch Touch Display 2 attached. The image defaults to
+   `touch2-10 90` (landscape). Use shared touchscreen/web Settings later to choose
+   another supported profile or orientation. `touch2-10 normal`
    for portrait, `touch2-7 90` / `touch2-7 normal` for 7-inch Touch Display 2,
    or `original normal` / `original 90` for the original 7-inch panel. These
    are panel profiles, not GTK layout dimensions. External HDMI/USB panels need
    their own verified profile; do not assume Touch Display 2 wiring.
-   The installer runs from committed source and refuses an existing installation.
-   To benchmark without Bridge, prefix the install command with
-   `sudo env PI_HOME_SKIP_ROON_BRIDGE=1 bash ...`.
-3. Pi Home should boot into Cage/GTK on tty1. Open `http://<hostname>.local:8765`.
+4. Pi Home should boot into Cage/GTK on tty1. Open `http://<hostname>.local:8765`.
    Read the unique web Settings password with
    `sudo cat /etc/pi-home/secrets.env` locally; do not share its contents.
    Use shared touchscreen/web Settings to select orientation, network and Roon.
-   Authorize the Pi Home extension in Roon and enable Bridge's ALSA endpoint in
-   Roon Settings → Audio. No shared Linux password is created; Imager's account
-   is retained. Offline touchscreen account/network setup is not implemented yet.
+   Install Roon Bridge from Pi Home if wanted, then authorize the Pi Home extension
+   and enable Bridge's ALSA endpoint in Roon Settings → Audio. Imager's account is
+   retained. Offline touchscreen account/network setup is not implemented yet.
 
 The default is Beta for evaluation. Stable remains independently controlled;
 selecting an older stable release never downgrades this prototype.
@@ -153,20 +143,17 @@ visible frame spans are not yet instrumented. Until implemented, report UI timin
 and Roon request timings separately; film-based visible delay cannot identify which
 layer caused it. Do not decide an OS winner from cached HTTP probes.
 
-## Flashable image destination
+## Flashable image construction
 
-The initial runtime experiment uses one automated installer after Imager boot.
-There is **no published flashable Pi Home Lite image yet**. A future Linux ARM64
-image job should pin/verify the official Lite image SHA256, install this committed
-target in a disposable guest (retaining Pi firmware/kernel), collect the resolved
-package manifest, run runtime checks, seal clean machine state, safely shrink the
-unmounted ext4 partition, verify boot on a larger card, compress to
-`pi-home-<version>-rpi-arm64.img.xz`, and publish checksum plus provenance.
+The ARM64 workflow pins and verifies the official 6 October 2026 Lite image,
+expands its ext4 partition for build headroom, installs this committed target in a
+disposable native chroot while retaining Pi firmware/kernel, records resolved
+packages, seals machine state, checks both filesystems, compresses the disk to
+`pi-home-<version>-raspios-lite-arm64.img.xz`, and publishes checksum plus
+provenance. The image remains experimental until this exact artifact boots and its
+touch/audio paths are accepted on the physical Pi 5 and 10-inch display.
 
-`seal-image.sh` is a guarded prototype helper (`PI_HOME_DISPOSABLE_IMAGE=1`) for
-clean disposable guests only; it refuses paired Roon files and resets application
-identity, firstboot/expansion markers, machine-id and SSH keys. It is not a complete
-privacy scrub or image builder. A distribution pipeline must also remove test login
-credentials, Wi-Fi profiles, secrets, logs and other machine state, provide an
-unattended secure initial-account/setup mechanism, and avoid shipping a test admin
-account. Never seal or clone an owner's live Pi as a distributable image.
+`seal-image.sh` is guarded (`PI_HOME_DISPOSABLE_IMAGE=1`) for clean disposable
+guests only. The builder refuses paired Roon files, login accounts, Wi-Fi profiles,
+SSH host keys or machine identity before export. Never seal or clone an owner's
+live Pi as a distributable image.

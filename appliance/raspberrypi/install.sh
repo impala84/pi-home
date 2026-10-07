@@ -15,12 +15,17 @@ done
 source_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 profile=${1:-original}
 rotation=${2:-normal}
+image_build=${PI_HOME_IMAGE_BUILD:-0}
 [[ $profile =~ ^(original|touch2-5|touch2-7|touch2-10)$ && $rotation =~ ^(normal|90|180|270)$ ]] || { echo 'Usage: install.sh [original|touch2-5|touch2-7|touch2-10] [normal|90|180|270]'; exit 2; }
 [[ ! -e /opt/pi-home && ! -L /opt/pi-home && ! -e /opt/pi-bus-time-display ]] || { echo 'Existing application found; use its updater, not this clean installer'; exit 1; }
 install -d -m 0755 /var/log/pi-home
 # Capture baseline before installing/removing services.
 dpkg-query -W > /var/log/pi-home/packages-before.txt
-systemctl list-units --type=service --all --no-pager > /var/log/pi-home/services-before.txt
+if [[ $image_build == 1 ]]; then
+  printf 'Captured during offline image construction; no service manager was running.\n' > /var/log/pi-home/services-before.txt
+else
+  systemctl list-units --type=service --all --no-pager > /var/log/pi-home/services-before.txt
+fi
 free -b > /var/log/pi-home/memory-before.txt
 apt-get update
 mapfile -t packages < <(sed '/^#/d; /^[[:space:]]*$/d' "$source_dir/appliance/raspberrypi/packages/runtime.txt")
@@ -31,8 +36,14 @@ install -d -m 0755 /opt/pi-home-releases
 initial=/opt/pi-home-releases/initial-image
 [[ ! -e $initial ]] || { echo 'Incomplete previous install: preserve logs and repair initial-image before retrying'; exit 1; }
 mkdir "$initial"
-git -c safe.directory="$source_dir" -C "$source_dir" archive HEAD | tar -x -C "$initial"
-git -c safe.directory="$source_dir" -C "$source_dir" rev-parse HEAD > "$initial/.source-commit"
+if git -c safe.directory="$source_dir" -C "$source_dir" rev-parse HEAD >/dev/null 2>&1; then
+  git -c safe.directory="$source_dir" -C "$source_dir" archive HEAD | tar -x -C "$initial"
+  git -c safe.directory="$source_dir" -C "$source_dir" rev-parse HEAD > "$initial/.source-commit"
+else
+  [[ ${PI_HOME_SOURCE_COMMIT:-} =~ ^[0-9a-f]{40}$ ]] || { echo 'Image build requires PI_HOME_SOURCE_COMMIT'; exit 1; }
+  tar -C "$source_dir" --exclude=.git --exclude=.venv -cf - . | tar -x -C "$initial"
+  printf '%s\n' "$PI_HOME_SOURCE_COMMIT" > "$initial/.source-commit"
+fi
 python3 -m venv --system-site-packages "$initial/.venv"
 "$initial/.venv/bin/pip" install --no-build-isolation --no-deps "$initial"
 npm --prefix "$initial/roon-controller" ci --omit=dev --no-audit --no-fund
@@ -87,16 +98,24 @@ for service in pi-bus-time-display pi-bus-roon-controller; do
   printf '[Unit]\nWants=pi-home-firstboot.service\nAfter=pi-home-firstboot.service\n' > "/etc/systemd/system/$service.service.d/lite.conf"
 done
 # Only explicit package background updates are disabled. Keep discovery/network/SSH.
-systemctl disable --now apt-daily.timer apt-daily-upgrade.timer 2>/dev/null || true
-if systemctl cat dphys-swapfile.service >/dev/null 2>&1; then systemctl disable --now dphys-swapfile.service; fi
+if [[ $image_build == 1 ]]; then
+  systemctl disable apt-daily.timer apt-daily-upgrade.timer 2>/dev/null || true
+  if systemctl cat dphys-swapfile.service >/dev/null 2>&1; then systemctl disable dphys-swapfile.service; fi
+else
+  systemctl disable --now apt-daily.timer apt-daily-upgrade.timer 2>/dev/null || true
+  if systemctl cat dphys-swapfile.service >/dev/null 2>&1; then systemctl disable --now dphys-swapfile.service; fi
+fi
 # Current Lite may ship a zram policy; preserve it. Additional zram is opt-in.
 systemctl mask getty@tty1.service
 systemctl set-default multi-user.target
-systemctl daemon-reload
+[[ $image_build == 1 ]] || systemctl daemon-reload
 systemctl enable NetworkManager avahi-daemon ssh pi-home-seatd pi-home-firstboot pi-bus-native pi-bus-time-display pi-bus-roon-controller pi-bus-system-action.path pi-home-leds
-# Run now to avoid leaving default web credentials available until reboot.
-python3 "$initial/appliance/raspberrypi/firstboot.py"
-if [[ ${PI_HOME_SKIP_ROON_BRIDGE:-0} != 1 ]]; then
+# A sealed image must generate its device identity, web secret and expanded root
+# only after it has been flashed. It must not redistribute Roon's binaries.
+if [[ $image_build != 1 ]]; then
+  python3 "$initial/appliance/raspberrypi/firstboot.py"
+fi
+if [[ $image_build != 1 && ${PI_HOME_SKIP_ROON_BRIDGE:-0} != 1 ]]; then
   printf 'y\n' | bash "$initial/scripts/install-roon-bridge.sh"
   mkdir -p /etc/systemd/system/roonbridge.service.d
   printf '[Service]\nEnvironment=ROON_DATAROOT=/var/roon\nRestart=on-failure\nRestartSec=5\n' > /etc/systemd/system/roonbridge.service.d/pi-home.conf

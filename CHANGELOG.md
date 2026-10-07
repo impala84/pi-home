@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.3-beta.3 Raspberry Pi OS Lite — 8 October 2026
+
+- Adds a flashable Raspberry Pi OS Lite ARM64 beta based on the pinned official 6 October 2026 Trixie image and the latest 1.1.3 responsive touchscreen UI.
+- Preconfigures the Raspberry Pi 5 / 10-inch Touch Display 2 for landscape while retaining shared Settings controls for orientation and profile changes.
+- Builds in a disposable native ARM64 chroot, verifies the official base checksum, application revision, service links, display overlay and filesystems, and publishes image checksum, package manifest and provenance.
+- Ships no login account, Wi-Fi profile, SSH host keys, machine identity, Roon pairing or proprietary Roon Bridge binaries. Raspberry Pi Imager supplies the owner's account/network; Pi Home generates its own secret and expands storage on first boot.
+
 ## 1.1.3-beta.2 Alpine — 7 October 2026
 
 - Fetches Surprise Me artwork at 900px instead of stretching the shared 256px thumbnail; keeps the scrolling cache small.
