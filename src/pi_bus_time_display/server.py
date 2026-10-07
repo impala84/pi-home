@@ -33,7 +33,7 @@ ALPINE_SYSTEM_ACTIONS = {
     "update", "reboot", "netdata_enable", "netdata_disable", "netdata_claim",
     "netdata_claim_command", "netdata_official_install", "netdata_disconnect", "netdata_lightweight",
     "device_credentials", "install_tools", "display_on", "display_off",
-    "set_brightness", "set_display", "roon_install", "roon_start", "roon_stop", "roon_restart",
+    "set_brightness", "set_display", "set_wifi", "set_hostname", "roon_install", "roon_start", "roon_stop", "roon_restart",
 }
 SYSTEM_ACTIONS = ALPINE_SYSTEM_ACTIONS | {
     "leds_enable", "leds_disable",
@@ -753,6 +753,10 @@ def write_control_request(state_dir: Path, request: dict) -> bool:
     if os.getenv("PI_HOME_APPLIANCE_PLATFORM") == "alpine-prototype":
         if request.get("action") in ALPINE_SYSTEM_ACTIONS:
             payload = {"action": request["action"]}
+            if request["action"] == "set_wifi":
+                payload.update(ssid=str(request.get("ssid", "")), password=str(request.get("password", "")))
+            if request["action"] == "set_hostname":
+                payload.update(hostname=str(request.get("hostname", "")))
             if request["action"] in {"display_on", "set_brightness"}:
                 brightness = int(request.get("brightness", 100))
                 if not 10 <= brightness <= 100: raise ValueError("Brightness must be between 10 and 100")
@@ -770,7 +774,7 @@ def write_control_request(state_dir: Path, request: dict) -> bool:
                 payload.update(profile=str(request.get("profile", "")), orientation=str(request.get("orientation", "")), mounting=str(request.get("mounting", "standard")))
             try:
                 with socket.socket(socket.AF_UNIX) as client:
-                    client.settimeout(105 if request["action"] in {"netdata_claim", "netdata_claim_command", "netdata_lightweight", "roon_start", "roon_stop", "roon_restart"} else 15); client.connect("/run/pi-home-setup.sock")
+                    client.settimeout(105 if request["action"] in {"netdata_claim", "netdata_claim_command", "netdata_lightweight", "roon_start", "roon_stop", "roon_restart"} else 45 if request["action"] == "set_wifi" else 15); client.connect("/run/pi-home-setup.sock")
                     client.sendall((json.dumps(payload) + "\n").encode())
                     result = json.loads(client.makefile("rb").readline(4096))
             except OSError as error: raise ValueError("Alpine system helper is not ready. Please retry.") from error

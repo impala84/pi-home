@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.3-beta.1 Alpine — 7 October 2026
+
+- Connects authenticated web Wi-Fi/name controls to the Alpine helper; permits validated network/name changes after onboarding and allows time for Wi-Fi association.
+- Enlarges 10-inch labels, transport controls, mute/back/settings buttons, album-track artwork and artist portrait. Moves portrait mute below the volume slider and separates top-menu items.
+- Removes excess expansion above artist albums and enlarges the 10-inch Surprise Me artwork/actions while preserving smaller display sizes.
+- Bounds artwork visibility scans during scrolling instead of running them on every motion event; no panel refresh-rate claim is made.
+- Retains the user-confirmed 10-inch touch correction from 1.1.2. Beta only pending physical layout, Wi-Fi and scrolling acceptance.
+
 ## 1.1.2 Alpine — 7 October 2026
 
 - Corrects rotated touch on the 10-inch Touch Display 2: target its Ilitek `ili_v3` input device, not only the Goodix controller used by the smaller panels.

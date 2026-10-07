@@ -24,3 +24,6 @@ body[data-theme="roon"] .primary-tabs button[aria-selected="true"],body[data-the
 @media(max-width:620px){.netdata-actions{grid-template-columns:1fr}}
 textarea{display:block;inline-size:100%;min-inline-size:0;max-inline-size:100%;min-height:132px;margin-top:7px;padding:13px 14px;resize:vertical;border:1px solid var(--line);border-radius:9px;background:var(--field);color:var(--ink);font:13px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace}textarea:focus{outline:2px solid var(--mint);border-color:transparent}
 button[data-action="reboot"]{background:#8a5b24!important;color:#fff1d2!important}button[data-action="reboot"]:hover{background:#a76f2b!important}
+/* Comfortable settings controls on touchscreens, without changing colours. */
+button,.button-link,.capture-download{min-height:48px}
+@media(pointer:coarse){button,.button-link,.capture-download{min-height:60px;font-size:18px;padding:16px 22px}input:not([type="checkbox"]):not([type="range"]),select{min-height:60px;font-size:18px}}

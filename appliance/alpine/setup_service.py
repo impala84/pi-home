@@ -711,7 +711,12 @@ class Setup:
         if action == "reboot" and (state.get("complete") or state.get("orientation")):
             threading.Timer(2, lambda: self.run(["/sbin/reboot"])).start()
             return {"ok": True}
-        if state.get("complete"): raise ValueError("Setup is already complete.")
+        # Authenticated web settings reuse only these validated network/name
+        # actions after onboarding; other wizard steps stay locked.
+        if state.get("complete") and action not in {"set_hostname", "set_wifi"}: raise ValueError("Setup is already complete.")
+        if action in {"set_hostname", "set_wifi"}:
+            if not state.get("complete"): raise ValueError("Finish setup before changing network settings.")
+            action = {"set_hostname": "name", "set_wifi": "wifi"}[action]
         if action == "name":
             name = str(data.get("hostname", "")).lower()
             if not re.fullmatch(r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?", name):

@@ -32,7 +32,7 @@ jobs:
           mkdir -p dist/beta-review
           docker run --rm -v "$PWD:/opt/pi-home:ro" -v "$PWD/dist/beta-review:/screenshots" -w /opt/pi-home alpine:3.24.2 sh -ec '
             apk add --no-cache python3 py3-gobject3 py3-cairo gtk4.0 font-inter dbus adwaita-icon-theme librsvg xvfb-run imagemagick
-            for dimensions in 720x1280 480x800 1200x1920 1280x720; do
+            for dimensions in 720x1280 480x800 1200x1920 1280x720 1920x1200; do
               width=${dimensions%x*}; height=${dimensions#*x}
               GDK_BACKEND=x11 GSK_RENDERER=cairo PI_HOME_SCREEN_WIDTH=$width PI_HOME_SCREEN_HEIGHT=$height PI_HOME_SCREENSHOT_DIR=/screenshots/$dimensions dbus-run-session xvfb-run -a -s "-screen 0 ${dimensions}x24" python3 appliance/alpine/discover_visual_review.py
             done'

@@ -48,10 +48,20 @@ class AlpinePrototypeTests(unittest.TestCase):
     def test_unsupported_privileged_actions_fail_without_queuing(self):
         with tempfile.TemporaryDirectory() as folder, patch.dict(os.environ, {"PI_HOME_APPLIANCE_PLATFORM": "alpine-prototype"}):
             state = Path(folder)
-            for action in ("set_wifi",):
+            for action in ("leds_enable",):
                 with self.assertRaisesRegex(ValueError, "unavailable in Alpine Beta"):
                     write_control_request(state, {"action": action})
             self.assertEqual(list(state.iterdir()), [])
+
+    def test_wifi_and_hostname_are_forwarded_to_existing_setup_actions(self):
+        client = Mock(); client.__enter__ = Mock(return_value=client); client.__exit__ = Mock(return_value=False)
+        client.makefile.return_value.readline.return_value = b'{"ok":true}\n'
+        with patch.dict(os.environ, {"PI_HOME_APPLIANCE_PLATFORM": "alpine-prototype"}), patch("pi_bus_time_display.server.socket.socket", return_value=client):
+            self.assertTrue(write_control_request(Path("/unused"), {"action": "set_wifi", "ssid": "My Network", "password": "private"}))
+            self.assertEqual(json.loads(client.sendall.call_args.args[0]), {"action": "set_wifi", "ssid": "My Network", "password": "private"})
+            client.settimeout.assert_called_with(45)
+            self.assertTrue(write_control_request(Path("/unused"), {"action": "set_hostname", "hostname": "pi-home-room"}))
+            self.assertEqual(json.loads(client.sendall.call_args.args[0]), {"action": "set_hostname", "hostname": "pi-home-room"})
 
     def test_alpine_backlight_actions_use_the_bounded_root_helper(self):
         client = Mock(); client.__enter__ = Mock(return_value=client); client.__exit__ = Mock(return_value=False)

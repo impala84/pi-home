@@ -493,6 +493,27 @@ scrolledwindow overshoot, scrolledwindow undershoot { background: transparent; b
 }
 .transport button.library-action.library-busy:disabled { opacity: 1; color: #6ed9ae; animation: library-pulse 900ms ease-in-out infinite alternate; }
 .theme-roon .transport button.library-action.library-busy:disabled { color: #817aeb; animation-name: library-pulse-roon; }
+.large-display .transport button { min-width: 120px; min-height: 120px; border-radius: 60px; }
+.large-display .transport .play { min-width: 150px; min-height: 150px; border-radius: 75px; }
+.large-display .utility, .large-display .browser-back { min-width: 150px; min-height: 72px; font-size: 21px; padding: 12px 24px; }
+.large-display .settings-title { font-size: 44px; }
+.large-display .settings-version, .large-display .settings-diagnostic { font-size: 21px; }
+.large-display .settings-select, .large-display .setting-line { min-height: 72px; font-size: 22px; }
+.large-display .settings-action { min-height: 82px; font-size: 22px; }
+.large-display .discovery-card .queue-title { font-size: 27px; }
+.large-display .discovery-card .queue-subtitle { font-size: 22px; }
+.large-display .queue-row { min-height: 138px; }
+.large-display .queue-title { font-size: 30px; }
+.large-display .queue-meta, .large-display .queue-duration { font-size: 23px; }
+.large-display .queue-art, .large-display .browser-action-icon { min-width: 116px; min-height: 116px; }
+.large-display .artist-name { font-size: 38px; }
+.large-display .artist-play { min-height: 72px; font-size: 25px; }
+.large-display .surprise-title { font-size: 42px; }
+.large-display .surprise-artist { font-size: 30px; }
+.large-display .surprise-action { min-width: 108px; min-height: 108px; }
+.large-display .surprise-caption { font-size: 24px; }
+.large-display .time { font-size: 23px; }
+.large-display .roon-artist { font-size: 32px; }
 """ % (APPLIANCE_PAGE_TOP, LANDSCAPE_PAGE_MARGIN, LANDSCAPE_PAGE_MARGIN,
        PORTRAIT_PAGE_MARGIN, PORTRAIT_PAGE_MARGIN, PANEL_STROKE, CAROUSEL_START_INSET)).encode()
 
@@ -726,12 +747,25 @@ class Display(Gtk.Application):
         previous = getattr(self, "responsive_portrait", None)
         self.responsive_portrait = portrait
         self.viewport_width, self.viewport_height = width, height
+        large_display = min(width, height) >= 1000
+        (self.window.add_css_class if large_display else self.window.remove_css_class)("large-display")
         (self.window.add_css_class if portrait and width >= 1000 else self.window.remove_css_class)("large-portrait")
         for css_class, enabled in (("portrait", portrait), ("display-landscape", not portrait), ("compact-portrait", portrait and width < 600), ("high-resolution", max(width, height) >= 1200), ("touch-landscape", width >= 1200 and not portrait)):
             (self.window.add_css_class if enabled else self.window.remove_css_class)(css_class)
         self.now_playing_content.set_orientation(Gtk.Orientation.VERTICAL if portrait else Gtk.Orientation.HORIZONTAL)
         self.now_playing_content.set_spacing(24 if portrait else 26)
         self.now_playing_centre.set_valign(Gtk.Align.START if portrait else Gtk.Align.CENTER)
+        if hasattr(self, "volume_row"):
+            mute_parent = self.mute.get_parent()
+            target = self.now_playing_centre if large_display and portrait else self.volume_row
+            if mute_parent is not target:
+                mute_parent.remove(self.mute)
+                if target is self.volume_row: target.prepend(self.mute)
+                else: target.append(self.mute)
+            self.mute.set_halign(Gtk.Align.CENTER if large_display and portrait else Gtk.Align.FILL)
+            self.controls.set_spacing(26 if large_display else 14)
+            for control in (self.library_add, self.prev, self.play, self.next):
+                control.get_child().set_pixel_size(64 if large_display else 42 if control is self.play else 34)
         self.zone.set_valign(Gtk.Align.START if portrait else Gtk.Align.CENTER)
         self.zone.set_margin_top(8 if portrait else 0)
         self.roon_clock.set_valign(Gtk.Align.START if portrait else Gtk.Align.CENTER)
@@ -755,7 +789,7 @@ class Display(Gtk.Application):
             tabs.set_halign(Gtk.Align.FILL if portrait else Gtk.Align.CENTER)
             # Equal cells multiply the longest label's minimum width by five.
             # Share the spare space instead, keeping every full label readable.
-            tabs.set_homogeneous(False); tabs.set_spacing(8)
+            tabs.set_homogeneous(False); tabs.set_spacing(24 if width >= 1000 else 8)
             child = tabs.get_first_child()
             while child:
                 child.set_hexpand(portrait); child = child.get_next_sibling()
@@ -894,7 +928,7 @@ class Display(Gtk.Application):
         self.prev.set_size_request(50, 50); self.prev.set_valign(Gtk.Align.CENTER); self.play.set_size_request(68, 68); self.play.set_valign(Gtk.Align.CENTER); self.next.set_size_request(50, 50); self.next.set_valign(Gtk.Align.CENTER)
         self.controls.append(self.library_add); self.controls.append(self.prev); self.controls.append(self.play); self.controls.append(self.next); centre.append(self.controls)
         self.library_message = self.label("", "browser-message", .5); self.library_message.set_wrap(True); self.library_message.set_visible(False); centre.append(self.library_message)
-        volume_row = Gtk.Box(spacing=10); self.mute = self.button("MUTE", self.toggle_audio_mute, "utility"); self.mute.set_size_request(62, 38); volume_row.append(self.mute); self.volume = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0, 100, 1); self.volume.add_css_class("volume"); self.volume.set_hexpand(True); self.volume.set_draw_value(False); self.volume.connect("value-changed", self.change_volume); volume_row.append(self.volume); self.volume_value = self.label("—", "time", 1); self.volume_value.add_css_class("volume-number"); volume_row.append(self.volume_value); centre.append(volume_row)
+        volume_row = Gtk.Box(spacing=10); self.volume_row = volume_row; self.mute = self.button("MUTE", self.toggle_audio_mute, "utility"); self.mute.set_size_request(62, 38); volume_row.append(self.mute); self.volume = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0, 100, 1); self.volume.add_css_class("volume"); self.volume.set_hexpand(True); self.volume.set_draw_value(False); self.volume.connect("value-changed", self.change_volume); volume_row.append(self.volume); self.volume_value = self.label("—", "time", 1); self.volume_value.add_css_class("volume-number"); volume_row.append(self.volume_value); centre.append(volume_row)
         content.append(centre); self.roon_views.add_named(content, "now")
         source = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12); source.add_css_class("source-view"); source.set_halign(Gtk.Align.CENTER); source.set_valign(Gtk.Align.CENTER); source.set_hexpand(True); source.set_vexpand(True)
         self.source_title = self.label("EXTERNAL INPUT", "source-title", .5); source.append(self.source_title)
@@ -1714,8 +1748,9 @@ class Display(Gtk.Application):
                 body = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5); body.set_halign(Gtk.Align.CENTER); body.set_valign(Gtk.Align.START)
                 picture = MixPicture(duotone=item.get("kind") == "mix" or item.get("_context_seed", False)); picture.add_css_class("queue-art"); picture.set_can_shrink(True); picture.set_content_fit(Gtk.ContentFit.COVER); self.set_browser_placeholder(picture)
                 art = Gtk.ScrolledWindow(); art.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.NEVER); art.set_propagate_natural_width(False); art.set_propagate_natural_height(False); art.set_min_content_width(size); art.set_max_content_width(size); art.set_min_content_height(size); art.set_max_content_height(size); art.set_size_request(size, size); art.set_halign(Gtk.Align.CENTER); art.set_child(picture); body.append(art)
-                title_height = 54 if daily else 58
-                credit_height = 36
+                large_display = min(getattr(self, "viewport_width", 800), getattr(self, "viewport_height", 480)) >= 1000
+                title_height = 82 if large_display else 54 if daily else 58
+                credit_height = 62 if large_display else 36
                 title_label = self.label(item.get("title", ""), "queue-title", .5); title_label.set_wrap(True); title_label.set_max_width_chars(20 if daily else 23); title_label.set_lines(2); title_label.set_ellipsize(Pango.EllipsizeMode.END); title_label.set_size_request(size, title_height); title_label.set_valign(Gtk.Align.START); body.append(title_label)
                 title_label.set_justify(Gtk.Justification.CENTER)
                 credit = self.label(item.get("artist") or " · ".join(item.get("context") or []), "queue-subtitle", .5); credit.set_wrap(True); credit.set_max_width_chars(25); credit.set_lines(2); credit.set_ellipsize(Pango.EllipsizeMode.END); credit.set_size_request(size, credit_height); credit.set_valign(Gtk.Align.START); body.append(credit)
@@ -1770,7 +1805,7 @@ class Display(Gtk.Application):
         self.open_discover("recent", recent_mode=mode)
 
     def discovery_scrolled(self, adjustment):
-        self.load_visible_discovery_artwork()
+        self.schedule_scroll_artwork("discovery", self.load_visible_discovery_artwork)
         if getattr(self, "responsive_portrait", False): return
         if self.discovery_section != "daily" or not getattr(self, "discovery_daily_sections", None): return
         marker = self.discovery_daily_sections.get("recommendations")
@@ -1912,16 +1947,21 @@ class Display(Gtk.Application):
         if portrait:
             panel.set_orientation(Gtk.Orientation.HORIZONTAL)
             panel.set_spacing(28)
+            self.browser_artist_scroll.set_vexpand(False)
+            self.browser_artist_scroll.set_valign(Gtk.Align.START)
             self.browser_artist_scroll.set_propagate_natural_height(True)
             self.browser_artist_scroll.set_min_content_height(240)
         else:
             panel.set_orientation(Gtk.Orientation.VERTICAL)
+            self.browser_artist_scroll.set_vexpand(True)
+            self.browser_artist_scroll.set_valign(Gtk.Align.FILL)
             self.browser_artist_scroll.set_propagate_natural_height(False)
             self.browser_artist_scroll.set_min_content_height(1)
         picture = Gtk.Picture(); picture.set_can_shrink(True); picture.set_content_fit(Gtk.ContentFit.COVER)
         self.set_browser_placeholder(picture, artist=True)
         if portrait:
-            size = min(320, round(getattr(self, "viewport_width", 720) * .315))
+            width = getattr(self, "viewport_width", 720)
+            size = min(460 if width >= 1000 else 320, round(width * (.38 if width >= 1000 else .315)))
             square = Gtk.ScrolledWindow()
             square.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.NEVER)
             square.set_propagate_natural_width(False); square.set_propagate_natural_height(False)
@@ -2281,7 +2321,8 @@ class Display(Gtk.Application):
             monitor = Gdk.Display.get_default().get_monitors().get_item(0)
             screen_width = monitor.get_geometry().width if monitor else 800
             portrait = getattr(self, "responsive_portrait", False)
-            size = max(100, min(480, screen_width - (96 if portrait else 400), self.browser_scroll.get_allocated_height() - (500 if portrait else 135)))
+            large_display = min(getattr(self, "viewport_width", 800), getattr(self, "viewport_height", 480)) >= 1000
+            size = max(100, min(760 if large_display else 480, screen_width - (96 if portrait else 400), self.browser_scroll.get_allocated_height() - (640 if large_display and portrait else 500 if portrait else 135)))
             picture = Gtk.Picture(); picture.set_can_shrink(True); picture.set_content_fit(Gtk.ContentFit.COVER)
             square = Gtk.ScrolledWindow(); square.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.NEVER); square.set_propagate_natural_width(False); square.set_propagate_natural_height(False); square.set_min_content_width(size); square.set_max_content_width(size); square.set_min_content_height(size); square.set_max_content_height(size); square.set_size_request(size, size); square.set_halign(Gtk.Align.CENTER); square.set_child(picture)
             stage = Gtk.Box(orientation=Gtk.Orientation.VERTICAL if portrait else Gtk.Orientation.HORIZONTAL, spacing=38 if portrait else 40); stage.set_halign(Gtk.Align.CENTER); stage.set_valign(Gtk.Align.CENTER)
@@ -2347,7 +2388,8 @@ class Display(Gtk.Application):
                     self.set_browser_placeholder(picture, item.get("result_type") == "artists")
                     # A fixed viewport prevents the texture's natural dimensions
                     # or the number of rows from enlarging album thumbnails.
-                    art_slot = Gtk.ScrolledWindow(); art_slot.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.NEVER); art_slot.set_propagate_natural_width(False); art_slot.set_propagate_natural_height(False); art_slot.set_min_content_width(84); art_slot.set_max_content_width(84); art_slot.set_min_content_height(84); art_slot.set_max_content_height(84); art_slot.set_size_request(84, 84); art_slot.set_halign(Gtk.Align.START); art_slot.set_valign(Gtk.Align.CENTER); art_slot.set_child(picture); row.append(art_slot)
+                    thumb_size = 116 if min(getattr(self, "viewport_width", 800), getattr(self, "viewport_height", 480)) >= 1000 else 84
+                    art_slot = Gtk.ScrolledWindow(); art_slot.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.NEVER); art_slot.set_propagate_natural_width(False); art_slot.set_propagate_natural_height(False); art_slot.set_min_content_width(thumb_size); art_slot.set_max_content_width(thumb_size); art_slot.set_min_content_height(thumb_size); art_slot.set_max_content_height(thumb_size); art_slot.set_size_request(thumb_size, thumb_size); art_slot.set_halign(Gtk.Align.START); art_slot.set_valign(Gtk.Align.CENTER); art_slot.set_child(picture); row.append(art_slot)
                     self.browser_artwork_keys.append(key)
                     if key:
                         self.browser_pictures.setdefault(key, []).append(picture)
@@ -2391,9 +2433,20 @@ class Display(Gtk.Application):
         self.sync_browser_scrubber()
         return False
 
+    def schedule_scroll_artwork(self, name, callback):
+        # Scrolling remains native; bound visibility scans/image jobs instead
+        # of walking every card on every touch/kinetic animation frame.
+        attribute = "scroll_artwork_" + name
+        if getattr(self, attribute, None): return
+        def load():
+            setattr(self, attribute, None)
+            callback()
+            return False
+        setattr(self, attribute, GLib.timeout_add(80, load))
+
     def browser_scrolled(self, *_):
         if self.browser_rendering or self.browser_loading or self.browser_scroll_restore is not None or getattr(self, "browser_scrub_timer", None): return
-        self.load_visible_browser_artwork()
+        self.schedule_scroll_artwork("browser", self.load_visible_browser_artwork)
         if self.browser_state and self.browser_state.get("alpha_scrub"):
             value = self.browser_scroll.get_vadjustment().get_value()
             for card, item in getattr(self, "browser_cards", []):

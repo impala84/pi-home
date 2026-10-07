@@ -314,11 +314,12 @@ capture("artist-profile")
 if screen_height > screen_width:
     assert display.browser_artist_panel.get_orientation() == Gtk.Orientation.HORIZONTAL
     portrait_art = display.browser_artist_panel.get_first_child()
-    assert portrait_art.get_width() <= screen_width * .36, portrait_art.get_width()
+    assert portrait_art.get_width() <= screen_width * (.4 if screen_width >= 1000 else .36), portrait_art.get_width()
     assert portrait_art.get_height() == portrait_art.get_width()
     artist_bounds = display.browser_artist_scroll.compute_bounds(page)[1]
     albums_bounds = display.browser_scroll.compute_bounds(page)[1]
     assert albums_bounds.get_y() >= artist_bounds.get_y() + artist_bounds.get_height()
+    assert albums_bounds.get_y() - artist_bounds.get_y() - artist_bounds.get_height() < 70, (artist_bounds, albums_bounds)
 display.render_browser({"status": "ready", "section": "genres", "layout": "tiles", "show_labels": True,
     "items": [{"title": name, "item_key": name} for name in ("Pop/Rock", "Classical", "Electronic", "Jazz", "Stage & Screen", "International", "Vocal", "Blues", "Easy Listening")]})
 capture("genres")

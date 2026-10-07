@@ -51,6 +51,16 @@ class AlpineSetupTests(unittest.TestCase):
             with self.assertRaises(ValueError): self.setup.handle({"action": "name", "hostname": name})
         self.run.assert_not_called()
 
+    def test_completed_device_can_change_wifi_and_name_but_not_wizard(self):
+        self.setup.save({"complete": True})
+        self.setup.handle({"action": "set_wifi", "ssid": "Living Room", "password": "private-password"})
+        self.run.assert_any_call(["nmcli", "--wait", "30", "device", "wifi", "connect", "Living Room", "password", "private-password"])
+        self.setup.handle({"action": "set_hostname", "hostname": "pi-home-lounge"})
+        self.assertTrue(self.setup.saved()["complete"])
+        self.assertNotIn("private-password", self.setup.progress.read_text())
+        with self.assertRaisesRegex(ValueError, "already complete"):
+            self.setup.handle({"action": "display", "profile": "touch2-10", "rotation": "90"})
+
     def test_optional_software_skip_is_persisted_without_installing(self):
         self.setup.save({"network": True})
         result = self.setup.handle({"action": "software", "roon_bridge": False, "netdata": False})
