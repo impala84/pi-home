@@ -508,6 +508,12 @@ display.set_roon_view("now")
 bus = display.build_bus(); window.set_child(bus)
 display.render_bus({"status": "ok", "stop_name": "Flamingo Valley", "stop_code": "83249", "services": [{"service": number, "arrivals": [{"minutes": value, "monitored": True} for value in (1, 14, 28)]} for number in ("40", "42")]})
 capture("bus-times")
+if min(screen_width, screen_height) >= 1000:
+    display.render_bus({"status":"ok", "services":[{"service":number,"arrivals":[{"minutes":value,"monitored":True} for value in (0,123)]} for number in ("40","42")]})
+    capture("bus-times-due")
+    assert window.get_width() == screen_width and window.get_height() == screen_height
+    display.render_bus({"status":"ok", "services":[{"service":number,"arrivals":[{"minutes":value,"monitored":True} for value in (1,14,28)]} for number in ("40","42")]})
+    settle()
 bus_content_top = display.services.get_first_child().compute_bounds(bus)[1].get_y()
 bus_stroke = display.services.get_first_child().get_style_context().get_border().left
 bus_clock_bounds = display.bus_clock.compute_bounds(bus)[1]

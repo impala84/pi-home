@@ -1578,6 +1578,9 @@ class Display(Gtk.Application):
                 col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL); col.set_valign(Gtk.Align.CENTER); minutes = arrival.get("minutes"); value = self.label("Due" if minutes == 0 else str(minutes), "arrival", .5)
                 if portrait:
                     due_size = min(344 if self.window.has_css_class("large-display") else 112, max(32, round(route_size * 1.1 if self.window.has_css_class("large-display") else route_size * .68)))
+                    if self.window.has_css_class("large-display"):
+                        text = "Due" if minutes == 0 else str(minutes)
+                        due_size = min(due_size, round((getattr(self, "viewport_width", 1200) - 100) / (2 * max(2, len(text)) * .7)))
                     attrs = Pango.AttrList(); attrs.insert(Pango.attr_size_new_absolute(due_size * Pango.SCALE)); value.set_attributes(attrs)
                 col.append(value); col.append(self.label("MIN · LIVE" if arrival.get("monitored") else "MIN · AFTER", "arrival-sub", .5)); col.set_hexpand(True); arrivals.append(col)
             row.append(arrivals); self.services.append(row)
