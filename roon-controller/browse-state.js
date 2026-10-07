@@ -113,6 +113,7 @@ class BrowseManager {
       if (command === 'route') return this.restoreRoute(session, data);
       if (command === 'surprise') return this.surprise(session);
       if (command === 'surprise_play') return this.playSurprise(session);
+      if (command === 'artist') return this.openArtist(session, String(data.name || '').slice(0, 500));
       let active = this.activeSessions.get(session) || session;
       const preview = this.sessions.get(active)?.search_routes?.[data.item_key];
       if (command === 'open' && preview) {
@@ -190,7 +191,7 @@ class BrowseManager {
         next = this.save(session, {...next, skipped_album_preview: true});
       }
     }
-    if (state?.section === 'artists' && state.section_root && opened && result.action === 'list' && !next.error) {
+    if (((state?.section === 'artists' && state.section_root) || next.items?.some(item => item.action && /^play artist$/i.test(item.title))) && opened && !opened.action && result.action === 'list' && !next.error) {
       this.artistContexts.set(session + ':' + next.title, {name:opened.title,image_key:opened.image_key});
       while (this.artistContexts.size > 64) this.artistContexts.delete(this.artistContexts.keys().next().value);
       return this.save(session, {...next, artist_profile:{name:opened.title,image_key:opened.image_key}});
@@ -410,6 +411,13 @@ class BrowseManager {
     const section = this.sections.get(session) || '';
     const sectionTitle = section ? section[0].toUpperCase() + section.slice(1) : '';
     const sectionRoot = Boolean(section && String(list?.title || '').trim().toLowerCase() === section);
+    const tracks = normalised.filter(item => !item.action && item.hint !== 'header');
+    const albumProfile = normalised.some(item => item.action && /^play album$/i.test(item.title)) && tracks.length ? {
+      name: String(list?.title || ''), artist: tracks[0].subtitle || '',
+      image_key: list?.image_key || fallbackImageKey || tracks[0].image_key || null,
+      // Only display a write-up supplied by the core; never invent one.
+      review: typeof list?.review === 'string' ? list.review : '',
+    } : null;
     return this.save(session, {
       status: 'ready', hierarchy, level, title: presentation.layout === 'home' ? 'Browse' : String(list?.title || (hierarchy === 'search' ? 'Search' : 'Browse')),
       subtitle: String(list?.subtitle || ''), count, offset: Number(loadedOffset || list?.display_offset || 0),
@@ -417,6 +425,8 @@ class BrowseManager {
       alpha_scrub: sectionRoot && ['albums', 'artists'].includes(section), can_back: !sectionRoot && (hierarchy !== 'browse' || Number(list?.level || 0) > 0),
       has_more: !filteredLibrary && presentation.layout !== 'home' && Number(loadedOffset || 0) + normalised.length < count,
       fallback_image_key: fallbackImageKey, message, error: false,
+      ...(albumProfile ? {album_profile: albumProfile} : {}),
+      action_menu: normalised.length > 0 && normalised.every(item => item.action || item.hint === 'header') && normalised.some(item => /^play now$/i.test(item.title)),
       ...(normalised.some(item => /^play artist$/i.test(item.title)) && this.artistContexts.has(session + ':' + list.title) ? {artist_profile:this.artistContexts.get(session + ':' + list.title)} : {}),
       ...presentation
     });
@@ -472,6 +482,25 @@ class BrowseManager {
     const origin = this.sessions.get(session)?.search_origin;
     if (origin && !state.search_origin) state = {...state, search_origin: origin};
     this.sessions.set(session, state); return state;
+  }
+
+  async openArtist(baseSession, name) {
+    const service = this.service(), zone = this.zone();
+    if (!service || !zone || !name) return {status:'unavailable', items:[], can_back:false};
+    // Resolve a fresh core-owned key; track subtitles aren't durable artist IDs.
+    const session = `${baseSession}-artist-link`;
+    this.sections.set(session, 'search'); this.activeSessions.set(baseSession, session);
+    const results = await this.search(service, zone, session, name, 'all');
+    let group = '';
+    const artist = results.items.find(item => {
+      if (item.hint === 'header') { group = item.title; return false; }
+      return group === 'ARTISTS' && item.title.toLowerCase() === name.toLowerCase();
+    });
+    if (!artist) return results;
+    const route = results.search_routes?.[artist.item_key];
+    const target = route?.session || session;
+    this.activeSessions.set(baseSession, target);
+    return this._run(target, 'open', {item_key:route?.key || artist.item_key});
   }
 }
 

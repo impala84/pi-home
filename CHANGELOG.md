@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.1.3-beta.3 Alpine — 8 October 2026
+
+- Adds a subtle static dither over the existing Roon gradient to reduce colour banding; physical-panel acceptance is still required.
+- Fixes overwritten portrait bus-route sizing, enlarges route/due numerals on 10-inch displays and uses lighter large route and Watch TV numerals.
+- Uses white, larger plus/minus glyphs in round gray Watch TV buttons.
+- Clips elastic paint nodes to their damage bounds and resets springs when replacing content, addressing possible stale animation strips. Adds a 10px clearance below browser/Discover scrollers.
+- Removes unused alphabet-rail space in search cover grids; shifts the scrubber right and enlarges its 10-inch letter. Reduces large Back buttons about 10–12% while retaining label size.
+- Enlarges Artist Albums and Daily recommendation labels.
+- Adds one album cover/header with artist navigation and track play icons instead of repeated artwork. Shows the core's playback-action menu in a touch popover. Displays review text only if actually supplied by the core; the public Browse contract does not guarantee reviews.
+- Adds exact-match artist-link resolution and album/action metadata tests. Wi-Fi throughput remains under hardware diagnosis; no unverified network changes are applied.
+- Beta only. Does not change the user's working boot GPU configuration or touch rotation.
+
 ## 1.1.3-beta.2 Alpine — 7 October 2026
 
 - Fetches Surprise Me artwork at 900px instead of stretching the shared 256px thumbnail; keeps the scrolling cache small.

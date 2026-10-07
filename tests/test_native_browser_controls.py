@@ -186,6 +186,7 @@ class LayoutWidget:
     def add_css_class(self, name): self.classes.add(name)
     def remove_css_class(self, name): self.classes.discard(name)
     def connect(self, event, callback): self.properties[event] = callback
+    def cancel_spring(self): self.properties["elastic_offset"] = 0
     def __getattr__(self, name):
         if name.startswith("set_"):
             return lambda *args: self.properties.__setitem__(name[4:], args)
@@ -414,8 +415,11 @@ class NativeBrowserControlsTests(unittest.TestCase):
         monitor = SimpleNamespace(get_geometry=lambda: SimpleNamespace(width=720))
         monitors = SimpleNamespace(get_n_items=lambda: 1, get_item=lambda _: monitor)
         gdk = SimpleNamespace(Display=SimpleNamespace(get_default=lambda: SimpleNamespace(get_monitors=lambda: monitors)))
-        owner = SimpleNamespace(responsive_portrait=True, settings_data={}, window=SimpleNamespace(get_width=lambda: 720))
+        owner = SimpleNamespace(responsive_portrait=True, settings_data={}, browser_state={}, window=SimpleNamespace(get_width=lambda: 720))
         self.assertEqual(native_method("browser_grid_metrics", {"Gdk": gdk})(owner)[0], 3)
+        self.assertEqual(native_method("browser_grid_metrics", {"Gdk": gdk})(owner), (3, 200))
+        owner.browser_state = {"alpha_scrub": True}
+        self.assertEqual(native_method("browser_grid_metrics", {"Gdk": gdk})(owner), (3, 173))
         for section in ("recent", "releases"):
             columns, size = native_method("discovery_grid_metrics", {"Gdk": gdk})(owner, section)
             self.assertEqual(columns, 2)

@@ -3,6 +3,34 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const {BrowseManager, browserLayout, formatDuration, libraryItems, publicItem, rootItems, safeSession, withAlbumArtist, withFallbackImage} = require('./browse-state');
 
+test('album detail exposes one cover and honest optional metadata without altering track keys', () => {
+  const manager = new BrowseManager(() => ({}), () => ({}));
+  const state = manager.store('album', 'browse', {title:'Example Album', level:3, count:3}, [
+    {title:'Play Album', hint:'action', item_key:'play'},
+    {title:'1. First', subtitle:'Example Artist', item_key:'first'},
+    {title:'2. Second', subtitle:'Example Artist', item_key:'second'},
+  ], '', 'cover');
+  assert.deepEqual(state.album_profile, {name:'Example Album', artist:'Example Artist', image_key:'cover', review:''});
+  assert.equal(state.items[1].item_key, 'first');
+  assert.equal(state.action_menu, false);
+  const menu = manager.store('album', 'browse', {title:'First', level:4}, [
+    {title:'Play Now', hint:'action', item_key:'now'}, {title:'Add Next', hint:'action', item_key:'next'},
+  ], '');
+  assert.equal(menu.action_menu, true);
+  assert.equal(menu.album_profile, undefined);
+});
+
+test('artist links use fresh exact-match core keys and preserve artist profile', async () => {
+  const service = {
+    browse(options, done) { assert.equal(options.item_key, 'fresh-artist'); done(false, {action:'list', list:{title:'Example Artist', level:2}}); },
+    load(options, done) { done(false, {list:{title:'Example Artist', level:2}, items:[{title:'Play Artist',hint:'action',item_key:'play'},{title:'Album',item_key:'album'}]}); },
+  };
+  const manager = new BrowseManager(() => service, () => ({zone_id:'zone'}));
+  manager.search = async (_service, _zone, session) => manager.save(session, {hierarchy:'search', level:1, items:[{title:'ARTISTS',hint:'header'},{title:'Example Artist',item_key:'fresh-artist',image_key:'portrait'}]});
+  const result = await manager.run('links', 'artist', {name:'Example Artist'});
+  assert.deepEqual(result.artist_profile, {name:'Example Artist', image_key:'portrait'});
+});
+
 test('a missing Roon callback has a deadline and releases the serialized queue', async () => {
   const fs = require('node:fs'), vm = require('node:vm'), path = require('node:path');
   const source = fs.readFileSync(path.join(__dirname, 'browse-state.js'), 'utf8');

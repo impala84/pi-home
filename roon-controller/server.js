@@ -387,7 +387,7 @@ http.createServer(async (request, response) => {
       }
       if (url.pathname === '/api/browse') {
         if (!configuredRuntime().browserEnabled) return json(response, 404, {error: 'Roon Browse is disabled'});
-        const action = ['root', 'open', 'back', 'more', 'previous', 'jump', 'section', 'search', 'surprise', 'surprise_play', 'current', 'route'].includes(data.action) ? data.action : 'current';
+        const action = ['root', 'open', 'back', 'more', 'previous', 'jump', 'section', 'search', 'surprise', 'surprise_play', 'current', 'route', 'artist'].includes(data.action) ? data.action : 'current';
         return json(response, 200, await browser.run(data.session, action, data));
       }
       if (url.pathname === '/api/control' && data.action === 'resume') resumeRoon(zone);

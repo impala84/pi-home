@@ -110,8 +110,12 @@ class ElasticCarouselTrack(Gtk.Box):
 
     def do_snapshot(self, snapshot):
         snapshot.save()
+        # Keep translated spring nodes inside their declared damage bounds.
+        # Painting beyond them can leave stale strips on a real GLES display.
+        bounds = Graphene.Rect(); bounds.init(0, 0, self.get_width(), self.get_height())
+        snapshot.push_clip(bounds)
         point = Graphene.Point(); point.init(0, self.elastic_offset) if getattr(self, "elastic_vertical", False) else point.init(self.elastic_offset, 0)
-        snapshot.translate(point); Gtk.Box.do_snapshot(self, snapshot); snapshot.restore()
+        snapshot.translate(point); Gtk.Box.do_snapshot(self, snapshot); snapshot.pop(); snapshot.restore()
 
 class ElasticVerticalTrack(ElasticCarouselTrack):
     def __init__(self, spacing=0):
@@ -507,9 +511,17 @@ scrolledwindow overshoot, scrolledwindow undershoot { background: transparent; b
 .large-display .settings-page .settings-theme-choice { font-size: 24px; min-height: 72px; }
 .large-display .settings-page scale value { font-size: 21px; }
 .large-display.portrait .discover-toolbar .roon-subnav button { padding-left: 5px; padding-right: 5px; }
-.large-display .source-volume { font-size: 400px; }
+.large-display .source-volume { font-size: 400px; font-weight: 300; }
 .large-display .source-mute { min-width: 240px; min-height: 82px; font-size: 26px; }
-.theme-roon .source-step { color: #817aeb; }
+.source-step, .theme-roon .source-step { color: #fff; padding: 0; border-radius: 999px; }
+.large-display .browser-back { min-width: 132px; min-height: 64px; padding: 10px 20px; }
+.large-display .artist-albums-heading { font-size: 24px; }
+.large-display .recommendation-heading { font-size: 21px; margin-top: 18px; margin-bottom: 0; }
+.large-display .recommendation-album { font-size: 25px; }
+.album-profile { padding: 12px 0 24px; }
+.album-artist { background: transparent; padding: 0; color: #aaa; font-size: 22px; }
+.large-display .album-artist { font-size: 28px; }
+.large-display .service-no { font-weight: 300; }
 .large-display.portrait .now-volume-row { margin-top: 30px; }
 .large-display.portrait .now-mute { margin-top: 36px; }
 .portrait.large-portrait .roon-page { padding-top: 21px; }
@@ -536,6 +548,10 @@ scrolledwindow overshoot, scrolledwindow undershoot { background: transparent; b
 .large-display .roon-artist { font-size: 32px; }
 """ % (APPLIANCE_PAGE_TOP, LANDSCAPE_PAGE_MARGIN, LANDSCAPE_PAGE_MARGIN,
        PORTRAIT_PAGE_MARGIN, PORTRAIT_PAGE_MARGIN, PANEL_STROKE, CAROUSEL_START_INSET)).encode()
+
+# Small static texture: no animation, full-screen image download or per-frame work.
+CSS += ('.theme-roon .roon-page { background-image: url("%s"), linear-gradient(120deg, #242338, #181818 60%%, #251c22); background-repeat: repeat, no-repeat; background-size: 8px 8px, cover; }' %
+        (Path(__file__).resolve().parent / 'icons/gradient-dither.svg').as_uri()).encode()
 
 
 def get_json(url: str, timeout: float = .8):
@@ -661,7 +677,7 @@ class Display(Gtk.Application):
         if css:
             for name in css.split(): widget.add_css_class(name)
         large = min(getattr(self, "viewport_width", 800), getattr(self, "viewport_height", 480)) >= 1000
-        image = FamilyIcon(icon, (64 if large else 42) if "surprise-action" in css else 34); widget.set_child(image)
+        image = FamilyIcon(icon, (64 if large else 42) if "surprise-action" in css else 46 if "source-step" in css else 34); widget.set_child(image)
         caption = {"previous": "Previous track", "next": "Next track", "play": "Play", "pause": "Pause", "refresh": "Refresh", "remove": "Volume down", "add": "Add"}.get(image.icon_name, image.icon_name.title())
         widget.set_tooltip_text(caption)
         widget.update_property([Gtk.AccessibleProperty.LABEL], [caption])
@@ -930,6 +946,7 @@ class Display(Gtk.Application):
         self.discovery_list = ElasticVerticalTrack(spacing=18)
         self.discovery_scroll = Gtk.ScrolledWindow(); self.discovery_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC); self.discovery_scroll.set_kinetic_scrolling(True); self.discovery_scroll.set_overlay_scrolling(True); self.discovery_scroll.set_propagate_natural_height(False); self.discovery_scroll.set_min_content_height(1); self.discovery_scroll.set_size_request(-1, 1); self.discovery_scroll.set_vexpand(True); self.discovery_scroll.set_hexpand(True); self.discovery_scroll.set_child(self.discovery_list)
         self.discovery_scroll.add_css_class("discovery-scroll")
+        self.discovery_scroll.set_margin_bottom(10)
         self.discovery_list.connect_scroll(self.discovery_scroll)
         self.discovery_scroll.get_vadjustment().connect("value-changed", self.discovery_scrolled)
         self.discovery_body = Gtk.Box(spacing=0); self.discovery_body.set_vexpand(True); self.discovery_body.set_hexpand(True)
@@ -986,6 +1003,7 @@ class Display(Gtk.Application):
         browser_scroll = Gtk.ScrolledWindow(); browser_scroll.add_css_class("queue-scroll"); browser_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC); browser_scroll.set_kinetic_scrolling(True); browser_scroll.set_overlay_scrolling(True); browser_scroll.set_propagate_natural_height(False); browser_scroll.set_propagate_natural_width(False); browser_scroll.set_min_content_height(1); browser_scroll.set_size_request(-1, 1); browser_scroll.set_vexpand(True); browser_scroll.set_hexpand(True); browser_scroll.set_child(self.browser_list); self.browser_scroll = browser_scroll
         browser_scroll.get_vadjustment().connect("value-changed", self.browser_scrolled)
         self.browser_list.connect_scroll(browser_scroll)
+        browser_scroll.set_margin_bottom(10)
         previous_scroll = Gtk.EventControllerScroll.new(Gtk.EventControllerScrollFlags.VERTICAL)
         previous_scroll.connect("scroll", self.browser_previous_scroll); browser_scroll.add_controller(previous_scroll)
         previous_drag = Gtk.GestureDrag.new(); previous_drag.set_propagation_phase(Gtk.PropagationPhase.CAPTURE); previous_drag.connect("drag-update", lambda _gesture, x, y: self.browser_previous_scroll(None, 0, -1) if y > 30 and y > abs(x) * 2 else None); previous_drag.connect("drag-end", self.browser_swipe_back); browser_scroll.add_controller(previous_drag)
@@ -1510,9 +1528,9 @@ class Display(Gtk.Application):
                 number.set_xalign(.5); number.set_size_request(-1, -1); number.set_valign(Gtk.Align.CENTER)
                 count = max(1, len(visible))
                 card_budget = (getattr(self, "viewport_height", self.window.get_height()) - 240 - (count - 1) * 24) / count
-                route_size = min(216, max(40, round((card_budget - 80) / 1.85)))
-                attrs = Pango.AttrList(); attrs.insert(Pango.attr_size_new_absolute(route_size * Pango.SCALE)); number.set_attributes(attrs)
-            font_size = round(route_size * .8) if portrait else (123 if self.window.has_css_class("high-resolution") else 82)
+                large = self.window.has_css_class("large-display")
+                route_size = min(344 if large else 216, max(40, round((card_budget - 80) / (2.6 if large else 1.85))))
+            font_size = route_size if portrait else (123 if self.window.has_css_class("high-resolution") else 82)
             if not portrait and len(visible) > 2:
                 font_size = round(font_size / (1.8 if len(visible) >= 4 else 1.4))
             attrs = Pango.AttrList(); attrs.insert(Pango.attr_size_new_absolute(font_size * Pango.SCALE)); number.set_attributes(attrs)
@@ -1520,7 +1538,8 @@ class Display(Gtk.Application):
             for arrival in service.get("arrivals", [])[:2 if portrait else 3]:
                 col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL); col.set_valign(Gtk.Align.CENTER); minutes = arrival.get("minutes"); value = self.label("Due" if minutes == 0 else str(minutes), "arrival", .5)
                 if portrait:
-                    attrs = Pango.AttrList(); attrs.insert(Pango.attr_size_new_absolute(min(112, max(32, round(route_size * .68))) * Pango.SCALE)); value.set_attributes(attrs)
+                    due_size = min(172 if self.window.has_css_class("large-display") else 112, max(32, round(route_size * .55 if self.window.has_css_class("large-display") else route_size * .68)))
+                    attrs = Pango.AttrList(); attrs.insert(Pango.attr_size_new_absolute(due_size * Pango.SCALE)); value.set_attributes(attrs)
                 col.append(value); col.append(self.label("MIN · LIVE" if arrival.get("monitored") else "MIN · AFTER", "arrival-sub", .5)); col.set_hexpand(True); arrivals.append(col)
             row.append(arrivals); self.services.append(row)
         self.bus_status.set_text("Live from LTA DataMall" if data.get("status") == "ok" and not data.get("stale") else "Offline / last known arrivals")
@@ -1732,6 +1751,7 @@ class Display(Gtk.Application):
         if signature == self.discovery_signature: return False
         self.discovery_signature = signature
         self.discovery_data = data
+        self.discovery_list.cancel_spring()
         while child := self.discovery_list.get_first_child(): self.discovery_list.remove(child)
         self.discovery_pictures = {}
         self.discovery_cards = []
@@ -2083,7 +2103,7 @@ class Display(Gtk.Application):
             # Includes outer margins, the alphabet rail, queue-list padding
             # and each button's CSS padding; none may depend on image size.
             margin = 30
-            available = width - margin * 2 - (0 if genres else 80)
+            available = width - margin * 2 - (80 if not genres and (self.browser_state or {}).get("alpha_scrub") else 0)
             gap = 30
             return 3, max(48, (available - gap * 2) // 3)
         available = max(140, width - 266)
@@ -2126,12 +2146,12 @@ class Display(Gtk.Application):
         # One shared centre for the dot and the letter's actual ink bounds.
         value = max(0, min(25, round(self.browser_scrub_scale.get_value())))
         center = 16 + max(1, height - 32) * value / 25
-        x = width - 18
+        x = width - 12
         track = (.27, .26, .29) if getattr(self, "settings_data", {}).get("display_theme") == "roon" else (.145, .192, .18)
         cr.set_source_rgb(*track); cr.set_line_width(5); cr.set_line_cap(1); cr.move_to(x, 16); cr.line_to(x, max(16, height - 16)); cr.stroke()
         accent = (.506, .478, .922) if getattr(self, "settings_data", {}).get("display_theme") == "roon" else (.431, .851, .682)
         cr.set_source_rgb(*accent); cr.arc(x, center, 9, 0, 6.283185307); cr.fill()
-        cr.select_font_face("Inter", 0, 1); cr.set_font_size(18)
+        cr.select_font_face("Inter", 0, 1); cr.set_font_size(25 if min(getattr(self, "viewport_width", 800), getattr(self, "viewport_height", 480)) >= 1000 else 18)
         letter = chr(65 + value); extents = cr.text_extents(letter)
         cr.move_to(x - 26 - extents[2], center - extents[1] - extents[3] / 2); cr.show_text(letter)
 
@@ -2305,7 +2325,49 @@ class Display(Gtk.Application):
         shell = Gtk.ScrolledWindow(); shell.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.NEVER); shell.set_propagate_natural_width(False); shell.set_propagate_natural_height(False); shell.set_min_content_width(size); shell.set_max_content_width(size); shell.set_min_content_height(size + (caption_height if show_labels else 0)); shell.set_max_content_height(size + (caption_height if show_labels else 0)); shell.set_child(content)
         button = Gtk.Button(); button.add_css_class("browser-cover-card"); button.set_child(shell); button.set_sensitive(bool(item.get("item_key"))); button.connect("clicked", self.open_browser_item, item.get("item_key")); return button
 
+    def album_header(self, profile, items):
+        header = Gtk.Box(spacing=24); header.add_css_class("album-profile")
+        width = getattr(self, "viewport_width", 800)
+        size = min(380, round(width * .32)) if width >= 1000 else min(240, round(width * .3))
+        picture = Gtk.Picture(); picture.set_can_shrink(True); picture.set_content_fit(Gtk.ContentFit.COVER)
+        self.set_browser_placeholder(picture)
+        slot = Gtk.ScrolledWindow(); slot.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.NEVER)
+        slot.set_propagate_natural_width(False); slot.set_propagate_natural_height(False)
+        slot.set_min_content_width(size); slot.set_max_content_width(size)
+        slot.set_min_content_height(size); slot.set_max_content_height(size)
+        slot.set_size_request(size, size); slot.set_child(picture); header.append(slot)
+        if key := profile.get("image_key"): self.load_preview_artwork(picture, key)
+        copy = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16); copy.set_hexpand(True); copy.set_valign(Gtk.Align.CENTER)
+        title = self.label(profile.get("name") or "Album", "artist-name"); title.set_wrap(True); title.set_max_width_chars(28); copy.append(title)
+        if artist := profile.get("artist"):
+            link = self.button(artist, lambda *_: self.request_browser("artist", name=artist), "album-artist")
+            link.set_halign(Gtk.Align.START); link.set_tooltip_text("View artist"); copy.append(link)
+        if review := profile.get("review"):
+            summary = self.label(review[:1800], "queue-meta"); summary.set_wrap(True); summary.set_lines(6); summary.set_ellipsize(Pango.EllipsizeMode.END); summary.set_max_width_chars(50); copy.append(summary)
+        if play := next((item for item in items if item.get("action") and item.get("title", "").lower() == "play album"), None):
+            button = self.labelled_icon_button("play", "Play Album", lambda *_: self.open_browser_item(None, play.get("item_key")), "artist-play")
+            button.set_halign(Gtk.Align.START); copy.append(button)
+        header.append(copy)
+        return header
+
     def render_browser(self, data):
+        self.browser_list.cancel_spring()
+        if data.get("action_menu"):
+            self.browser_state = data; self.browser_loading = False; self.browser_rendering = False
+            popover = Gtk.Popover(); popover.set_parent(self.browser_body); popover.set_autohide(True)
+            rect = Gdk.Rectangle(); rect.x = max(0, self.browser_body.get_width() // 2); rect.y = min(180, self.browser_body.get_height() // 3); rect.width = 1; rect.height = 1; popover.set_pointing_to(rect)
+            choices = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+            selected = {"value": False}
+            def choose(_button, key):
+                selected["value"] = True; popover.popdown(); self.request_browser("open", item_key=key)
+            for item in data.get("items", []):
+                if item.get("action"):
+                    choices.append(self.button(item["title"], lambda button, key=item.get("item_key"): choose(button, key), "utility"))
+            def closed(*_):
+                popover.unparent()
+                if not selected["value"]: self.request_browser("back")
+            popover.connect("closed", closed); popover.set_child(choices); popover.popup()
+            return False
         self.browser_rendering = True; self.browser_loading = True; self.browser_state = data; self.browser_back.set_visible(bool(data.get("can_back")) and not data.get("surprise_preview")); self.browser_back.set_sensitive(bool(data.get("can_back"))); self.browser_scrubber.set_visible(bool(data.get("alpha_scrub")))
         active_section = "surprise" if data.get("surprise_preview") else (data.get("section") or "albums")
         from_discover = self.discovery_active and self.discovery_browser_origin
@@ -2339,6 +2401,10 @@ class Display(Gtk.Application):
         self.browser_list.set_homogeneous(False)
         self.browser_list.set_vexpand(grouped_search)
         self.browser_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.NEVER if grouped_search else Gtk.PolicyType.AUTOMATIC)
+        album_profile = data.get("album_profile")
+        if album_profile:
+            self.browser_list.append(self.album_header(album_profile, items))
+            items = [item for item in items if not (item.get("action") and item.get("title", "").lower() == "play album")]
         if data.get("artist_profile"):
             heading = self.label("ARTIST ALBUMS", "browser-section"); heading.add_css_class("artist-albums-heading"); self.browser_list.append(heading)
             items = [item for item in items if item is not artist_play]
@@ -2415,6 +2481,9 @@ class Display(Gtk.Application):
                 if item.get("action"):
                     action_icon = FamilyIcon(self.browser_action_icon(item.get("title")), 42)
                     action_frame = Gtk.CenterBox(); action_frame.add_css_class("browser-action-icon"); action_frame.set_size_request(84, 84); action_frame.set_hexpand(False); action_frame.set_halign(Gtk.Align.START); action_frame.set_valign(Gtk.Align.CENTER); action_frame.set_center_widget(action_icon); row.append(action_frame)
+                elif album_profile:
+                    action_icon = FamilyIcon("play", 52 if self.window.has_css_class("large-display") else 34)
+                    action_icon.set_size_request(72, 72); action_icon.set_valign(Gtk.Align.CENTER); row.append(action_icon)
                 else:
                     picture = Gtk.Picture(); picture.add_css_class("queue-art"); picture.set_can_shrink(True); picture.set_content_fit(Gtk.ContentFit.COVER)
                     self.set_browser_placeholder(picture, item.get("result_type") == "artists")
