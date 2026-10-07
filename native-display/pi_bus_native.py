@@ -351,6 +351,18 @@ CSS += b"""
 .portrait.large-portrait .browser-filter { font-size: 24px; min-height: 52px; }
 .portrait.large-portrait .browser-cover-grid { padding-left: 0; }
 .portrait.large-portrait .nav button { font-size: 26px; min-height: 72px; }
+.portrait .roon-page { padding-top: 15px; }
+.portrait .settings-page { padding-top: 17px; }
+.portrait .settings-page .settings-title { font-size: 30px; }
+.portrait .settings-page .settings-version { font-size: 15px; }
+.portrait .settings-page .settings-diagnostic { font-size: 15px; }
+.portrait .settings-header .settings-utilities button { min-height: 52px; font-size: 13px; }
+.portrait.compact-portrait .settings-page .settings-title { font-size: 24px; }
+.portrait.compact-portrait .settings-page .settings-version { font-size: 13px; }
+.portrait.compact-portrait .settings-page .settings-diagnostic { font-size: 14px; }
+.portrait.compact-portrait .settings-header .settings-utilities button { min-height: 44px; }
+.settings-page .settings-action.reboot-action, .confirm-reboot { background: #8a5b24; color: #fff1d2; }
+.settings-page .settings-action.reboot-action:hover, .confirm-reboot:hover { background: #a76f2b; }
 """
 
 
@@ -825,12 +837,12 @@ class Display(Gtk.Application):
     def build_settings(self):
         page = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8); page.add_css_class("page"); page.add_css_class("settings-page")
         top = Gtk.Box(spacing=20); top.add_css_class("settings-header"); self.settings_header = top
-        heading = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4); heading.set_hexpand(True)
+        heading = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8); heading.set_hexpand(True)
         title_row = Gtk.Box(spacing=10); title_row.set_valign(Gtk.Align.CENTER)
         title_row.append(self.label("Pi Home", "settings-title")); title_row.get_last_child().add_css_class("settings-brand"); title_row.get_last_child().set_valign(Gtk.Align.BASELINE); title_row.append(self.label("Settings", "settings-title")); title_row.get_last_child().set_valign(Gtk.Align.BASELINE)
         self.device_status = self.label("", "settings-version"); self.device_status.set_valign(Gtk.Align.BASELINE); self.device_status.set_max_width_chars(32); self.device_status.set_ellipsize(Pango.EllipsizeMode.END); title_row.append(self.device_status); heading.append(title_row)
         self.touch_diagnostics = self.label("Loading diagnostics…", "settings-diagnostic"); self.touch_diagnostics.set_wrap(True); heading.append(self.touch_diagnostics); top.append(heading)
-        utilities = Gtk.Box(spacing=22); utilities.set_valign(Gtk.Align.START); utilities.append(self.button("BACK", self.close_settings)); utilities.append(self.button("SLEEP", self.sleep)); top.append(utilities); page.append(top)
+        utilities = Gtk.Box(spacing=22); utilities.add_css_class("settings-utilities"); utilities.set_valign(Gtk.Align.START); utilities.append(self.button("BACK", self.close_settings)); utilities.append(self.button("SLEEP", self.sleep)); top.append(utilities); page.append(top)
         separator = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL); separator.add_css_class("settings-divider"); page.append(separator)
         card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14); card.add_css_class("settings-card"); card.set_vexpand(True)
         self.settings_row_sizes = Gtk.SizeGroup(mode=Gtk.SizeGroupMode.VERTICAL)
@@ -848,7 +860,7 @@ class Display(Gtk.Application):
         self.touch_mounting = Gtk.DropDown.new_from_strings(["Rotation · Standard", "Rotation · 180°"]); self.touch_mounting.add_css_class("settings-select"); display_column.append(self.touch_mounting)
         brightness_row = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16); brightness_row.set_margin_top(8); brightness_row.append(self.label("DISPLAY BRIGHTNESS", "eyebrow")); self.touch_brightness = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 10, 100, 1); self.touch_brightness.set_draw_value(True); self.touch_brightness.set_value_pos(Gtk.PositionType.RIGHT); self.touch_brightness.connect("value-changed", self.change_brightness); brightness_row.append(self.touch_brightness); display_column.append(brightness_row)
         for row in (self.touch_profile, self.touch_orientation, self.touch_mounting): self.settings_row_sizes.add_widget(row)
-        actions = Gtk.Box(spacing=18); actions.set_homogeneous(True); actions.set_valign(Gtk.Align.END); self.settings_actions = actions; self.apply_display_button = self.button("APPLY DISPLAY", self.request_display_settings, "settings-action"); self.apply_display_button.set_hexpand(True); self.update_button = self.button("INSTALL UPDATE", self.request_update, "settings-action"); self.update_button.set_hexpand(True); actions.append(self.update_button); actions.append(self.apply_display_button); actions.append(self.button("REBOOT", self.confirm_reboot, "settings-action")); card.append(actions); page.append(card)
+        actions = Gtk.Box(spacing=18); actions.set_homogeneous(True); actions.set_valign(Gtk.Align.END); self.settings_actions = actions; self.apply_display_button = self.button("APPLY DISPLAY", self.request_display_settings, "settings-action"); self.apply_display_button.set_hexpand(True); self.update_button = self.button("INSTALL UPDATE", self.request_update, "settings-action"); self.update_button.set_hexpand(True); actions.append(self.update_button); actions.append(self.apply_display_button); reboot = self.button("REBOOT", self.confirm_reboot, "settings-action"); reboot.add_css_class("reboot-action"); actions.append(reboot); card.append(actions); page.append(card)
         return page
 
     def build_sleep(self):
@@ -1478,14 +1490,14 @@ class Display(Gtk.Application):
         self.discovery_card_scrollers = {}
         self.sync_discovery_sidebar()
         self.discovery_body.set_margin_end(0)
-        self.discovery_list.set_margin_top(5 if portrait_grid and self.discovery_section == "releases" else 0)
+        self.discovery_list.set_margin_top(10 if portrait_grid and self.discovery_section == "releases" else 0)
         if data.get("status") != "ready":
             self.discovery_list.append(self.loading_notice() if data.get("status") == "loading" else self.label(data.get("message", "Discover is unavailable."), "browser-message")); return False
         if self.discovery_mix:
             title = self.label((data.get("mix") or {}).get("title", "Your Daily Mix"), "queue-title")
             self.discovery_list.append(title)
             controls = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
-            for action, label in (("play", "PLAY THIS MIX"), ("queue", "QUEUE THIS MIX")):
+            for action, label in (("play", "▶  PLAY THIS MIX"), ("queue", "QUEUE THIS MIX")):
                 control = self.button(label, lambda _button, value=action: self.request_mix_action(value, controls), "artist-play" if action == "play" else "browser-back")
                 controls.append(control)
             self.discovery_list.append(controls)

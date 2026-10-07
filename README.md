@@ -1,6 +1,6 @@
 # Pi Home
 
-The next testing release is **1.1.1-beta.8**: all portrait refinements restored—30px outer margins and column gaps, bottom-docked search with single-column results, revised Surprise placement, full-width playlists, right-aligned Back and artist spacing—with corrected loaded-card sizing and bounded Browse requests. Bus routes are smaller solid numerals in their route colours, with two larger portrait arrivals and three in landscape. Select Beta in System → Software to receive it; Stable remains on 1.1.0.
+The next testing release is **1.1.1-beta.9**: larger portrait settings text and controls, consistent orange reboot buttons, a 3px lower music header, 5px more space above New Releases, and a purple play triangle on Play This Mix. Retains all beta.8 portrait refinements and loading safeguards. Select Beta in System → Software to receive it; Stable remains on 1.1.0.
 
 Beta updates are source-only releases: automated backend, controller, update-safety and native layout checks still run, but no downloadable disk image is built. For stable releases or explicit fresh-install testing, run the Alpine verification workflow on the release branch with **build_image** enabled, verify the image, then attach it to the release. The existing Alpine updater continues to require a successful verification run for the exact release commit.
 

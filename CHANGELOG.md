@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.1-beta.9 — 7 October 2026
+
+- Enlarges portrait settings title, version, diagnostics and Back/Sleep controls; adds more separation below the title row.
+- Uses the web GUI orange reboot treatment across backend reboot buttons, touchscreen settings and restart confirmation.
+- Lowers the shared portrait music header by 3px, retaining cog/clock alignment and 30px side margins.
+- Adds another 5px above portrait New Releases and a purple play triangle to Play This Mix.
+- Retains beta.8 navigation/loading safeguards and adds native settings screenshot coverage. Source-only beta, no disk image rebuild.
+
 ## 1.1.1-beta.8 — 7 October 2026
 
 - Restores all beta.6 portrait refinements: consistent 30px margins/gaps, compact menu spacing, revised Surprise layout, bottom-docked search and single-column previews, right-aligned Back, full-width playlists and artist album spacing.
