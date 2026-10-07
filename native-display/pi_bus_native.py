@@ -528,6 +528,9 @@ scrolledwindow overshoot, scrolledwindow undershoot { background: transparent; b
 .large-display.display-landscape .roon-page { padding-top: 5px; }
 .compact-portrait .source-step { min-width: 64px; min-height: 64px; border-radius: 32px; }
 .compact-portrait .source-volume { font-size: 84px; }
+.compact-portrait .browser-sidebar { border-spacing: 4px; }
+.compact-portrait .browser-filter { padding-left: 2px; padding-right: 2px; }
+.compact-portrait .browser-back { min-width: 56px; padding-left: 8px; padding-right: 8px; }
 .large-display .settings-select, .large-display .setting-line { min-height: 72px; font-size: 22px; }
 .large-display .settings-action { min-height: 82px; font-size: 22px; }
 .large-display .discovery-card .queue-title { font-size: 27px; }
@@ -2338,9 +2341,10 @@ class Display(Gtk.Application):
         slot.set_size_request(size, size); slot.set_child(picture); header.append(slot)
         if key := profile.get("image_key"): self.load_preview_artwork(picture, key)
         copy = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16); copy.set_hexpand(True); copy.set_valign(Gtk.Align.CENTER)
-        title = self.label(profile.get("name") or "Album", "artist-name"); title.set_wrap(True); title.set_max_width_chars(28); copy.append(title)
+        title = self.label(profile.get("name") or "Album", "artist-name"); title.set_wrap(True); title.set_wrap_mode(Pango.WrapMode.WORD_CHAR); title.set_max_width_chars(28); copy.append(title)
         if artist := profile.get("artist"):
             link = self.button(artist, lambda *_: self.request_browser("artist", name=artist), "album-artist")
+            link.get_child().set_wrap(True); link.get_child().set_wrap_mode(Pango.WrapMode.WORD_CHAR); link.get_child().set_max_width_chars(23)
             link.set_halign(Gtk.Align.START); link.set_tooltip_text("View artist"); copy.append(link)
         if review := profile.get("review"):
             summary = self.label(review[:1800], "queue-meta"); summary.set_wrap(True); summary.set_lines(6); summary.set_ellipsize(Pango.EllipsizeMode.END); summary.set_max_width_chars(50); copy.append(summary)

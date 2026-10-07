@@ -31,6 +31,22 @@ test('artist links use fresh exact-match core keys and preserve artist profile',
   assert.deepEqual(result.artist_profile, {name:'Example Artist', image_key:'portrait'});
 });
 
+test('successful queue actions return from the popup to album tracks without replaying the action', async () => {
+  const calls = [];
+  const service = {
+    browse(options, done) { calls.push(options); done(false, options.item_key ? {action:'message',message:'Queued'} : {action:'list',list:{title:'Album',level:3}}); },
+    load(options, done) { done(false, {list:{title:'Album',level:3},items:[{title:'Play Album',hint:'action',item_key:'album-play'},{title:'Track',subtitle:'Artist',item_key:'track'}]}); },
+  };
+  const manager = new BrowseManager(() => service, () => ({zone_id:'zone'}));
+  manager.sessions.set('pihome-queue', {hierarchy:'browse', level:4, action_menu:true, fallback_image_key:'cover', items:[{title:'Queue',action:true,item_key:'queue-once'}]});
+  const result = await manager.run('queue', 'open', {item_key:'queue-once'});
+  assert.equal(calls.filter(call => call.item_key).length, 1);
+  assert.equal(calls[1].pop_levels, 1);
+  assert.equal(result.action_menu, false);
+  assert.equal(result.album_profile.name, 'Album');
+  assert.equal(result.message, 'Added to queue.');
+});
+
 test('a missing Roon callback has a deadline and releases the serialized queue', async () => {
   const fs = require('node:fs'), vm = require('node:vm'), path = require('node:path');
   const source = fs.readFileSync(path.join(__dirname, 'browse-state.js'), 'utf8');

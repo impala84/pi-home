@@ -167,6 +167,11 @@ class BrowseManager {
     if (opened?.shuffle_genre) return this.shuffleGenre(service, zone, session, state, options);
     let result = await request(service, 'browse', options);
     let playbackCompleted = opened?.action && /^play(?: now| from here)?$/i.test(opened.title.trim());
+    if (state?.action_menu && opened?.action && /^(add next|queue)$/i.test(opened.title.trim()) && !result.is_error && result.action !== 'list') {
+      const album = await request(service, 'browse', {hierarchy, multi_session_key:session, zone_or_output_id:zone.zone_id, pop_levels:1});
+      const restored = await this.follow(service, session, hierarchy, album, state.fallback_image_key);
+      return this.save(session, {...restored, message: /^add next$/i.test(opened.title.trim()) ? 'Added next.' : 'Added to queue.'});
+    }
     // Play Album can open a second action menu rather than start playback.
     // Complete its Play Now action explicitly, just as the Surprise preview does.
     if (opened?.action && /^play album$/i.test(opened.title.trim()) && result.action === 'list' && !result.is_error) {
