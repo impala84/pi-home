@@ -2,6 +2,7 @@
 
 ## 1.1.1-beta.15 — 7 October 2026
 
+- Restores the original smaller neutral album/artist loading placeholders and increases native playback/library/cog strokes from 2 to 3 units, keeping the new shapes.
 - Corrects horizontal Daily carousel end space to exactly 30px, not the leading screen coordinate.
 - Removes GTK overshoot/undershoot highlight lines.
 - Adds a capped 18px resisted touch pull and a 450ms damped spring-back at both ends; paint-only offsets leave the first-card resting position unchanged.

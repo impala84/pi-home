@@ -1,5 +1,5 @@
 .pi-icon { width: 1em; height: 1em; vertical-align: middle; flex-shrink: 0; }
-svg.pi-icon, svg.browser-tile-icon, svg.browser-home-icon, svg.missing-artwork {
+svg.pi-icon, svg.browser-tile-icon, svg.browser-home-icon {
   fill: none; stroke: currentColor; stroke-width: 2;
   stroke-linecap: round; stroke-linejoin: round;
 }
@@ -420,4 +420,4 @@ body[data-theme="roon"] .browser-scrubber input::-moz-range-track, body[data-the
 }
 
 /* Canonical family units override legacy 24px SVG rules. */
-svg.pi-icon, svg.browser-tile-icon, svg.browser-home-icon, svg.missing-artwork { stroke-width: 2; }
+svg.pi-icon, svg.browser-tile-icon, svg.browser-home-icon { stroke-width: 2; }

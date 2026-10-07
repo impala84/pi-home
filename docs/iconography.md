@@ -34,5 +34,10 @@ and dropdown affordances remain native accessible widgets. Loading dots are an
 animation, not a pictogram. Branding favicons remain unchanged. Layout, hit
 targets, callbacks, labels and active/inactive colours are not redesigned.
 
+Artwork loading placeholders deliberately retain the smaller neutral pre-upgrade
+disc and person designs; these are distinct from Browse category symbols. Native
+playback/library controls and the cog use a 3-unit optical stroke for touchscreen
+legibility; genres and other family symbols retain the 2-unit base stroke.
+
 Native screenshot fixtures cover four display dimensions and all 21 genres.
 They are deterministic GTK renders, not proof of physical touchscreen gestures.
