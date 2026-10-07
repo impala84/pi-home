@@ -55,6 +55,28 @@ class PortraitRefinementTests(unittest.TestCase):
         self.assertEqual(owner.elastic_offset, 0)
         self.assertIsNone(owner.spring_timer)
 
+    def test_carousel_touch_pull_resists_both_ends_without_moving_scroll(self):
+        import math
+        handlers = {}
+        drag = SimpleNamespace(set_touch_only=Mock(), set_propagation_phase=Mock(), set_state=Mock(), connect=lambda name, handler: handlers.update({name: handler}))
+        gtk = SimpleNamespace(GestureDrag=lambda: drag, PropagationPhase=SimpleNamespace(CAPTURE=1), EventSequenceState=SimpleNamespace(CLAIMED=2))
+        value = [0]
+        adjustment = SimpleNamespace(get_lower=lambda: 0, get_upper=lambda: 600, get_page_size=lambda: 200, get_value=lambda: value[0], set_value=Mock())
+        scroller = SimpleNamespace(get_hadjustment=lambda: adjustment, add_controller=Mock())
+        owner = SimpleNamespace(cancel_spring=Mock(), queue_draw=Mock(), spring_back=Mock(), elastic_offset=0)
+        native_method("attach_touch_pull", {"Gtk": gtk, "math": math})(owner, scroller)
+        for boundary, distance in ((0, 100), (400, -100)):
+            value[0] = boundary; handlers["drag-begin"]()
+            handlers["drag-update"](drag, distance, 0)
+            self.assertGreater(abs(owner.elastic_offset), 0)
+            self.assertLess(abs(owner.elastic_offset), 18)
+            self.assertEqual(owner.elastic_offset > 0, distance > 0)
+            adjustment.set_value.assert_not_called()
+            handlers["drag-end"](); owner.spring_back.assert_called()
+        drag.set_state.reset_mock(); handlers["drag-begin"]()
+        handlers["drag-update"](drag, 20, 80)
+        drag.set_state.assert_not_called()
+
     def test_http_error_is_preserved_only_for_browse(self):
         import io, json, urllib.error
         for path, expected in (("/api/browse", {"error": "Roon Browse request timed out"}), ("/api/control", None)):
