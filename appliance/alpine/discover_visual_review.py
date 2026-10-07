@@ -154,9 +154,9 @@ render("daily", daily)
 capture("daily-mixes")
 if screen_width >= 1200 and screen_height < screen_width:
     recommendation_row = display.discovery_daily_sections["recommendations"]
-    first_card = recommendation_row.get_child().get_first_child()
-    first_art = first_card.get_child().get_child().get_first_child()
-    first_cover = first_art.compute_bounds(page)[1]
+    track = recommendation_row.get_child()
+    if isinstance(track, Gtk.Viewport): track = track.get_child()
+    first_cover = track.get_first_child().compute_bounds(page)[1]
     child = display.discovery_list.get_first_child()
     while child:
         if child.has_css_class("recommendation-heading") or child.has_css_class("recommendation-album"):
