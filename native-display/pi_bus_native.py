@@ -322,7 +322,7 @@ CSS += b"""
 .display-landscape.theme-roon .discover-toolbar .roon-subnav button.active { border-bottom-color: #817aeb; }
 .display-landscape .bus-page, .display-landscape .home-page { padding-top: 8px; padding-left: 28px; padding-right: 28px; }
 .recommendation-album { color: #fff; font-size: 18px; }
-.display-landscape .recommendation-heading { margin-left: 0; margin-right: 0; }
+.display-landscape .recommendation-heading, .display-landscape .recommendation-album { margin-left: 10px; margin-right: 0; }
 .display-landscape .discovery-card, .display-landscape .discovery-card:hover, .display-landscape .discovery-card:active { padding: 0; }
 .portrait .discover-toolbar .roon-subnav button { font-weight: 500; letter-spacing: 0; padding: 4px 0; min-height: 38px; }
 .portrait .discover-toolbar .roon-subnav button.active { color: #fff; }
@@ -1516,7 +1516,7 @@ class Display(Gtk.Application):
         self.discovery_cards = []
         self.discovery_card_scrollers = {}
         self.sync_discovery_sidebar()
-        self.discovery_body.set_margin_end(0 if portrait_grid else 28 if getattr(self, "viewport_width", 800) >= 1200 else 0)
+        self.discovery_body.set_margin_end(0 if portrait_grid or getattr(self, "discovery_section", "") == "daily" else 28 if getattr(self, "viewport_width", 800) >= 1200 else 0)
         self.discovery_list.set_margin_top(10 if portrait_grid and self.discovery_section == "releases" else 5 if not portrait_grid and getattr(self, "discovery_section", "") in {"recent", "daily", "releases"} else 0)
         if data.get("status") != "ready":
             self.discovery_list.append(self.loading_notice() if data.get("status") == "loading" else self.label(data.get("message", "Discover is unavailable."), "browser-message")); return False

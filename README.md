@@ -1,6 +1,6 @@
 # Pi Home
 
-The next testing release is **1.1.1-beta.11**: centred landscape music menus, a saved full-clock/icon preference, aligned Bus Times/Home clocks, text-only Daily recommendation context and balanced landscape content spacing. Retains previous portrait refinements and loading safeguards. Select Beta in System → Software to receive it; Stable remains on 1.1.0.
+The next testing release is **1.1.1-beta.12**: landscape Daily recommendation text aligns with the artwork, and horizontal artwork rows bleed to the right screen edge. Retains all beta.11 refinements and loading safeguards. Select Beta in System → Software to receive it; Stable remains on 1.1.0.
 
 Beta updates are source-only releases: automated backend, controller, update-safety and native layout checks still run, but no downloadable disk image is built. For stable releases or explicit fresh-install testing, run the Alpine verification workflow on the release branch with **build_image** enabled, verify the image, then attach it to the release. The existing Alpine updater continues to require a successful verification run for the exact release commit.
 
