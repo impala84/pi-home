@@ -6,6 +6,8 @@ from pathlib import Path
 from gi.repository import Gdk, GLib, Gtk
 
 ASSETS = Path(__file__).resolve().parents[1] / 'roon-controller/static/icons'
+TOUCH_CONTROL_STROKE = 3
+TOUCH_CONTROLS = {'play', 'pause', 'previous', 'next', 'add', 'remove', 'heart', 'settings', 'refresh'}
 ALIASES = {
     'media-playback-start-symbolic': 'play', 'media-playback-pause-symbolic': 'pause',
     'media-skip-backward-symbolic': 'previous', 'media-skip-forward-symbolic': 'next',
@@ -36,6 +38,8 @@ class FamilyIcon(Gtk.Image):
             path = ASSETS / (self.icon_name + '-symbolic.svg')
             if not path.exists(): path = ASSETS / 'music-symbolic.svg'
             svg = path.read_text().replace('currentColor', colour)
+            if self.icon_name in TOUCH_CONTROLS:
+                svg = svg.replace('stroke-width="2"', f'stroke-width="{TOUCH_CONTROL_STROKE}"')
             svg = svg.replace('width="128" height="128"', f'width="{resolution}" height="{resolution}"')
             if self.filled: svg = svg.replace('fill="none"', 'fill="' + colour + '"', 1)
             self._textures[key] = Gdk.Texture.new_from_bytes(GLib.Bytes.new(svg.encode()))

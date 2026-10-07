@@ -307,7 +307,12 @@ function browserTileSymbol(title, section) {
 }
 
 function missingArtwork(artist = false) {
-  return PiHomeIcons.element(artist ? 'artist' : 'album', 'missing-artwork');
+  const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  icon.setAttribute('viewBox', '0 0 100 100'); icon.setAttribute('aria-hidden', 'true'); icon.classList.add('missing-artwork');
+  icon.innerHTML = artist
+    ? '<circle cx="50" cy="30" r="14"/><path d="M22 88v-8a28 28 0 0 1 56 0v8"/>'
+    : '<circle cx="50" cy="50" r="31"/><circle cx="50" cy="50" r="8"/>';
+  return icon;
 }
 
 function browserSvgIcon(name, className = 'browser-tile-icon') {

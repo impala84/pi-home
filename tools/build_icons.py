@@ -76,8 +76,10 @@ def outputs():
           '});\n')
     files['roon-controller/static/icons.js'] = js
     files['src/pi_bus_time_display/static/icons.js'] = js
-    for name in ('album', 'artist'):
-        files['native-display/icons/missing-' + name + '.svg'] = svg(name).replace('currentColor', '#7f8b87')
+    # Neutral artwork placeholders are intentionally the pre-upgrade designs,
+    # not the prominent catalogue/navigation symbols.
+    files['native-display/icons/missing-album.svg'] = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="256" height="256"><g transform="translate(50 50)" fill="none" stroke="#777" stroke-width="4"><circle cx="50" cy="50" r="31"/><circle cx="50" cy="50" r="8"/></g></svg>\n'
+    files['native-display/icons/missing-artist.svg'] = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="256" height="256"><g transform="translate(50 50)" fill="none" stroke="#777" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><circle cx="50" cy="30" r="14"/><path d="M22 88v-8a28 28 0 0 1 56 0v8"/></g></svg>\n'
     return files
 
 if __name__ == '__main__':
