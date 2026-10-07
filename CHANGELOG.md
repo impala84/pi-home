@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.2 Alpine — 7 October 2026
+
+- Corrects rotated touch on the 10-inch Touch Display 2: target its Ilitek `ili_v3` input device, not only the Goodix controller used by the smaller panels.
+- Preserves existing 7-inch calibration, clears compositor output mapping to avoid double rotation, and logs input names for hardware diagnosis.
+- Apply the update, then reboot manually to reload touch calibration before Cage starts. Physical finger-input acceptance remains required.
+
 ## 1.1.1 Alpine Stable — 7 October 2026
 
 - Promotes the verified beta.18 application and full Raspberry Pi 5 ARM64 appliance image to the Stable channel, without further UI or interaction changes.

@@ -1,6 +1,6 @@
 # Pi Home
 
-The current Alpine stable release is **1.1.1**: full ARM64 appliance image for fresh Raspberry Pi 5 installations, with the verified beta.18 UI refinements and 30-track history. Existing Alpine devices can receive it through System → Software on the Stable channel without reflashing. Raspberry Pi OS releases remain separate.
+The current Alpine stable release is **1.1.2**: an in-place correction for 10-inch Touch Display 2 touch rotation. Update through System → Software on the Stable channel, then reboot manually to apply input calibration. Physical touch acceptance is still required. The 1.1.1 full image remains available for fresh installs. Raspberry Pi OS releases remain separate.
 
 Beta updates are normally source-only releases; full images are built for stable releases and explicit fresh-install requests. Automated backend, controller, update-safety and native layout checks run, followed by complete image validation with **build_image** enabled. The Alpine updater requires a successful verification run for the exact release commit.
 

@@ -444,6 +444,14 @@ class AlpineSetupTests(unittest.TestCase):
         self.assertIn('ENV{WL_OUTPUT}=""', rule)
         self.assertIn('LIBINPUT_CALIBRATION_MATRIX}="1 0 0 0 1 0"', rule)
         self.assertIn('LIBINPUT_CALIBRATION_MATRIX}="0 1 0 -1 0 1"', mapping.mapping_rule("DSI-1", "90"))
+        import fnmatch
+        for rotation, matrix in mapping.MATRICES.items():
+            rule10 = mapping.mapping_rule("DSI-1", rotation, "touch2-10")
+            self.assertIn('ATTRS{name}=="* ili_v3"', rule10)
+            self.assertTrue(fnmatch.fnmatch("10-0041 ili_v3", "* ili_v3"))
+            self.assertIn(f'LIBINPUT_CALIBRATION_MATRIX}}="{matrix}"', rule10)
+            self.assertIn('ENV{WL_OUTPUT}=""', rule10)
+        self.assertNotIn("ili_v3", mapping.mapping_rule("DSI-1", "90", "touch2-7"))
         for rotation in mapping.MATRICES:
             values = [float(v) for v in mapping.MATRICES[rotation].split()]
             for x, y in ((0, 0), (0, 1), (1, 0), (1, 1)):
