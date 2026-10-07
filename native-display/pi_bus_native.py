@@ -173,6 +173,10 @@ CSS += b"""
 .bus-page .service.compact .arrival, .bus-page .service.compact .service-no { font-size: 76px; }
 .touch-landscape .bus-page .service.compact .arrival, .touch-landscape .bus-page .service.compact .service-no { font-size: 99px; }
 .bus-page .header-title { transform: none; }
+.compact-landscape .bus-page .service.compact .arrival, .compact-landscape .bus-page .service.compact .service-no { font-size: 59px; }
+.compact-landscape .bus-page .service.dense .arrival, .compact-landscape .bus-page .service.dense .service-no { font-size: 36px; }
+.compact-landscape .bus-page .service.compact, .compact-landscape .bus-page .service.dense { padding-top: 3px; padding-bottom: 3px; }
+.display-landscape.high-resolution .bus-page .service.dense .arrival, .display-landscape.high-resolution .bus-page .service.dense .service-no { font-size: 64px; }
 .surprise-title { font-size: 30px; font-weight: 750; }.surprise-artist { font-size: 23px; color: #b6c0bc; }.surprise-caption { font-size: 17px; color: #b6c0bc; }
 .touch-landscape .surprise-title { font-size: 34px; }.touch-landscape .surprise-artist { font-size: 25px; }
 .artist-profile { padding: 12px 22px 8px 12px; }.artist-name { font-size: 27px; font-weight: 750; }.artist-bio { color: #b6c0bc; font-size: 17px; }.artist-source { color: #78837f; font-size: 11px; }
@@ -524,6 +528,9 @@ class Display(Gtk.Application):
         if css:
             for name in css.split(): widget.add_css_class(name)
         image = FamilyIcon(icon, 34); widget.set_child(image)
+        caption = {"previous": "Previous track", "next": "Next track", "play": "Play", "pause": "Pause", "refresh": "Refresh", "remove": "Volume down", "add": "Add"}.get(image.icon_name, image.icon_name.title())
+        widget.set_tooltip_text(caption)
+        widget.update_property([Gtk.AccessibleProperty.LABEL], [caption])
         widget.connect("clicked", callback)
         return widget
 
@@ -533,6 +540,7 @@ class Display(Gtk.Application):
         row.append(FamilyIcon(name, 24)); row.append(self.label(text))
         widget.set_child(row)
         widget.set_tooltip_text(text)
+        widget.update_property([Gtk.AccessibleProperty.LABEL], [text])
         return widget
 
     def loading_notice(self):
@@ -627,7 +635,7 @@ class Display(Gtk.Application):
         self.responsive_portrait = portrait
         self.viewport_width, self.viewport_height = width, height
         (self.window.add_css_class if portrait and width >= 1000 else self.window.remove_css_class)("large-portrait")
-        for css_class, enabled in (("portrait", portrait), ("display-landscape", not portrait), ("compact-portrait", portrait and width < 600), ("high-resolution", max(width, height) >= 1200), ("touch-landscape", width >= 1200 and not portrait)):
+        for css_class, enabled in (("portrait", portrait), ("display-landscape", not portrait), ("compact-portrait", portrait and width < 600), ("compact-landscape", not portrait and height < 600), ("high-resolution", max(width, height) >= 1200), ("touch-landscape", width >= 1200 and not portrait)):
             (self.window.add_css_class if enabled else self.window.remove_css_class)(css_class)
         self.now_playing_content.set_orientation(Gtk.Orientation.VERTICAL if portrait else Gtk.Orientation.HORIZONTAL)
         self.now_playing_content.set_spacing(24 if portrait else 26)
@@ -798,9 +806,9 @@ class Display(Gtk.Application):
         source = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12); source.add_css_class("source-view"); source.set_halign(Gtk.Align.CENTER); source.set_valign(Gtk.Align.CENTER); source.set_hexpand(True); source.set_vexpand(True)
         self.source_title = self.label("EXTERNAL INPUT", "source-title", .5); source.append(self.source_title)
         source_volume = Gtk.Box(spacing=28); source_volume.set_halign(Gtk.Align.CENTER); source_volume.set_valign(Gtk.Align.CENTER)
-        source_down = self.button("−", lambda *_: self.step_bluos_volume(-2), "source-step"); source_down.set_size_request(112, 112); source_down.set_halign(Gtk.Align.CENTER); source_down.set_valign(Gtk.Align.CENTER); source_volume.append(source_down)
+        source_down = self.icon_button("remove", lambda *_: self.step_bluos_volume(-2), "source-step"); source_down.set_tooltip_text("Volume down"); source_down.set_size_request(112, 112); source_down.set_halign(Gtk.Align.CENTER); source_down.set_valign(Gtk.Align.CENTER); source_volume.append(source_down)
         self.source_volume = self.label("—", "source-volume", .5); self.source_volume.set_size_request(230, -1); source_volume.append(self.source_volume)
-        source_up = self.button("+", lambda *_: self.step_bluos_volume(2), "source-step"); source_up.set_size_request(112, 112); source_up.set_halign(Gtk.Align.CENTER); source_up.set_valign(Gtk.Align.CENTER); source_volume.append(source_up); source.append(source_volume)
+        source_up = self.icon_button("add", lambda *_: self.step_bluos_volume(2), "source-step"); source_up.set_tooltip_text("Volume up"); source_up.set_size_request(112, 112); source_up.set_halign(Gtk.Align.CENTER); source_up.set_valign(Gtk.Align.CENTER); source_volume.append(source_up); source.append(source_volume)
         self.source_mute = self.button("MUTE", self.toggle_audio_mute, "source-mute"); self.source_mute.set_halign(Gtk.Align.CENTER); source.append(self.source_mute); self.roon_views.add_named(source, "source")
         self.queue_list = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2); self.queue_list.add_css_class("queue-list")
         queue_scroll = Gtk.ScrolledWindow(); queue_scroll.add_css_class("queue-scroll"); queue_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC); queue_scroll.set_kinetic_scrolling(True); queue_scroll.set_overlay_scrolling(True); queue_scroll.set_propagate_natural_height(False); queue_scroll.set_propagate_natural_width(False); queue_scroll.set_min_content_height(1); queue_scroll.set_size_request(-1, 1); queue_scroll.set_vexpand(True); queue_scroll.set_hexpand(True); queue_scroll.set_child(self.queue_list); self.queue_scroll = queue_scroll
@@ -1321,7 +1329,7 @@ class Display(Gtk.Application):
         while child := self.services.get_first_child(): self.services.remove(child)
         visible = data.get("services", [])[:4]
         portrait = self.window.has_css_class("portrait")
-        self.services.set_spacing(24 if portrait else 14)
+        self.services.set_spacing(24 if portrait else 10 if self.window.has_css_class("compact-landscape") else 14)
         self.services.set_valign(Gtk.Align.START if portrait else Gtk.Align.FILL)
         self.services.set_vexpand(not portrait)
         self.bus_content.set_valign(Gtk.Align.START if portrait else Gtk.Align.FILL)
@@ -1904,7 +1912,9 @@ class Display(Gtk.Application):
             available = width - margin * 2 - (0 if genres else 80)
             gap = 30
             return 3, max(48, (available - gap * 2) // 3)
-        available = max(140, width - 266)
+        # Keep the Debian GTK rail measurements: fixed estimates widen 800px displays.
+        rails = sum(widget.measure(Gtk.Orientation.HORIZONTAL, -1)[0] for widget in (self.browser_sidebar, self.browser_discovery_sidebar, self.browser_scrubber) if widget.get_visible())
+        available = max(140, width - rails - 74)
         columns = min(5 if genres else 4, max(1, available // 140))
         size = max(64, min(212, (available - 16 * (columns - 1)) // columns - 12))
         return columns, size
