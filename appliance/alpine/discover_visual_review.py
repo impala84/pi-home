@@ -152,6 +152,17 @@ daily = {
 }
 render("daily", daily)
 capture("daily-mixes")
+if screen_width >= 1200 and screen_height < screen_width:
+    recommendation_row = display.discovery_daily_sections["recommendations"]
+    first_cover = recommendation_row.get_child().get_first_child().compute_bounds(page)[1]
+    child = display.discovery_list.get_first_child()
+    while child:
+        if child.has_css_class("recommendation-heading") or child.has_css_class("recommendation-album"):
+            assert abs(child.compute_bounds(page)[1].get_x() - first_cover.get_x()) <= 1
+        child = child.get_next_sibling()
+    for row in display.discovery_daily_sections.values():
+        bounds = row.compute_bounds(page)[1]
+        assert abs(bounds.get_x() + bounds.get_width() - screen_width) <= 1
 assert "discover:" + daily["groups"][0]["seed"]["artwork_key"] not in display.discovery_pictures
 if screen_height > screen_width:
     assert "recommendations" not in display.discovery_daily_sections
@@ -447,7 +458,7 @@ if screen_height > screen_width:
 settings = display.build_settings()
 window.set_child(settings)
 display.configure_settings_layout(screen_width, screen_height)
-display.device_status.set_text("v1.1.1-beta.11 Alpine")
+display.device_status.set_text("v1.1.1-beta.12 Alpine")
 display.touch_diagnostics.set_text("Memory 6.1%  ·  Load 0.65  ·  62.8°C  ·  Controller ready  ·  Bridge offline")
 capture("settings")
 assert window.get_width() == screen_width and window.get_height() == screen_height, (window.get_width(), window.get_height())

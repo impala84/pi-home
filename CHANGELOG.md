@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.1-beta.12 — 7 October 2026
+
+- Aligns landscape Daily recommendation headings and uppercase album names with the artwork left edge.
+- Lets landscape Daily artwork rows bleed to the right screen edge, without changing other page margins.
+- Adds native geometry assertions for both boundaries. Source-only beta; no disk image.
+
 ## 1.1.1-beta.11 — 7 October 2026
 
 - Adds Display → Landscape music clock: icon or full digital clock when space permits.
