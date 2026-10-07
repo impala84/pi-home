@@ -20,12 +20,6 @@ def native_method(name, dependencies=None):
     return namespace[name]
 
 
-def measured_browser_rails():
-    def rail(width, visible=True):
-        return SimpleNamespace(get_visible=lambda: visible, measure=lambda *_: (width, width, -1, -1))
-    return SimpleNamespace(browser_sidebar=rail(137), browser_discovery_sidebar=rail(137, False), browser_scrubber=rail(92))
-
-
 class Entry:
     def __init__(self, text, position, selection=(False, 0, 0)):
         self.text, self.position, self.selection = text, position, selection
@@ -67,7 +61,7 @@ class PortraitRefinementTests(unittest.TestCase):
 
     def test_utility_icon_receives_each_css_class(self):
         gtk = SimpleNamespace(Button=LayoutWidget, Image=SimpleNamespace(new_from_icon_name=lambda _: LayoutWidget()))
-        button = native_method("icon_button", {"Gtk": gtk})(SimpleNamespace(), "clock", lambda *_: None, "discover-utility discover-sleep")
+        button = native_method("icon_button", {"Gtk": gtk, "FamilyIcon": lambda *_: LayoutWidget()})(SimpleNamespace(), "clock", lambda *_: None, "discover-utility discover-sleep")
         self.assertEqual(button.classes, {"discover-utility", "discover-sleep"})
 
     def test_grid_margins_and_gaps_are_thirty_pixels(self):
@@ -192,7 +186,8 @@ class NativeBrowserControlsTests(unittest.TestCase):
         self.assertIn('self.library_add = self.button("", self.add_current_album)', code)
         self.assertIn('self.library_add.set_visible(has_album)', code)
         self.assertIn('self.set_library_icon(self.library_favorite is True)', code)
-        self.assertIn('Gtk.Image.new_from_icon_name("list-add-symbolic")', code)
+        self.assertIn('FamilyIcon("add", 28)', code)
+        self.assertIn('FamilyIcon("heart", 28, filled=filled)', code)
         self.assertIn('self.library_add.set_valign(Gtk.Align.CENTER)', code)
         self.assertIn('self.library_add.set_halign(Gtk.Align.CENTER)', code)
         self.assertIn('self.library_pending = True', code)
@@ -295,7 +290,7 @@ class NativeBrowserControlsTests(unittest.TestCase):
         monitor=SimpleNamespace(get_geometry=lambda:SimpleNamespace(width=1280))
         monitors=SimpleNamespace(get_n_items=lambda:1,get_item=lambda _index:monitor)
         gdk=SimpleNamespace(Display=SimpleNamespace(get_default=lambda:SimpleNamespace(get_monitors=lambda:monitors)))
-        columns,size=native_method("browser_grid_metrics",{"Gdk":gdk,"Gtk":SimpleNamespace(Orientation=SimpleNamespace(HORIZONTAL=0))})(measured_browser_rails())
+        columns,size=native_method("browser_grid_metrics",{"Gdk":gdk})(SimpleNamespace())
         self.assertEqual(columns,4)
         metrics=native_method("discovery_grid_metrics",{"Gdk":gdk})
         self.assertEqual(metrics(SimpleNamespace(),"recent"),(4,236))
@@ -484,7 +479,8 @@ class NativeBrowserControlsTests(unittest.TestCase):
         message.set_text.assert_not_called()
         code=SOURCE.read_text(encoding='utf-8')
         self.assertNotIn('Gtk.Expander(label="VIEW TRACKS")',code)
-        self.assertIn('"▶  PLAY THIS MIX"',code)
+        self.assertIn('"PLAY THIS MIX"',code)
+        self.assertIn('self.labelled_icon_button("play"', code)
 
     def test_grouped_results_have_separate_scrollers_not_nested_in_browser_viewport(self):
         code = SOURCE.read_text(encoding="utf-8")
@@ -623,13 +619,13 @@ class NativeBrowserControlsTests(unittest.TestCase):
         self.assertIn('!data.can_back || Boolean(data.surprise_preview)',web)
 
     def test_grid_minimums_fit_physical_monitor_without_using_expanded_content(self):
-        metrics = native_method("browser_grid_metrics", {"Gdk": SimpleNamespace(Display=SimpleNamespace(get_default=lambda: display)), "Gtk":SimpleNamespace(Orientation=SimpleNamespace(HORIZONTAL=0))})
+        metrics = native_method("browser_grid_metrics", {"Gdk": SimpleNamespace(Display=SimpleNamespace(get_default=lambda: display))})
         for width in (480, 720, 800, 1024, 1280):
             monitor = SimpleNamespace(get_geometry=lambda:SimpleNamespace(width=width))
             display = SimpleNamespace(get_monitors=lambda:SimpleNamespace(get_n_items=lambda:1,get_item=lambda _:monitor))
             for genres in (True, False):
-                columns, size = metrics(measured_browser_rails(), genres)
-                self.assertLessEqual(columns * (size + 12) + (columns - 1) * 16, width - 303)
+                columns, size = metrics(SimpleNamespace(), genres)
+                self.assertLessEqual(columns * (size + 12) + (columns - 1) * 16, width - 266)
                 self.assertLessEqual(size, 212)
 
     def test_playback_handoff_requires_successful_navigation_response(self):

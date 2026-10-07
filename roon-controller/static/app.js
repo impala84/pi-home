@@ -28,8 +28,8 @@ $('settings-link').href = `${mainOrigin}/admin`;
 $('bus-link').href = `${mainOrigin}/`;
 $('home-link').href = `${mainOrigin}/home.html`;
 
-const playIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 11 7-11 7z"/></svg>';
-const pauseIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6v12M15 6v12"/></svg>';
+const playIcon = PiHomeIcons.svg('play');
+const pauseIcon = PiHomeIcons.svg('pause');
 const format = value => {
   value = Math.max(0, Math.round(value || 0));
   return `${Math.floor(value / 60)}:${String(value % 60).padStart(2, '0')}`;
@@ -211,7 +211,7 @@ function queueRow(item) {
   if (item.image_key) {
     const image = document.createElement('img'); image.loading = 'lazy'; image.alt = ''; image.src = api(`/api/image?key=${encodeURIComponent(item.image_key)}&size=96`); artwork.append(image);
   }
-  if (item.is_current) { const playing = document.createElement('span'); playing.className = 'queue-play-badge'; playing.textContent = '▶'; artwork.append(playing); }
+  if (item.is_current) { const playing = document.createElement('span'); playing.className = 'queue-play-badge'; playing.append(PiHomeIcons.element('play')); artwork.append(playing); }
   const copy = document.createElement('span'); copy.className = 'queue-copy';
   const title = document.createElement('strong'); title.textContent = item.title || 'Untitled track'; copy.append(title);
   const meta = document.createElement('small'); meta.textContent = [item.artist, item.album].filter(Boolean).join(' · ') || 'Roon'; copy.append(meta);
@@ -276,13 +276,7 @@ function browserRow(item) {
 
 function browserActionIcon(title) {
   const value = String(title || '').toLowerCase();
-  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('aria-hidden', 'true');
-  if (/add next/.test(value)) svg.innerHTML = '<path d="M4 6h10M4 12h7M4 18h10M18 9v6M15 12h6"/>';
-  else if (/queue/.test(value)) svg.innerHTML = '<path d="M5 6h14M5 12h14M5 18h9"/><path d="m17 16 3 2-3 2z"/>';
-  else if (/shuffle/.test(value)) svg.innerHTML = '<path d="M4 7h3c5 0 5 10 10 10h3M17 4l3 3-3 3M4 17h3c2 0 3.3-1.5 4.4-3.3M17 14l3 3-3 3"/>';
-  else if (/from here/.test(value)) svg.innerHTML = '<path d="M5 5v14M9 6l10 6-10 6z"/>';
-  else svg.innerHTML = '<path d="m8 5 11 7-11 7z"/>';
-  return svg;
+  return PiHomeIcons.element(/add next/.test(value) ? 'add' : /queue/.test(value) ? 'playlist' : /shuffle/.test(value) ? 'shuffle' : /from here/.test(value) ? 'next' : 'play');
 }
 
 function browserTileSymbol(title, section) {
@@ -307,30 +301,17 @@ function browserTileSymbol(title, section) {
   if (value.includes('new age') || value.includes('ambient')) return 'ambient';
   if (value.includes('holiday')) return 'holiday';
   if (value.includes('children')) return 'children';
+  if (value.includes('comedy')) return 'comedy';
   if (value.includes('religious') || value.includes('gospel')) return 'religious';
   return 'music';
 }
 
 function missingArtwork(artist = false) {
-  const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  icon.setAttribute('viewBox', '0 0 100 100'); icon.setAttribute('aria-hidden', 'true'); icon.classList.add('missing-artwork');
-  icon.innerHTML = artist
-    ? '<circle cx="50" cy="30" r="14"/><path d="M22 88v-8a28 28 0 0 1 56 0v8"/>'
-    : '<circle cx="50" cy="50" r="31"/><circle cx="50" cy="50" r="8"/>';
-  return icon;
+  return PiHomeIcons.element(artist ? 'artist' : 'album', 'missing-artwork');
 }
 
 function browserSvgIcon(name, className = 'browser-tile-icon') {
-  const icon = document.createElement('span'); icon.className = className;
-  icon.setAttribute('aria-hidden', 'true');
-  const mask = `url(${api(`/icons/${name}-symbolic.svg`)})`;
-  icon.style.maskImage = mask; icon.style.webkitMaskImage = mask;
-  icon.style.maskSize = 'contain'; icon.style.webkitMaskSize = 'contain';
-  icon.style.maskRepeat = 'no-repeat'; icon.style.webkitMaskRepeat = 'no-repeat';
-  icon.style.maskPosition = 'center'; icon.style.webkitMaskPosition = 'center';
-  icon.style.backgroundColor = 'currentColor'; icon.style.display = 'inline-block';
-  icon.style.width = '1em'; icon.style.height = '1em';
-  return icon;
+  return PiHomeIcons.element(name, className);
 }
 
 function browseArtwork(container, key, size, artist = false) {
@@ -368,7 +349,7 @@ function renderArtistProfile(profile, playAction) {
   browseArtwork(artwork, profile.image_key, 400, true); panel.append(artwork);
   const title = document.createElement('h2'); title.textContent = profile.name; panel.append(title);
   if (playAction) {
-    const play = document.createElement('button'); play.className = 'artist-play'; play.textContent = '▶  Play Artist';
+    const play = document.createElement('button'); play.className = 'artist-play'; play.append(PiHomeIcons.element('play'), document.createTextNode(' Play Artist'));
     play.onclick = () => browseCommand('open', {item_key: playAction.item_key}); panel.append(play);
   }
 }
@@ -397,14 +378,14 @@ function renderBrowser(data) {
     const album = data.items[0]; const preview = document.createElement('div'); preview.className = 'surprise-preview';
     const art = document.createElement('div'); art.className = 'surprise-art';
     if (album.image_key) { const image = document.createElement('img'); image.alt = `${album.title} album cover`; image.src = api(`/api/image?key=${encodeURIComponent(album.image_key)}&size=600`); art.append(image); }
-    else art.textContent = '♫';
+    else art.append(PiHomeIcons.element('album'));
     const title = document.createElement('h2'); title.textContent = album.title;
     const artist = document.createElement('p'); artist.textContent = album.subtitle || '';
     const stage = document.createElement('div'); stage.className = 'surprise-stage';
     const buttons = [];
-    for (const [symbol, label, action] of [['↻', 'Surprise me again', 'surprise'], ['▶', 'Play this album', 'surprise_play']]) {
+    for (const [symbol, label, action] of [['refresh', 'Surprise me again', 'surprise'], ['play', 'Play this album', 'surprise_play']]) {
       const controls = document.createElement('div'); controls.className = 'surprise-control';
-      const button = document.createElement('button'); button.className = 'surprise-action'; button.textContent = symbol; button.title = label; button.setAttribute('aria-label', label); button.onclick = () => browseCommand(action);
+      const button = document.createElement('button'); button.className = 'surprise-action'; button.append(PiHomeIcons.element(symbol)); button.title = label; button.setAttribute('aria-label', label); button.onclick = () => browseCommand(action);
       const caption = document.createElement('span'); caption.textContent = action === 'surprise' ? 'Surprise Me' : 'Play Now'; controls.append(button, caption); buttons.push(controls);
     }
     stage.append(buttons[0], art, buttons[1]); preview.append(stage, title, artist); list.append(preview);

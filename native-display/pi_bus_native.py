@@ -17,6 +17,7 @@ import unicodedata
 import urllib.request
 import urllib.error
 import uuid
+import sys
 from queue import Queue
 from datetime import datetime
 from pathlib import Path
@@ -29,6 +30,8 @@ gi.require_version("Graphene", "1.0")
 gi.require_version("Gsk", "4.0")
 gi.require_foreign("cairo")
 from gi.repository import Gdk, Gio, GLib, Graphene, Gsk, Gtk, Pango
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from icon_family import FamilyIcon
 
 BUS = "http://127.0.0.1:8765"
 ROON = "http://127.0.0.1:8766"
@@ -170,10 +173,6 @@ CSS += b"""
 .bus-page .service.compact .arrival, .bus-page .service.compact .service-no { font-size: 76px; }
 .touch-landscape .bus-page .service.compact .arrival, .touch-landscape .bus-page .service.compact .service-no { font-size: 99px; }
 .bus-page .header-title { transform: none; }
-.compact-landscape .bus-page .service.compact .arrival, .compact-landscape .bus-page .service.compact .service-no { font-size: 59px; }
-.compact-landscape .bus-page .service.dense .arrival, .compact-landscape .bus-page .service.dense .service-no { font-size: 36px; }
-.compact-landscape .bus-page .service.compact, .compact-landscape .bus-page .service.dense { padding-top: 3px; padding-bottom: 3px; }
-.display-landscape.high-resolution .bus-page .service.dense .arrival, .display-landscape.high-resolution .bus-page .service.dense .service-no { font-size: 64px; }
 .surprise-title { font-size: 30px; font-weight: 750; }.surprise-artist { font-size: 23px; color: #b6c0bc; }.surprise-caption { font-size: 17px; color: #b6c0bc; }
 .touch-landscape .surprise-title { font-size: 34px; }.touch-landscape .surprise-artist { font-size: 25px; }
 .artist-profile { padding: 12px 22px 8px 12px; }.artist-name { font-size: 27px; font-weight: 750; }.artist-bio { color: #b6c0bc; font-size: 17px; }.artist-source { color: #78837f; font-size: 11px; }
@@ -388,6 +387,8 @@ CSS += b"""
 
 
 CSS += ("""
+.settings-icon { color: #6ed9ae; }
+.theme-roon .settings-icon { color: #817aeb; }
 .bus-page, .home-page { padding-top: %dpx; }
 .display-landscape .bus-page, .display-landscape .home-page { padding-left: %dpx; padding-right: %dpx; }
 .portrait .bus-page, .portrait .home-page { padding-left: %dpx; padding-right: %dpx; }
@@ -522,8 +523,16 @@ class Display(Gtk.Application):
         widget = Gtk.Button()
         if css:
             for name in css.split(): widget.add_css_class(name)
-        image = Gtk.Image.new_from_icon_name(icon); image.set_pixel_size(34); widget.set_child(image)
+        image = FamilyIcon(icon, 34); widget.set_child(image)
         widget.connect("clicked", callback)
+        return widget
+
+    def labelled_icon_button(self, name, text, callback, css="utility"):
+        widget = self.button(text, callback, css)
+        row = Gtk.Box(spacing=8); row.set_halign(Gtk.Align.CENTER)
+        row.append(FamilyIcon(name, 24)); row.append(self.label(text))
+        widget.set_child(row)
+        widget.set_tooltip_text(text)
         return widget
 
     def loading_notice(self):
@@ -551,6 +560,10 @@ class Display(Gtk.Application):
         return panel
 
     def discover_utility_icon(self, clock=False):
+        if not clock:
+            icon = FamilyIcon("settings", 34)
+            icon.add_css_class("settings-icon")
+            return icon
         # Draw outlines directly: symbolic theme recolouring can fill SVG holes.
         icon = Gtk.DrawingArea(); icon.set_size_request(30 if clock else 34, 34)
         def draw(_area, cr, width, height):
@@ -614,7 +627,7 @@ class Display(Gtk.Application):
         self.responsive_portrait = portrait
         self.viewport_width, self.viewport_height = width, height
         (self.window.add_css_class if portrait and width >= 1000 else self.window.remove_css_class)("large-portrait")
-        for css_class, enabled in (("portrait", portrait), ("display-landscape", not portrait), ("compact-portrait", portrait and width < 600), ("compact-landscape", not portrait and height < 600), ("high-resolution", max(width, height) >= 1200), ("touch-landscape", width >= 1200 and not portrait)):
+        for css_class, enabled in (("portrait", portrait), ("display-landscape", not portrait), ("compact-portrait", portrait and width < 600), ("high-resolution", max(width, height) >= 1200), ("touch-landscape", width >= 1200 and not portrait)):
             (self.window.add_css_class if enabled else self.window.remove_css_class)(css_class)
         self.now_playing_content.set_orientation(Gtk.Orientation.VERTICAL if portrait else Gtk.Orientation.HORIZONTAL)
         self.now_playing_content.set_spacing(24 if portrait else 26)
@@ -1284,13 +1297,11 @@ class Display(Gtk.Application):
             if entity.get("percentage") is not None: detail += f" · {entity['percentage']}%"
             if state in {"on", "open", "playing"}: box.add_css_class("on")
             control_row = Gtk.Box(spacing=5); control_row.set_vexpand(True)
-            domain = entity.get("domain", "switch"); icon_name = domain + ("-on" if state == "on" else "") + ".svg"
-            if self.settings_data.get("display_theme") == "roon": icon_name = icon_name.replace(".svg", "-roon.svg")
-            icon_path = Path(__file__).with_name("icons") / icon_name
+            domain = entity.get("domain", "switch")
             icon_size = 108 if self.window.has_css_class("high-resolution") else 72
             if portrait: icon_size = max(64, min(240, round((self.window.get_height() - 190) / max(4, len(entities)) * .7)))
             icon_slot = icon_size; icon_size = round(icon_size * .75)
-            icon = Gtk.Image.new_from_gicon(Gio.FileIcon.new(Gio.File.new_for_path(str(icon_path)))); icon.set_pixel_size(icon_size); icon.set_size_request(icon_slot, icon_slot); icon.set_halign(Gtk.Align.CENTER); icon.set_valign(Gtk.Align.CENTER); icon.add_css_class("home-icon")
+            icon = FamilyIcon(domain if domain in {"fan", "light"} else "switchon" if state == "on" else "switch", icon_size); icon.set_size_request(icon_slot, icon_slot); icon.set_halign(Gtk.Align.CENTER); icon.set_valign(Gtk.Align.CENTER); icon.add_css_class("home-icon")
             button = Gtk.Button(); button.add_css_class("home-device-button"); button.set_hexpand(not portrait); button.set_vexpand(True); button.set_child(icon); button.connect("clicked", self.toggle_home, entity.get("entity_id", "")); control_row.append(button)
             details = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8); details.set_hexpand(True); details.set_valign(Gtk.Align.CENTER)
             if entity.get("supports_level"):
@@ -1310,7 +1321,7 @@ class Display(Gtk.Application):
         while child := self.services.get_first_child(): self.services.remove(child)
         visible = data.get("services", [])[:4]
         portrait = self.window.has_css_class("portrait")
-        self.services.set_spacing(24 if portrait else 10 if self.window.has_css_class("compact-landscape") else 14)
+        self.services.set_spacing(24 if portrait else 14)
         self.services.set_valign(Gtk.Align.START if portrait else Gtk.Align.FILL)
         self.services.set_vexpand(not portrait)
         self.bus_content.set_valign(Gtk.Align.START if portrait else Gtk.Align.FILL)
@@ -1376,7 +1387,7 @@ class Display(Gtk.Application):
         else:
             self.image_misses = 0
         self.zone.set_text(zone.get("name") or "ROON"); self.title.set_text(lines.get("line1") or "Nothing playing"); self.artist.set_text(playing.get("display_artist") or re.split(r"\s+/\s+|\s*;\s*", lines.get("line2") or "Roon")[0])
-        play_icon = Gtk.Image.new_from_icon_name("media-playback-start-symbolic" if external else ("media-playback-pause-symbolic" if zone.get("state") == "playing" else "media-playback-start-symbolic")); play_icon.set_pixel_size(42); self.play.set_child(play_icon); self.prev.set_sensitive(not external and bool(zone.get("can_previous"))); self.next.set_sensitive(not external and bool(zone.get("can_next"))); self.play.set_sensitive(bool(zone.get("can_play") or zone.get("can_pause")))
+        play_icon = FamilyIcon("play" if external or zone.get("state") != "playing" else "pause", 42); self.play.set_child(play_icon); self.prev.set_sensitive(not external and bool(zone.get("can_previous"))); self.next.set_sensitive(not external and bool(zone.get("can_next"))); self.play.set_sensitive(bool(zone.get("can_play") or zone.get("can_pause")))
         elapsed = int(zone.get("seek_position") or 0); length = int(playing.get("length") or 0); self.seek_updating = True; self.progress.set_range(0, max(1, length)); self.progress.set_value(min(elapsed, length) if length else 0); self.progress.set_sensitive(bool(zone.get("can_seek") and length)); self.seek_updating = False; self.elapsed.set_text(self.format_time(elapsed)); self.remaining.set_text("−" + self.format_time(max(0, length - elapsed)))
         output = zone.get("output") or {}; volume = output.get("volume") or {}; value = volume.get("value"); self.volume_updating = True; self.volume.set_sensitive(value is not None); self.volume.set_value(float(value or 0)); self.volume_value.set_text(str(value) if value is not None else "FIXED"); self.mute.set_sensitive(value is not None); self.mute.set_label("UNMUTE" if volume.get("is_muted") else "MUTE"); self.volume_updating = False
         text_layout = (self.title.get_text(), self.artist.get_text())
@@ -1559,8 +1570,8 @@ class Display(Gtk.Application):
             title = self.label((data.get("mix") or {}).get("title", "Your Daily Mix"), "queue-title")
             self.discovery_list.append(title)
             controls = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
-            for action, label in (("play", "▶  PLAY THIS MIX"), ("queue", "QUEUE THIS MIX")):
-                control = self.button(label, lambda _button, value=action: self.request_mix_action(value, controls), "artist-play" if action == "play" else "browser-back")
+            for action, label in (("play", "PLAY THIS MIX"), ("queue", "QUEUE THIS MIX")):
+                control = self.labelled_icon_button("play" if action == "play" else "playlist", label, lambda _button, value=action: self.request_mix_action(value, controls), "artist-play" if action == "play" else "browser-back")
                 controls.append(control)
             self.discovery_list.append(controls)
         if self.discovery_section == "daily" and not portrait_grid:
@@ -1826,7 +1837,7 @@ class Display(Gtk.Application):
         panel.append(details)
         title = self.label(name, "artist-name", 0 if portrait else .5); title.set_wrap(True); title.set_max_width_chars(20); details.append(title)
         if play_action:
-            play = self.button("▶  Play Artist", lambda *_: self.open_browser_item(None, play_action.get("item_key")), "artist-play")
+            play = self.labelled_icon_button("play", "Play Artist", lambda *_: self.open_browser_item(None, play_action.get("item_key")), "artist-play")
             play.set_halign(Gtk.Align.START if portrait else Gtk.Align.CENTER); details.append(play)
 
     def request_browser(self, action, **payload):
@@ -1893,11 +1904,7 @@ class Display(Gtk.Application):
             available = width - margin * 2 - (0 if genres else 80)
             gap = 30
             return 3, max(48, (available - gap * 2) // 3)
-        # GTK/theme versions give the rails different minimum widths. Reserve
-        # their measured size plus page, grid and list padding, not a fixed
-        # rail estimate that can force an 800px viewport wider than its panel.
-        rails = sum(widget.measure(Gtk.Orientation.HORIZONTAL, -1)[0] for widget in (self.browser_sidebar, self.browser_discovery_sidebar, self.browser_scrubber) if widget.get_visible())
-        available = max(140, width - rails - 74)
+        available = max(140, width - 266)
         columns = min(5 if genres else 4, max(1, available // 140))
         size = max(64, min(212, (available - 16 * (columns - 1)) // columns - 12))
         return columns, size
@@ -2057,6 +2064,7 @@ class Display(Gtk.Application):
         if "new age" in value or "ambient" in value: return "ambient"
         if "holiday" in value: return "holiday"
         if "children" in value: return "children"
+        if "comedy" in value: return "comedy"
         if "religious" in value or "gospel" in value: return "religious"
         return "music"
 
@@ -2069,21 +2077,15 @@ class Display(Gtk.Application):
         return "media-playback-start-symbolic"
 
     def browser_svg_icon(self, name, size=54):
-        path = Path(__file__).resolve().parents[1] / "roon-controller/static/icons" / (name + "-symbolic.svg")
-        # Symbolic icon loading treats SVG strokes as filled masks. Render the
-        # original vector as a picture so the keyline artwork stays outlined.
-        colour = "#817aeb" if self.settings_data.get("display_theme") == "roon" else "#6ed9ae"
-        svg = path.read_bytes().replace(b"#2e3436", colour.encode("ascii"))
-        texture = Gdk.Texture.new_from_bytes(GLib.Bytes.new(svg))
-        icon = Gtk.Picture.new_for_paintable(texture)
-        icon.set_can_shrink(True); icon.set_size_request(size, size)
+        icon = FamilyIcon(name, size)
+        icon.set_size_request(size, size)
         icon.set_halign(Gtk.Align.CENTER); icon.set_valign(Gtk.Align.CENTER)
         icon.add_css_class("browser-tile-icon")
         return icon
 
     def browser_menu_card(self, item, compact=False):
         content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12); content.set_halign(Gtk.Align.CENTER); content.set_valign(Gtk.Align.CENTER)
-        icon = Gtk.Image.new_from_icon_name(self.browser_item_icon(item.get("title"))); icon.set_pixel_size(58 if compact else 78); icon.add_css_class("browser-home-icon"); content.append(icon)
+        icon = FamilyIcon(self.browser_item_icon(item.get("title")), 58 if compact else 78); icon.add_css_class("browser-home-icon"); content.append(icon)
         title = self.label(item.get("title") or "Roon", "browser-home-title", .5); title.set_wrap(True); title.set_justify(Gtk.Justification.CENTER); content.append(title)
         button = Gtk.Button(); button.add_css_class("browser-home-card");
         if compact: button.add_css_class("compact")
@@ -2227,7 +2229,7 @@ class Display(Gtk.Application):
                 row = Gtk.Box(spacing=14); row.set_hexpand(True)
                 key = item.get("image_key")
                 if item.get("action"):
-                    action_icon = Gtk.Image.new_from_icon_name(self.browser_action_icon(item.get("title"))); action_icon.set_pixel_size(34)
+                    action_icon = FamilyIcon(self.browser_action_icon(item.get("title")), 34)
                     action_frame = Gtk.CenterBox(); action_frame.add_css_class("browser-action-icon"); action_frame.set_size_request(84, 84); action_frame.set_hexpand(False); action_frame.set_halign(Gtk.Align.START); action_frame.set_valign(Gtk.Align.CENTER); action_frame.set_center_widget(action_icon); row.append(action_frame)
                 else:
                     picture = Gtk.Picture(); picture.add_css_class("queue-art"); picture.set_can_shrink(True); picture.set_content_fit(Gtk.ContentFit.COVER)
@@ -2354,7 +2356,7 @@ class Display(Gtk.Application):
             artwork = Gtk.Overlay(); artwork.add_css_class("queue-art-stack"); artwork.set_size_request(66, 66)
             picture = Gtk.Picture(); picture.add_css_class("queue-art"); picture.set_size_request(66, 66); picture.set_content_fit(Gtk.ContentFit.COVER); artwork.set_child(picture)
             if item.get("is_current"):
-                playing = Gtk.Image.new_from_icon_name("media-playback-start-symbolic"); playing.set_pixel_size(38); playing.add_css_class("queue-play-badge"); playing.set_halign(Gtk.Align.CENTER); playing.set_valign(Gtk.Align.CENTER); artwork.add_overlay(playing)
+                playing = FamilyIcon("play", 38); playing.add_css_class("queue-play-badge"); playing.set_halign(Gtk.Align.CENTER); playing.set_valign(Gtk.Align.CENTER); artwork.add_overlay(playing)
             row.append(artwork)
             key = item.get("image_key")
             self.queue_artwork_keys.append(key)
@@ -2549,13 +2551,10 @@ class Display(Gtk.Application):
 
     def set_library_icon(self, filled):
         if getattr(self, "library_status", "unknown") != "in_library":
-            icon = Gtk.Image.new_from_icon_name("list-add-symbolic"); icon.set_pixel_size(28); icon.set_size_request(28, 28)
+            icon = FamilyIcon("add", 28); icon.set_size_request(28, 28)
             self.library_add.set_child(icon); self.library_add.set_tooltip_text("Loading library status…" if getattr(self, "library_status", "unknown") == "unknown" else "Add album to library")
             return
-        suffix = "-filled" if filled else ""
-        theme = "-roon" if getattr(self, "settings_data", {}).get("display_theme") == "roon" else ""
-        icon_path = Path(__file__).with_name("icons") / f"heart{suffix}{theme}.svg"
-        icon = Gtk.Image.new_from_gicon(Gio.FileIcon.new(Gio.File.new_for_path(str(icon_path))))
+        icon = FamilyIcon("heart", 28, filled=filled)
         icon.set_pixel_size(28); icon.set_size_request(28, 28)
         self.library_add.set_child(icon)
         self.library_add.set_tooltip_text("Unfavourite album" if filled else "Favourite album")
