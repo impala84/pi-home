@@ -60,10 +60,12 @@ class PortraitRefinementTests(unittest.TestCase):
         self.assertEqual(len(owner.browser_list.children), 1)
 
     def test_utility_icon_receives_each_css_class(self):
-        gtk = SimpleNamespace(Button=LayoutWidget, AccessibleProperty=SimpleNamespace(LABEL="label"))
+        widget = LayoutWidget(); widget.update_property = Mock()
+        gtk = SimpleNamespace(Button=lambda: widget, AccessibleProperty=SimpleNamespace(LABEL="label"))
         image = LayoutWidget(); image.icon_name = "clock"
         button = native_method("icon_button", {"Gtk": gtk, "FamilyIcon": lambda *_: image})(SimpleNamespace(), "clock", lambda *_: None, "discover-utility discover-sleep")
         self.assertEqual(button.classes, {"discover-utility", "discover-sleep"})
+        widget.update_property.assert_called_once_with(["label"], ["Clock"])
 
     def test_grid_margins_and_gaps_are_thirty_pixels(self):
         monitor = SimpleNamespace(get_geometry=lambda: SimpleNamespace(width=720))
