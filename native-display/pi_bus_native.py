@@ -854,7 +854,10 @@ class Display(Gtk.Application):
             for key in keys: key_row.append(self.button(key, lambda _button, value=key: self.browser_keyboard_key(value), "browser-key"))
             search_panel.append(key_row)
         keyboard_actions = Gtk.Box(spacing=10); keyboard_actions.set_homogeneous(True)
-        for title, value in (("SPACE", " "), ("⌫", "BACKSPACE"), ("CLEAR", "CLEAR")): keyboard_actions.append(self.button(title, lambda _button, value=value: self.browser_keyboard_key(value), "browser-key"))
+        for title, value in (("SPACE", " "), ("Backspace", "BACKSPACE"), ("CLEAR", "CLEAR")):
+            callback = lambda _button, value=value: self.browser_keyboard_key(value)
+            key = self.icon_button("erase", callback, "browser-key") if value == "BACKSPACE" else self.button(title, callback, "browser-key")
+            key.set_tooltip_text(title); keyboard_actions.append(key)
         search_submit = self.button("SEARCH", self.submit_browser_search, "browser-key"); search_submit.add_css_class("browser-search-submit"); keyboard_actions.append(search_submit); search_panel.append(keyboard_actions); self.roon_views.add_named(search_panel, "search")
         detail_panel = Gtk.Box(spacing=24); detail_panel.add_css_class("detail-panel"); detail_panel.set_hexpand(True); detail_panel.set_vexpand(True); self.detail_panel = detail_panel
         self.browser_search_entry.connect("changed", self.schedule_browser_search)
