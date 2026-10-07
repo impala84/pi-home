@@ -278,7 +278,7 @@ CSS += b"""
 .browser-scrubber { padding: 0; }
 .browser-surprise { font-size: 14px; }
 .surprise-action { min-width: 72px; min-height: 72px; padding: 8px; border-radius: 12px; background: #18211f; color: #6ed9ae; }
-.browser-search-panel { padding: 18px 0; margin-left: 2px; margin-right: 2px; }
+.browser-search-panel { padding: 18px 0; margin-left: 10px; margin-right: 10px; }
 .touch-landscape .browser-search-panel { margin-left: 2px; margin-right: 30px; }
 .portrait .browser-search-panel { margin-left: 0; margin-right: 0; }
 .browser-search-entry { min-height: 60px; font-size: 28px; padding: 8px 14px; background: #18211f; color: #f4f0e6; border-radius: 8px; }
