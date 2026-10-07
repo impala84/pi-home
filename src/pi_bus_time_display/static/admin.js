@@ -43,6 +43,30 @@ const duration=seconds=>{const hours=Math.floor(seconds/3600),days=Math.floor(ho
 function showDiagnostics(data={}){const memory=data.memory||{},swap=data.swap||{};document.getElementById('diag-memory').textContent=`${memory.used_percent||0}% · ${mb(memory.used_kb)} · swap ${mb(swap.used_kb)}`;document.getElementById('diag-available').textContent=mb(memory.available_kb);const health=data.temperature_c==null?'':` · ${data.temperature_c}°C · throttle ${data.throttled||'unknown'}`;document.getElementById('diag-load').textContent=((data.load||[]).map(value=>Number(value).toFixed(2)).join(' · ')||'—')+health;document.getElementById('diag-uptime').textContent=duration(data.uptime_seconds||0);document.getElementById('diag-processes').replaceChildren(...(data.processes||[]).map(process=>{const row=document.createElement('div');row.className='process-row';const name=document.createElement('span');name.textContent=process.label;const value=document.createElement('strong');value.textContent=process.pids?.length?`${mb(process.rss_kb)} · ${Number(process.cpu_percent).toFixed(1)}% CPU`:process.active?'Running · metrics unavailable':'Not running';row.append(name,value);return row}))}
 async function loadDiagnostics(){const button=document.getElementById('refresh-diagnostics');button.disabled=true;try{const response=await fetch('/api/admin/diagnostics',{cache:'no-store'});if(!response.ok)throw new Error('Could not load diagnostics');showDiagnostics(await response.json())}catch(error){notify(error.message,true)}finally{button.disabled=false}}
 let captureObjectUrl = null;
+const previewControls = document.createElement('div'); previewControls.className = 'action-buttons';
+const previewRefresh = document.createElement('button'); previewRefresh.type = 'button'; previewRefresh.className = 'secondary'; previewRefresh.textContent = 'Load current album / browse items';
+const previewBack = document.createElement('button'); previewBack.type = 'button'; previewBack.className = 'secondary'; previewBack.textContent = 'Back on display';
+const previewItems = document.createElement('div'); previewItems.className = 'physical-view-buttons';
+previewControls.append(previewRefresh, previewBack); document.getElementById('capture-display').before(previewControls, previewItems);
+async function previewNavigate(action, itemKey = '') {
+  const response = await fetch('/api/admin/display-mode', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({mode:'roon',view:'browse',browse_action:action,item_key:itemKey})});
+  const data = await response.json(); if (!response.ok) throw new Error(data.error || 'Could not open display item');
+  notify('Display navigation requested. When it has loaded, refresh the items or capture the screen.');
+}
+previewBack.addEventListener('click', () => previewNavigate('back').catch(error => notify(error.message,true)));
+previewRefresh.addEventListener('click', async () => {
+  previewRefresh.disabled = true;
+  try {
+    const response = await fetch('/roon/api/browse?session=touch',{cache:'no-store'});
+    const data = await response.json(); if (!response.ok) throw new Error(data.error || 'Could not load display items');
+    previewItems.replaceChildren();
+    for (const item of data.items || []) {
+      if (!item.item_key || item.hint === 'header') continue;
+      const button = document.createElement('button'); button.type = 'button'; button.className = 'secondary'; button.textContent = item.title || 'Untitled';
+      button.addEventListener('click', () => previewNavigate('open',item.item_key).catch(error => notify(error.message,true))); previewItems.append(button);
+    }
+  } catch(error) { notify(error.message,true); } finally { previewRefresh.disabled = false; }
+});
 document.getElementById('capture-display').addEventListener('click', async () => {
   const button = document.getElementById('capture-display'), status = document.getElementById('capture-status');
   button.disabled = true; status.textContent = 'Capturing the touchscreen…';
@@ -57,6 +81,18 @@ document.getElementById('capture-display').addEventListener('click', async () =>
     document.getElementById('capture-download').href = captureObjectUrl;
     document.getElementById('capture-download').download = `pi-home-display-${new Date().toISOString().replace(/[:.]/g,'-')}.png`;
     document.getElementById('capture-preview').hidden = false;
+    let gallery = document.getElementById('capture-history');
+    if (!gallery) {
+      gallery = document.createElement('div'); gallery.id = 'capture-history';
+      document.getElementById('capture-preview').after(gallery);
+    }
+    const entry = document.createElement('figure'), preview = document.createElement('img'), download = document.createElement('a');
+    const savedUrl = URL.createObjectURL(image);
+    preview.src = savedUrl; preview.alt = 'Saved display preview';
+    download.href = savedUrl; download.download = document.getElementById('capture-download').download;
+    download.textContent = `Download capture · ${new Date().toLocaleTimeString()}`; download.className = 'capture-download';
+    entry.append(preview, download); gallery.prepend(entry);
+    while (gallery.children.length > 6) { const old = gallery.lastElementChild; URL.revokeObjectURL(old.querySelector('img').src); old.remove(); }
     status.textContent = 'Captured. Download the image to share it.';
   } catch (error) { status.textContent = error.message; notify(error.message, true); }
   finally { button.disabled = false; }

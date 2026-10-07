@@ -101,8 +101,10 @@ class State:
             "display_view_request": view_request,
         }
 
-    def request_display_view(self, view: str) -> dict:
+    def request_display_view(self, view: str, browse_action: str = "", item_key: str = "") -> dict:
         request = {"id": secrets.token_urlsafe(12), "view": view}
+        if browse_action:
+            request.update(browse_action=browse_action, item_key=item_key)
         with self.lock:
             self.display_view_request = request
         return dict(request)
@@ -1225,7 +1227,11 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
                     if view:
                         if view not in {"now", "recent", "daily", "releases", "browse", "surprise"}:
                             raise ValueError("Unknown display view")
-                        state.request_display_view(view)
+                        browse_action = str(data.get("browse_action", ""))
+                        item_key = str(data.get("item_key", ""))
+                        if browse_action not in {"", "open", "back", "current"} or len(item_key) > 2048:
+                            raise ValueError("Unknown preview navigation")
+                        state.request_display_view(view, browse_action, item_key)
                     if events:
                         events.emit("display.mode.changed", mode=mode)
                     self.send_json(200, json.dumps({"ok": True, "display_mode": mode, "display_view": view or None}).encode())

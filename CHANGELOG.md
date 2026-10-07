@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.3-beta.4 Alpine — 8 October 2026
+
+- Restores rounded gray track play tiles with purple triangles and anchors dark, themed playback menus beside the selected row.
+- Adds backend album/browse preview navigation and a six-image screenshot history under System → Diagnostics. Captures remain in browser memory, with downloadable PNGs; opening playback actions still requires an explicit click.
+- Includes the visible track popover in GTK display capture.
+- Replaces the short repeating dither pattern with a larger irregular static texture. Banding still requires physical-panel validation; this is not a confirmed hardware fix.
+- Beta only; working GPU, touch rotation, and network settings are unchanged.
+
 ## 1.1.3-beta.3 Alpine — 8 October 2026
 
 - Adds a subtle static dither over the existing Roon gradient to reduce colour banding; physical-panel acceptance is still required.

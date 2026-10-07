@@ -494,10 +494,14 @@ display.render_browser({"status":"ready", "section":"albums", "title":"Fixture A
 capture("album-detail")
 assert window.get_width() == screen_width and window.get_height() == screen_height
 assert display.browser_list.get_first_child().has_css_class("album-profile")
+display.browser_action_anchor = display.browser_list.get_first_child().get_next_sibling()
 display.render_browser({"status":"ready", "layout":"list", "action_menu":True, "items":[{"title":"Play Now", "action":True, "item_key":"play-now"},{"title":"Add Next", "action":True, "item_key":"next"},{"title":"Queue", "action":True, "item_key":"queue"}]})
 capture("track-actions")
+display.capture_display("track-menu-capture-check")
+assert "image" in capture_results[-1], capture_results[-1]
+(OUTPUT / "track-actions-live-capture.png").write_bytes(base64.b64decode(capture_results[-1]["image"]))
 # Dismiss without issuing a fixture request to the real controller.
-popup = display.browser_body.get_last_child()
+popup = display.browser_action_popover
 if isinstance(popup, Gtk.Popover): popup.unparent()
 display.set_roon_view("now")
 
@@ -552,7 +556,7 @@ if screen_height > screen_width:
 settings = display.build_settings()
 window.set_child(settings)
 display.configure_settings_layout(screen_width, screen_height)
-display.device_status.set_text("v1.1.3-beta.3 Alpine")
+display.device_status.set_text("v1.1.3-beta.4 Alpine")
 display.touch_diagnostics.set_text("Memory 6.1%  ·  Load 0.65  ·  62.8°C  ·  Controller ready  ·  Bridge offline")
 capture("settings")
 assert window.get_width() == screen_width and window.get_height() == screen_height, (window.get_width(), window.get_height())

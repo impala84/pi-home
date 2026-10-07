@@ -1,6 +1,6 @@
 # Pi Home
 
-Alpine testing release: **1.1.3-beta.3**, for album details, clearer bus numerals, refined browser spacing and a lightly dithered background. Select Beta explicitly to test; Stable remains 1.1.2.
+Alpine testing release: **1.1.3-beta.4**, for track-anchored dark playback menus, purple play tiles, and backend display-preview navigation and capture history. Select Beta explicitly to test; Stable remains 1.1.2.
 
 The current Alpine stable release is **1.1.2**: an in-place correction for 10-inch Touch Display 2 touch rotation. Update through System → Software on the Stable channel, then reboot manually to apply input calibration. Physical touch acceptance is still required. The 1.1.1 full image remains available for fresh installs. Raspberry Pi OS releases remain separate.
 

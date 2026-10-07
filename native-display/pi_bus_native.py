@@ -551,8 +551,14 @@ scrolledwindow overshoot, scrolledwindow undershoot { background: transparent; b
 """ % (APPLIANCE_PAGE_TOP, LANDSCAPE_PAGE_MARGIN, LANDSCAPE_PAGE_MARGIN,
        PORTRAIT_PAGE_MARGIN, PORTRAIT_PAGE_MARGIN, PANEL_STROKE, CAROUSEL_START_INSET)).encode()
 
+CSS += b"""
+popover.track-menu > contents { background: #222225; color: #eceaef; border: 1px solid #45434e; border-radius: 12px; padding: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.35); }
+.track-menu-action { min-height: 52px; padding: 10px 16px; border-radius: 8px; background: #282828; color: #817aeb; font-size: 18px; }
+.track-menu-action:hover, .track-menu-action:active { background: #383541; }
+.large-display .track-menu-action { min-height: 64px; font-size: 24px; }
+"""
 # Small static texture: no animation, full-screen image download or per-frame work.
-CSS += ('.theme-roon .roon-page { background-image: url("%s"), linear-gradient(120deg, #242338, #181818 60%%, #251c22); background-repeat: repeat, no-repeat; background-size: 8px 8px, cover; }' %
+CSS += ('.theme-roon .roon-page { background-image: url("%s"), linear-gradient(120deg, #242338, #181818 60%%, #251c22); background-repeat: repeat, no-repeat; background-size: 128px 128px, cover; }' %
         (Path(__file__).resolve().parent / 'icons/gradient-dither.svg').as_uri()).encode()
 
 
@@ -1287,6 +1293,17 @@ class Display(Gtk.Application):
             paintable = Gtk.WidgetPaintable.new(target)
             snapshot = Gtk.Snapshot()
             paintable.snapshot(snapshot, float(width), float(height))
+            # Popovers use a separate native surface and are not necessarily
+            # included in the page paintable. Composite the visible menu too.
+            popup = getattr(self, "browser_action_popover", None)
+            if popup is not None and popup.get_mapped():
+                valid, bounds = popup.compute_bounds(target)
+                if valid:
+                    snapshot.save()
+                    point = Graphene.Point(); point.init(bounds.get_x(), bounds.get_y())
+                    snapshot.translate(point)
+                    Gtk.WidgetPaintable.new(popup).snapshot(snapshot, float(popup.get_width()), float(popup.get_height()))
+                    snapshot.restore()
             node = snapshot.to_node()
             if node is None:
                 raise ValueError("Display produced no render node")
@@ -1303,6 +1320,17 @@ class Display(Gtk.Application):
 
     def apply_display_view_request(self, request):
         view = str(request.get("view", ""))
+        action = request.get("browse_action")
+        if action in {"open", "back", "current"}:
+            self.set_mode("roon"); self.set_roon_view("browse")
+            self.browser_action_anchor = None
+            child = self.browser_list.get_first_child()
+            while child:
+                if getattr(child, "browse_item_key", None) == request.get("item_key"):
+                    self.browser_action_anchor = child; break
+                child = child.get_next_sibling()
+            self.request_browser(action, **({"item_key": request.get("item_key", "")} if action == "open" else {}))
+            return False
         if view == "now":
             self.show_roon_now()
             self.set_mode("roon")
@@ -2233,6 +2261,7 @@ class Display(Gtk.Application):
 
     def open_browser_item(self, _button, item_key):
         if item_key:
+            self.browser_action_anchor = _button
             if getattr(self, "responsive_portrait", False) and self.roon_views.get_visible_child_name() == "search": self.set_roon_view("browse")
             self.request_browser("open", item_key=item_key)
 
@@ -2357,16 +2386,20 @@ class Display(Gtk.Application):
         self.browser_list.cancel_spring()
         if data.get("action_menu"):
             self.browser_state = data; self.browser_loading = False; self.browser_rendering = False
-            popover = Gtk.Popover(); popover.set_parent(self.browser_body); popover.set_autohide(True)
-            rect = Gdk.Rectangle(); rect.x = max(0, self.browser_body.get_width() // 2); rect.y = min(180, self.browser_body.get_height() // 3); rect.width = 1; rect.height = 1; popover.set_pointing_to(rect)
-            choices = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+            anchor = getattr(self, "browser_action_anchor", None) or self.browser_body
+            popover = Gtk.Popover(); popover.add_css_class("track-menu"); popover.set_parent(anchor); popover.set_autohide(True)
+            popover.set_has_arrow(False); popover.set_position(Gtk.PositionType.RIGHT)
+            rect = Gdk.Rectangle(); rect.x = 0; rect.y = 0; rect.width = min(116, max(1, anchor.get_width())); rect.height = max(1, anchor.get_height()); popover.set_pointing_to(rect)
+            self.browser_action_popover = popover
+            choices = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
             selected = {"value": False}
             def choose(_button, key):
                 selected["value"] = True; popover.popdown(); self.request_browser("open", item_key=key)
             for item in data.get("items", []):
                 if item.get("action"):
-                    choices.append(self.button(item["title"], lambda button, key=item.get("item_key"): choose(button, key), "utility"))
+                    choices.append(self.labelled_icon_button(self.browser_action_icon(item["title"]), item["title"], lambda button, key=item.get("item_key"): choose(button, key), "track-menu-action"))
             def closed(*_):
+                self.browser_action_popover = None
                 popover.unparent()
                 if not selected["value"]: self.request_browser("back")
             popover.connect("closed", closed); popover.set_child(choices); popover.popup()
@@ -2486,7 +2519,7 @@ class Display(Gtk.Application):
                     action_frame = Gtk.CenterBox(); action_frame.add_css_class("browser-action-icon"); action_frame.set_size_request(84, 84); action_frame.set_hexpand(False); action_frame.set_halign(Gtk.Align.START); action_frame.set_valign(Gtk.Align.CENTER); action_frame.set_center_widget(action_icon); row.append(action_frame)
                 elif album_profile:
                     action_icon = FamilyIcon("play", 52 if self.window.has_css_class("large-display") else 34)
-                    action_icon.set_size_request(72, 72); action_icon.set_valign(Gtk.Align.CENTER); row.append(action_icon)
+                    action_frame = Gtk.CenterBox(); action_frame.add_css_class("browser-action-icon"); action_frame.set_size_request(84, 84); action_frame.set_valign(Gtk.Align.CENTER); action_frame.set_center_widget(action_icon); row.append(action_frame)
                 else:
                     picture = Gtk.Picture(); picture.add_css_class("queue-art"); picture.set_can_shrink(True); picture.set_content_fit(Gtk.ContentFit.COVER)
                     self.set_browser_placeholder(picture, item.get("result_type") == "artists")
@@ -2506,6 +2539,7 @@ class Display(Gtk.Application):
                 subtitle = self.label(item.get("subtitle") or "Roon", "queue-meta"); subtitle.set_ellipsize(Pango.EllipsizeMode.END); copy.append(subtitle); row.append(copy)
                 row.append(self.label(item.get("duration") or "", "browser-arrow", 1))
                 button = Gtk.Button(); button.add_css_class("browser-row"); button.set_child(row); button.set_sensitive(bool(item.get("item_key")))
+                button.browse_item_key = item.get("item_key")
                 button.set_vexpand(False); button.set_valign(Gtk.Align.START)
                 if item.get("action"): button.add_css_class("browser-action")
                 button.connect("clicked", self.open_browser_item, item.get("item_key")); target.append(button)

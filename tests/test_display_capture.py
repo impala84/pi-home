@@ -11,6 +11,13 @@ PNG = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4
 
 
 class DisplayCaptureTests(unittest.TestCase):
+    def test_preview_navigation_is_delivered_to_native_display(self):
+        state = State(Config())
+        request = state.request_display_view('browse', 'open', 'album-key')
+        self.assertEqual(request['browse_action'], 'open')
+        self.assertEqual(request['item_key'], 'album-key')
+        self.assertEqual(state.controls_snapshot()['display_view_request'], request)
+
     def test_display_view_request_has_a_fresh_identity(self):
         state = State(Config())
         first = state.request_display_view('daily')
