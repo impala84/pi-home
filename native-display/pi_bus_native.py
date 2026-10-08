@@ -591,6 +591,8 @@ popover.sort-menu > contents { margin-top: 8px; background: #000; border: 1px so
 .compact-landscape .browser-sidebar { min-width: 112px; padding-right: 2px; }
 .compact-landscape .browser-filter { min-height: 44px; padding: 6px; font-size: 14px; }
 .compact-landscape .browser-scrubber { min-width: 44px; }
+.compact-landscape .browser-search-entry { min-height: 42px; padding: 4px 10px; font-size: 18px; }
+.compact-landscape .browser-key { min-width: 0; min-height: 32px; padding: 3px; font-size: 14px; }
 .compact-detail .detail-header { min-height: 58px; padding: 5px 16px; }
 .compact-detail .detail-header-title { font-size: 21px; }
 .compact-detail .detail-close { min-width: 46px; min-height: 46px; padding: 0; }
@@ -881,6 +883,7 @@ class Display(Gtk.Application):
             self.configure_settings_layout(width, height)
         self.browser_body.set_orientation(Gtk.Orientation.VERTICAL if portrait else Gtk.Orientation.HORIZONTAL)
         self.browser_search_panel.set_orientation(Gtk.Orientation.VERTICAL if portrait else Gtk.Orientation.HORIZONTAL)
+        self.search_main.set_spacing(6 if compact_landscape else 12)
         self.browser_sidebar.set_orientation(Gtk.Orientation.HORIZONTAL if portrait else Gtk.Orientation.VERTICAL)
         self.browser_discovery_sidebar.set_orientation(Gtk.Orientation.HORIZONTAL if portrait else Gtk.Orientation.VERTICAL)
         self.browser_sidebar_spacer.set_hexpand(portrait); self.browser_sidebar_spacer.set_vexpand(not portrait)
