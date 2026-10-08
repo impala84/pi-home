@@ -1590,6 +1590,7 @@ class Display(Gtk.Application):
         while child := self.services.get_first_child(): self.services.remove(child)
         visible = data.get("services", [])[:4]
         portrait = self.window.has_css_class("portrait")
+        self.bus_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC if portrait else Gtk.PolicyType.NEVER)
         self.services.set_spacing(24 if portrait else 14)
         self.services.set_valign(Gtk.Align.START if portrait else Gtk.Align.FILL)
         self.services.set_vexpand(not portrait)
