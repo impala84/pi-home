@@ -28,7 +28,10 @@ for gains, expected in [(IDENTITY, (255,255,255)), ((.9665,.8712,1), (246,222,25
         image = str(Path(folder) / 'white.png')
         subprocess.run(['import','-silent','-window','root',image],check=True)
         pixel = subprocess.check_output(['convert',image,'-format','%[pixel:p{32,32}]','info:'],text=True)
-        rgb = tuple(int(value) for value in re.findall(r'\d+',pixel)[:3])
+        values = [float(value) for value in re.findall(r'\d+(?:\.\d+)?',pixel)]
+        if '%' in pixel: values = [value * 255 / 100 for value in values]
+        if pixel.startswith('gray('): values = values * 3
+        rgb = tuple(round(value) for value in values[:3])
         assert len(rgb) == 3 and all(abs(a-b) <= 1 for a,b in zip(rgb,expected)), (pixel,expected)
     window.destroy()
 print('GTK white-balance identity and measured-gain pixels passed')
