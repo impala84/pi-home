@@ -301,12 +301,12 @@ CSS += b"""
 .theme-choice.active { background: #6ed9ae; color: #101714; }
 .theme-roon .theme-choice.active { background: #817aeb; color: #fff; }
 .settings-select label { color: #fff; }
-.settings-select popover contents { background: #e4e3e8; color: #17171a; border: 1px solid #77727e; border-radius: 8px; }
-.settings-select popover listview { background: transparent; color: #17171a; }
-.settings-select popover listview row { min-height: 46px; padding: 5px 12px; color: #17171a; }
-.settings-select popover listview row label { color: #17171a; }
-.settings-select popover listview row:selected { background: #c9c5ff; color: #111116; }
-.settings-select popover listview row:selected label { color: #111116; }
+.settings-select popover contents { background: #29292d; color: #f2f0f4; border: 1px solid #55525d; border-radius: 8px; }
+.settings-select popover listview { background: transparent; color: #f2f0f4; }
+.settings-select popover listview row { min-height: 46px; padding: 5px 12px; color: #f2f0f4; }
+.settings-select popover listview row label { color: #f2f0f4; }
+.settings-select popover listview row:selected { background: #403c55; color: #f2f0f4; }
+.settings-select popover listview row:selected label { color: #f2f0f4; }
 .artist-play { padding: 12px 18px; border: 0; border-radius: 7px; background: #303030; color: #6ed9ae; font-size: 18px; font-weight: 650; }
 .theme-roon .artist-play { background: #292929; color: #817aeb; }
 .artist-albums-heading { font-size: 16px; font-weight: 750; }
@@ -375,7 +375,7 @@ CSS += b"""
 .portrait.compact-portrait .nav button { min-height: 48px; padding: 4px; font-size: 14px; }
 .settings-page .settings-card { padding: 0; border: 0; background: transparent; }
 .settings-page .settings-column { padding: 0; }
-.settings-page .settings-controls { padding: 8px 0 0; }
+.settings-page .settings-controls { padding: 12px 0 0; }
 .settings-brand { color: #6ed9ae; }
 .settings-theme-choice { min-height: 48px; font-size: 16px; }
 .touch-landscape .settings-theme-choice { min-height: 56px; font-size: 19px; }
@@ -383,8 +383,9 @@ CSS += b"""
 .settings-version { font-size: 12px; color: #a4aaa7; }
 .settings-page .settings-diagnostic { font-size: 13px; color: #747974; }
 .settings-divider { background: #232228; min-height: 3px; margin-top: 10px; margin-bottom: 6px; }
-.settings-page .setting-line, .settings-page .settings-select { min-height: 40px; padding: 4px 12px; }
-.settings-page .brightness-setting scale { padding: 3px 10px; }
+.settings-page .setting-line, .settings-page .settings-select { min-height: 46px; padding: 7px 14px; }
+.settings-page .brightness-setting { padding-top: 6px; }
+.settings-page .brightness-setting scale { min-height: 44px; padding: 8px 10px; }
 .touch-landscape .settings-page { padding: 26px 28px; }
 .touch-landscape .settings-page .settings-card { padding: 0; }
 .touch-landscape .settings-page .settings-version { font-size: 17px; }
@@ -406,7 +407,7 @@ CSS += b"""
 .portrait.compact-portrait .stop, .portrait.compact-portrait .stop-code { font-size: 22px; }
 .portrait .service { padding: 18px 12px; }
 .portrait .bus-route-badge { border-radius: 60px; padding: 6px 24px; background: rgba(255,255,255,.045); }
-.portrait .bus-route-word { color: #66716e; font-weight: 500; }
+.portrait .bus-route-word { color: #f4f4f4; font-weight: 500; }
 .portrait .bus-next { font-weight: 700; color: #f4f4f4; }
 .portrait .bus-next-unit { color: #66716e; font-weight: 400; }
 .portrait .bus-rule { min-height: 1px; background: rgba(220,230,230,.35); }
@@ -1149,7 +1150,7 @@ class Display(Gtk.Application):
         scroll = Gtk.ScrolledWindow(); scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC); scroll.set_vexpand(True); scroll.set_child(controls); card.append(scroll)
         self.touch_mounting = Gtk.DropDown.new_from_strings(["Rotation · Standard", "Rotation · 180°"]); self.touch_mounting.add_css_class("settings-select"); display_column.append(self.touch_mounting)
         elastic_vertical_scroll(scroll)
-        brightness_row = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16); brightness_row.set_margin_top(8); brightness_row.append(self.label("DISPLAY BRIGHTNESS", "eyebrow")); self.touch_brightness = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 10, 100, 1); self.touch_brightness.set_draw_value(True); self.touch_brightness.set_value_pos(Gtk.PositionType.RIGHT); self.touch_brightness.connect("value-changed", self.change_brightness); brightness_row.append(self.touch_brightness); display_column.append(brightness_row)
+        brightness_row = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16); brightness_row.add_css_class("brightness-setting"); brightness_row.set_margin_top(8); brightness_row.append(self.label("DISPLAY BRIGHTNESS", "eyebrow")); self.touch_brightness = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 10, 100, 1); self.touch_brightness.set_draw_value(True); self.touch_brightness.set_value_pos(Gtk.PositionType.RIGHT); self.touch_brightness.connect("value-changed", self.change_brightness); brightness_row.append(self.touch_brightness); display_column.append(brightness_row)
         for row in (self.touch_profile, self.touch_orientation, self.touch_mounting): self.settings_row_sizes.add_widget(row)
         actions = Gtk.Box(spacing=18); actions.set_homogeneous(True); actions.set_valign(Gtk.Align.END); self.settings_actions = actions; self.apply_display_button = self.button("APPLY DISPLAY", self.request_display_settings, "settings-action"); self.apply_display_button.set_hexpand(True); self.update_button = self.button("INSTALL UPDATE", self.request_update, "settings-action"); self.update_button.set_hexpand(True); actions.append(self.update_button); actions.append(self.apply_display_button); reboot = self.button("REBOOT", self.confirm_reboot, "settings-action"); reboot.add_css_class("reboot-action"); actions.append(reboot); card.append(actions); page.append(card)
         return page
@@ -1441,6 +1442,8 @@ class Display(Gtk.Application):
                 self.discovery_signature = None
                 self.render_discover(self.discovery_request, self.discovery_data)
             self.apply_theme(config.get("display_theme"))
+            for value, button in getattr(self, "touch_background_buttons", {}).items():
+                (button.add_css_class if value == config.get("display_background", "current") else button.remove_css_class)("active")
             for button in self.bus_nav_buttons: button.set_visible(config.get("bus_enabled", True))
             for button in self.roon_nav_buttons: button.set_label("Now Playing")
             self.now_playing_tab.set_label((config.get("roon_now_playing_name") or "Now Playing").upper())
@@ -1578,7 +1581,7 @@ class Display(Gtk.Application):
         return False
 
     def render_touch_controls(self, device, system):
-        signature = json.dumps({"services": device.get("services", []), "bridge": (system or {}).get("roon_bridge")}, sort_keys=True)
+        signature = json.dumps({"services": device.get("services", []), "bridge": (system or {}).get("roon_bridge"), "netdata": (system or {}).get("netdata"), "background": self.settings_data.get("display_background")}, sort_keys=True)
         if signature == getattr(self, "touch_controls_signature", None): return
         self.touch_controls_signature = signature
         while child := self.touch_daily.get_last_child():
@@ -1586,8 +1589,18 @@ class Display(Gtk.Application):
             if child.has_css_class("setting-line"): self.settings_row_sizes.remove_widget(child)
             self.touch_daily.remove(child)
         bridge_state = (system or {}).get("roon_bridge")
+        service_pair = Gtk.Box(spacing=12); service_pair.set_homogeneous(True)
         if bridge_state in {"active", "running", "inactive", "stopped"}:
-            bridge = Gtk.Box(spacing=8); bridge.add_css_class("setting-line"); bridge_check = Gtk.CheckButton(label="Roon Bridge"); bridge_check.set_active(bridge_state in {"active", "running"}); bridge_check.connect("toggled", self.toggle_bridge); bridge.append(bridge_check); self.settings_row_sizes.add_widget(bridge); self.touch_daily.append(bridge)
+            bridge = Gtk.Box(spacing=8); bridge.add_css_class("setting-line"); bridge_check = Gtk.CheckButton(label="Roon Bridge"); bridge_check.set_active(bridge_state in {"active", "running"}); bridge_check.connect("toggled", self.toggle_bridge); bridge.append(bridge_check); service_pair.append(bridge)
+        netdata_state = (system or {}).get("netdata")
+        if netdata_state in {"active", "running", "inactive", "stopped"}:
+            netdata = Gtk.Box(spacing=8); netdata.add_css_class("setting-line"); netdata_check = Gtk.CheckButton(label="Netdata"); netdata_check.set_active(netdata_state in {"active", "running"}); netdata_check.connect("toggled", self.toggle_netdata); netdata.append(netdata_check); service_pair.append(netdata)
+        if service_pair.get_first_child(): self.touch_daily.append(service_pair)
+        background = Gtk.Box(spacing=12); background.add_css_class("setting-line"); background.append(self.label("Background")); choices = Gtk.Box(spacing=8); choices.set_homogeneous(True); choices.set_hexpand(True); self.touch_background_buttons = {}
+        for value, title in (("current", "Gradient"), ("black", "Black")):
+            choice = self.button(title, lambda _button, selected=value: self.change_background(selected), "theme-choice"); choice.set_hexpand(True); self.touch_background_buttons[value] = choice; choices.append(choice)
+            if value == self.settings_data.get("display_background", "current"): choice.add_css_class("active")
+        background.append(choices); self.touch_daily.append(background)
         services = Gtk.Box(spacing=12); services.add_css_class("setting-line"); services.append(self.label("Buses"))
         for item in device.get("services", []):
             button = Gtk.CheckButton(label=item.get("name", "")); button.set_active(bool(item.get("enabled"))); button.connect("toggled", self.toggle_service, item.get("name", "")); services.append(button)
@@ -1722,7 +1735,7 @@ class Display(Gtk.Application):
                 text = "Due" if value == 0 else str(value)
                 size = min(secondary_size, round((width - 110) / (max(1, len(later)) * max(2, len(text)) * .75)))
                 item.append(sized(text, "bus-following", max(12, size)))
-                if value != 0: item.append(sized("min", "bus-following-unit", max(11, round(caption_size * .72))))
+                if value != 0: item.append(sized("min", "bus-following-unit", max(18, round(secondary_size * .5))))
                 following.append(item)
             row.append(following)
 
@@ -3151,6 +3164,30 @@ class Display(Gtk.Application):
             button.set_sensitive(True)
             return False
         GLib.idle_add(finish)
+    def toggle_netdata(self, button):
+        requested = button.get_active(); button.set_sensitive(False)
+        threading.Thread(target=self._toggle_netdata, args=(button, requested), daemon=True).start()
+    def _toggle_netdata(self, button, requested):
+        result = post_json(BUS + "/api/device/netdata", {"enabled": requested}, timeout=20)
+        def finish():
+            if not result:
+                button.handler_block_by_func(self.toggle_netdata); button.set_active(not requested); button.handler_unblock_by_func(self.toggle_netdata)
+                self.touch_diagnostics.set_text("Could not change Netdata. Check backend Tools for service status.")
+            self.touch_controls_signature = None; self.last_system_fetch = 0; button.set_sensitive(True)
+            return False
+        GLib.idle_add(finish)
+    def change_background(self, selected):
+        if selected == self.settings_data.get("display_background", "current"): return
+        for button in self.touch_background_buttons.values(): button.set_sensitive(False)
+        def save():
+            result = post_json(f"{BUS}/api/admin/config", {"section": "appearance", "display_background": selected}, timeout=3)
+            def finish():
+                for button in self.touch_background_buttons.values(): button.set_sensitive(True)
+                if not result: self.touch_diagnostics.set_text("Could not save the background. Please try again.")
+                self.last_config_fetch = 0
+                return False
+            GLib.idle_add(finish)
+        threading.Thread(target=save, daemon=True).start()
     def toggle_service(self, button, service):
         threading.Thread(target=post_json, args=(BUS + "/api/device/service-visibility", {"service": service, "enabled": button.get_active()}), daemon=True).start()
     def toggle_home(self, _button, entity_id):

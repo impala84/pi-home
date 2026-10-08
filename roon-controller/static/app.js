@@ -637,8 +637,7 @@ window.addEventListener('resize', () => positionWebScrubber(Number($('browser-sc
 $('browser-scroll').addEventListener('wheel', event => { if (event.deltaY < 0 && $('browser-scroll').scrollTop < 40 && browserState?.offset > 0 && !browserRendering) browseCommand('previous'); }, {passive: true});
 $('browser-scrub-range').onchange = event => browseCommand('jump', {letter: String.fromCharCode(65 + Number(event.target.value))});
 $('details-open').onclick = () => setMusicView('details');
-$('details-artwork-close').onclick = () => setMusicView('now');
-$('details-artist-artwork-close').onclick = () => setMusicView('now');
+$('details-close').onclick = () => setMusicView('now');
 function restoreMusicRoute() {
   if (lastRestoredHash === location.hash) return;
   lastRestoredHash = location.hash;

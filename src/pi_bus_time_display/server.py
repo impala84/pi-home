@@ -1132,7 +1132,7 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
                     events.emit("display.wake.requested", view=state.awake_view)
                 self.send_json(200, json.dumps({"ok": True, "awake_seconds": state.config.outside_hours_wake_seconds}).encode())
                 return
-            if self.path in {"/api/device/service-visibility", "/api/device/roon-bridge", "/api/device/home-toggle", "/api/device/home-state", "/api/device/home-value"}:
+            if self.path in {"/api/device/service-visibility", "/api/device/roon-bridge", "/api/device/netdata", "/api/device/home-toggle", "/api/device/home-state", "/api/device/home-value"}:
                 if self.client_address[0] not in {"127.0.0.1", "::1"}:
                     self.send_json(403, b'{"error":"Touchscreen only"}')
                     return
@@ -1152,6 +1152,15 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
                         return
                     try:
                         write_control_request(mode_path.parent, {"action": "roon_start" if data["enabled"] else "roon_stop"})
+                    except (OSError, ValueError) as error:
+                        self.send_json(502, json.dumps({"error": str(error)}).encode())
+                        return
+                elif self.path == "/api/device/netdata":
+                    if type(data.get("enabled")) is not bool:
+                        self.send_json(400, b'{"error":"Choose whether Netdata should run"}')
+                        return
+                    try:
+                        write_control_request(mode_path.parent, {"action": "netdata_enable" if data["enabled"] else "netdata_disable"})
                     except (OSError, ValueError) as error:
                         self.send_json(502, json.dumps({"error": str(error)}).encode())
                         return

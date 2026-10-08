@@ -8,9 +8,9 @@ ROOT = Path(__file__).parents[1]
 class DisplayRotationTests(unittest.TestCase):
     def test_native_settings_dropdown_popup_has_explicit_readable_colours(self):
         display = (ROOT / "native-display/pi_bus_native.py").read_text(encoding="utf-8")
-        self.assertIn(".settings-select popover contents { background: #e4e3e8; color: #17171a;", display)
-        self.assertIn(".settings-select popover listview row label { color: #17171a; }", display)
-        self.assertIn(".settings-select popover listview row:selected { background: #c9c5ff; color: #111116; }", display)
+        self.assertIn(".settings-select popover contents { background: #29292d; color: #f2f0f4;", display)
+        self.assertIn(".settings-select popover listview row label { color: #f2f0f4; }", display)
+        self.assertIn(".settings-select popover listview row:selected { background: #403c55; color: #f2f0f4; }", display)
 
     def test_native_browse_is_vertical_only_and_back_is_not_an_overlay(self):
         display = (ROOT / "native-display/pi_bus_native.py").read_text()
@@ -188,9 +188,9 @@ class DisplayRotationTests(unittest.TestCase):
         self.assertIn("self.artwork.set_size_request(artwork_size, artwork_size)", display)
         self.assertIn("self.artwork_button.set_size_request(artwork_size, artwork_size)", display)
         self.assertIn('detail_artwork_button.connect("clicked", lambda *_: self.set_roon_view("now"))', display)
-        self.assertIn('id="details-artwork-close"', web_html)
-        self.assertIn("$('details-artwork-close').onclick = () => setMusicView('now')", web_js)
-        self.assertNotIn('id="details-close"', web_html)
+        self.assertNotIn('id="details-artwork-close"', web_html)
+        self.assertIn('id="details-close"', web_html)
+        self.assertIn("$('details-close').onclick = () => setMusicView('now')", web_js)
         self.assertNotIn('"detail-back"', display)
 
     def test_touchscreen_settings_title_and_checkbox_spacing(self):

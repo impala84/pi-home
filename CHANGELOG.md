@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.3-beta.17 Alpine — 8 October 2026
+
+- Makes the album-and-artist fact sheet a true full-screen view with an explicit close button, two balanced information columns and no hidden navigation behind it.
+- Adds compact touchscreen controls for Netdata and the gradient/black background alongside Roon Bridge, with roomier settings spacing, a larger brightness target and dark dropdown menus.
+- Restores the portrait bus `ROUTE` label to white and enlarges the muted `min` labels beside later arrivals.
+
 ## 1.1.3-beta.16 Alpine — 8 October 2026
 
 - Verifies that the separately served Roon controller is running the exact staged revision before an update can report success.
