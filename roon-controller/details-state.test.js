@@ -179,7 +179,7 @@ test('Bandcamp parsing returns artist notes and a small tag set', () => {
 test('album writeup prefers a linked Wikipedia summary', async () => {
   const group = {relations: [{url: {resource: 'https://en.wikipedia.org/wiki/Example_album'}}]};
   const result = await loadAlbumWriteup(group, null, async () => JSON.stringify({type: 'standard', extract: 'The album story.'}));
-  assert.deepEqual(result, {writeup: 'The album story.', source: 'Wikipedia', tags: []});
+  assert.deepEqual(result, {writeup: 'The album story.', full_writeup: 'The album story.', source: 'Wikipedia', tags: []});
 });
 
 test('album writeup falls back to the matching Wikipedia album page', async () => {
@@ -191,6 +191,7 @@ test('album writeup falls back to the matching Wikipedia album page', async () =
   assert.match(urls[0], /Morning_Glory/);
   assert.equal(result.source, 'Wikipedia');
   assert.match(result.writeup, /second studio album/);
+  assert.match(result.full_writeup, /released in 1995/);
 });
 
 test('Wikipedia album fallback rejects unrelated and disambiguation pages', async () => {

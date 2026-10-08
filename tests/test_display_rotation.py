@@ -58,6 +58,12 @@ class DisplayRotationTests(unittest.TestCase):
         self.assertIn('Install and connect Agent', html)
         self.assertIn('installs curl when needed', html)
 
+    def test_missing_netdata_exposes_a_local_install_action(self):
+        javascript = (ROOT / "src/pi_bus_time_display/static/admin.js").read_text()
+        self.assertIn("action:'netdata_install'", javascript)
+        self.assertIn('Install Netdata', javascript)
+        self.assertIn("installer.hidden=installed||!appliance", javascript)
+
     def test_netdata_actions_share_one_responsive_row_and_tools_have_a_heading(self):
         html = (ROOT / "src/pi_bus_time_display/static/admin.html").read_text()
         css = (ROOT / "src/pi_bus_time_display/static/admin.css").read_text()

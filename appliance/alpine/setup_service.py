@@ -693,9 +693,9 @@ class Setup:
             self.run(["rc-service", "netdata", "start"])
             atomic(operation_status, "Netdata Cloud settings applied. Waiting for the Agent to connect…\n")
             return {"ok": True}
-        if action == "netdata_official_install":
+        if action in {"netdata_install", "netdata_official_install"}:
             if not state.get("complete"): raise ValueError("Finish setup before installing Netdata.")
-            token, rooms, claim_url = parse_netdata_connection_command(data.get("command"))
+            token, rooms, claim_url = ("", "", "https://app.netdata.cloud") if action == "netdata_install" else parse_netdata_connection_command(data.get("command"))
             if not (self.root / "usr/bin/curl").is_file():
                 operation_status = self.root / "var/lib/pi-home/netdata-operation-status"
                 operation_status.parent.mkdir(parents=True, exist_ok=True)

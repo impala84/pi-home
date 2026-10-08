@@ -101,6 +101,13 @@ class AlpinePrototypeTests(unittest.TestCase):
         payload = json.loads(client.sendall.call_args.args[0])
         self.assertEqual(payload, {"action": "netdata_official_install", "command": command})
 
+    def test_netdata_can_be_installed_before_cloud_is_configured(self):
+        client = Mock(); client.__enter__ = Mock(return_value=client); client.__exit__ = Mock(return_value=False)
+        client.makefile.return_value.readline.return_value = b'{"ok":true,"queued":true}\n'
+        with patch.dict(os.environ, {"PI_HOME_APPLIANCE_PLATFORM": "alpine-prototype"}), patch("pi_bus_time_display.server.socket.socket", return_value=client):
+            self.assertTrue(write_control_request(Path("/unused"), {"action": "netdata_install"}))
+        self.assertEqual(json.loads(client.sendall.call_args.args[0]), {"action": "netdata_install"})
+
     def test_credentials_are_unique_private_and_idempotent(self):
         passwords = []
         for _ in range(2):

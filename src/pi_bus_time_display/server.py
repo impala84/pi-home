@@ -31,7 +31,7 @@ from .releases import ReleaseChecker
 CONTROL_REQUEST_LOCK = threading.Lock()
 ALPINE_SYSTEM_ACTIONS = {
     "update", "reboot", "netdata_enable", "netdata_disable", "netdata_claim",
-    "netdata_claim_command", "netdata_official_install", "netdata_disconnect", "netdata_lightweight",
+    "netdata_claim_command", "netdata_install", "netdata_official_install", "netdata_disconnect", "netdata_lightweight",
     "device_credentials", "install_tools", "display_on", "display_off",
     "set_brightness", "set_display", "set_wifi", "set_hostname", "roon_install", "roon_start", "roon_stop", "roon_restart",
 }

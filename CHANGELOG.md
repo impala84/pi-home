@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.3-beta.15 Alpine — 8 October 2026
+
+- Adds a standalone Netdata installer to Tools when the Agent is absent, with live progress and failure text; Cloud connection remains an optional second step.
+- Reworks the tapped Now Playing artwork view into a responsive fact sheet with separate artist portrait and biography plus album cover, full album write-up, release facts and track list.
+
 ## 1.1.3-beta.14 Alpine — 8 October 2026
 
 - Loads identity-checked Wikipedia album summaries before the slower MusicBrainz enrichment path, so a MusicBrainz timeout cannot suppress a valid summary.

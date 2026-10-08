@@ -19,6 +19,7 @@ let browserPreviousHeight = null;
 let browserScrubDragging = false;
 let browserScrollRestore = null;
 const browserSectionScrolls = new Map();
+const artistProfiles = new Map();
 const browserSession = sessionStorage.getItem('pi-home-roon-browser') || (globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`);
 sessionStorage.setItem('pi-home-roon-browser', browserSession);
 const proxied = location.pathname.startsWith('/roon');
@@ -507,7 +508,7 @@ function renderDetails(info) {
   library.disabled = info.status === 'loading' || library.classList.contains('library-busy');
   library.title = info.library_status === 'in_library' ? 'Album is in your library' : 'Add to Library';
   const metadata = info.metadata || {}; const facts = $('details-facts'); facts.replaceChildren();
-  $('details-writeup').textContent = metadata.writeup || '';
+  $('details-writeup').textContent = metadata.full_writeup || metadata.writeup || '';
   $('details-source').textContent = metadata.writeup_source ? `Source · ${metadata.writeup_source}` : '';
   const addFact = (name, value) => {
     if (!value) return;
@@ -522,9 +523,15 @@ function renderDetails(info) {
   addFact('Tracks', metadata.track_count ? String(metadata.track_count) : '');
   addFact('Country', metadata.country);
   addFact('Editions', metadata.edition_count > 1 ? String(metadata.edition_count) : '');
-  const key = info.artist_image_key || info.album_image_key || info.image_key;
+  const key = info.album_image_key || info.image_key;
   if (key) { $('details-art').src = api(`/api/image?key=${encodeURIComponent(key)}&size=700`); $('details-placeholder').hidden = true; }
   else { $('details-art').removeAttribute('src'); $('details-placeholder').hidden = false; }
+  const artistName = info.artist || fallback.line2 || '';
+  $('details-artist-heading').textContent = artistName || 'Unknown artist';
+  const artistKey = info.artist_image_key;
+  if (artistKey) { $('details-artist-art').src = api(`/api/image?key=${encodeURIComponent(artistKey)}&size=700`); $('details-artist-placeholder').hidden = true; }
+  else { $('details-artist-art').removeAttribute('src'); $('details-artist-placeholder').hidden = false; }
+  renderDetailsArtist(artistName);
   const list = $('details-tracks'); list.replaceChildren();
   (info.tracks || []).forEach((track, index) => {
     const item = document.createElement('li');
@@ -533,6 +540,24 @@ function renderDetails(info) {
     copy.append(title); if (track.subtitle) { const subtitle = document.createElement('small'); subtitle.textContent = track.subtitle; copy.append(subtitle); }
     item.append(number, copy); list.append(item);
   });
+}
+
+function renderDetailsArtist(name) {
+  const writeup = $('details-artist-writeup'); const source = $('details-artist-source');
+  if (!name) { writeup.textContent = ''; source.textContent = ''; return; }
+  const cached = artistProfiles.get(name);
+  if (cached?.writeup !== undefined) {
+    writeup.textContent = cached.full_writeup || cached.writeup || 'No artist background is available.';
+    source.textContent = cached.source ? `Source · ${cached.source}` : '';
+    return;
+  }
+  if (cached?.pending) return;
+  writeup.textContent = 'Loading artist background…'; source.textContent = '';
+  const pending = fetch(api(`/api/artist?name=${encodeURIComponent(name)}`), {cache:'no-store'})
+    .then(response => response.ok ? response.json() : Promise.reject(new Error('Artist lookup failed')))
+    .then(profile => { artistProfiles.set(name, profile); if ($('details-artist-heading').textContent === name) renderDetailsArtist(name); })
+    .catch(() => { const profile = {writeup:'No artist background is available.',source:''}; artistProfiles.set(name, profile); if ($('details-artist-heading').textContent === name) renderDetailsArtist(name); });
+  artistProfiles.set(name, {pending});
 }
 
 $('library-add').onclick = async () => {
@@ -613,6 +638,7 @@ $('browser-scroll').addEventListener('wheel', event => { if (event.deltaY < 0 &&
 $('browser-scrub-range').onchange = event => browseCommand('jump', {letter: String.fromCharCode(65 + Number(event.target.value))});
 $('details-open').onclick = () => setMusicView('details');
 $('details-artwork-close').onclick = () => setMusicView('now');
+$('details-artist-artwork-close').onclick = () => setMusicView('now');
 function restoreMusicRoute() {
   if (lastRestoredHash === location.hash) return;
   lastRestoredHash = location.hash;

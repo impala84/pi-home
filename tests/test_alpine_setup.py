@@ -291,6 +291,14 @@ class AlpineSetupTests(unittest.TestCase):
         self.run.assert_any_call(["apk", "add", "--no-cache", "curl", "ca-certificates"])
         self.assertNotIn("private-token", (self.root / "var/lib/pi-home/netdata-operation-status").read_text())
 
+    def test_official_agent_can_be_installed_without_cloud_credentials(self):
+        self.setup.save({"complete": True})
+        with patch.object(module.threading, "Thread") as thread:
+            result = self.setup.handle({"action": "netdata_install"})
+        self.assertTrue(result["queued"])
+        thread.assert_called_once_with(target=self.setup.install_official_netdata, args=("", "", "https://app.netdata.cloud"), daemon=True)
+        thread.return_value.start.assert_called_once()
+
     def test_official_agent_replaces_packaged_agent_and_uses_current_stable_flags(self):
         packaged = self.root / "usr/sbin/netdata"; packaged.parent.mkdir(parents=True); packaged.touch()
         (self.root / "var/lib/pi-home").mkdir(parents=True)

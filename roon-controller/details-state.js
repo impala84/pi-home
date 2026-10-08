@@ -110,7 +110,7 @@ async function loadArtistProfile(name, fetchJson = musicBrainzJson, fetchText = 
     } catch (_) {}
   }
   const result = await loadAlbumWriteup(artist, null, fetchText);
-  return {...empty, writeup: result.writeup, source: result.source};
+  return {...empty, writeup: result.writeup, full_writeup: result.full_writeup || result.writeup, source: result.source};
 }
 
 async function loadAlbumWriteup(group, release, fetchText = externalText) {
@@ -122,7 +122,7 @@ async function loadAlbumWriteup(group, release, fetchText = externalText) {
       if (index >= 0) {
         const title = target.pathname.slice(index + marker.length); const summaryUrl = `https://${target.hostname}/api/rest_v1/page/summary/${title}`;
         const summary = JSON.parse(await fetchText(summaryUrl));
-        if (summary.type !== 'disambiguation' && summary.extract) return {writeup: clipWriteup(summary.extract), source: 'Wikipedia', tags: []};
+        if (summary.type !== 'disambiguation' && summary.extract) return {writeup: clipWriteup(summary.extract), full_writeup: decodeHtml(summary.extract), source: 'Wikipedia', tags: []};
       }
     } catch (_) {}
   }
@@ -133,7 +133,7 @@ async function loadAlbumWriteup(group, release, fetchText = externalText) {
       if (parsed.writeup || parsed.tags.length) return {...parsed, source: parsed.writeup ? 'Artist notes via Bandcamp' : 'Bandcamp'};
     } catch (_) {}
   }
-  return {writeup: '', source: '', tags: []};
+  return {writeup: '', full_writeup: '', source: '', tags: []};
 }
 
 async function loadWikipediaAlbumWriteup(album, artist, fetchText = externalText) {
@@ -151,7 +151,7 @@ async function loadWikipediaAlbumWriteup(album, artist, fetchText = externalText
       const artistMatch = artistWords.length && artistWords.every(word => context.includes(word));
       const albumMatch = /\b(album|record|mixtape|extended play| ep)\b/.test(context);
       if (summary.type !== 'disambiguation' && summary.extract && artistMatch && albumMatch) {
-        return {writeup: clipWriteup(summary.extract), source: 'Wikipedia', tags: []};
+        return {writeup: clipWriteup(summary.extract), full_writeup: decodeHtml(summary.extract), source: 'Wikipedia', tags: []};
       }
     } catch (_) {}
   }
@@ -270,7 +270,7 @@ async function loadMusicBrainzMetadata(album, artist, trackCount = 0, fetchJson 
   if (!writeup.writeup) writeup = await loadWikipediaAlbumWriteup(album, artist, fetchText);
   const facts = musicBrainzFacts(group, trackCount, release);
   facts.genres = [...new Set([...facts.genres, ...writeup.tags])].slice(0, 4);
-  return {...facts, writeup: writeup.writeup, writeup_source: writeup.source};
+  return {...facts, writeup: writeup.writeup, full_writeup: writeup.full_writeup || writeup.writeup, writeup_source: writeup.source};
 }
 
 function chooseItem(items, title) {

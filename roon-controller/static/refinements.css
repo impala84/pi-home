@@ -196,22 +196,23 @@ h1 {
 .details-view::-webkit-scrollbar { display: none; }
 .details-copy { align-self: stretch; display: flex; flex-direction: column; }
 .details-metadata { margin: auto 0; }
-.details-panel { width: min(1120px, calc(100% - 40px)); min-height: calc(100% - 20px); margin: -30px auto 0; padding: 34px 0 28px; display: grid; grid-template-columns: minmax(260px, 42%) 1fr; gap: clamp(28px,5vw,70px); align-items: center; }
+.details-panel { width: min(1160px, calc(100% - 40px)); min-height: calc(100% - 20px); margin: 0 auto; padding: 28px 0; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: clamp(24px,3vw,44px); align-items: start; }
+.details-entity { min-width: 0; display: grid; grid-template-columns: minmax(180px,42%) minmax(0,1fr); gap: clamp(18px,2.2vw,30px); align-items: start; padding: 22px; border: 1px solid var(--line); border-radius: 16px; background: rgba(19,24,22,.72); }
 .details-art { aspect-ratio: 1; display: grid; place-items: center; overflow: hidden; border: 0; border-radius: 14px; padding: 0; background: var(--panel); }
 .details-art img { width: 100%; height: 100%; object-fit: cover; }
 .details-art img:not([src]) { display: none; }
 .details-art span { color: #34413d; font-size: clamp(32px,6vw,72px); letter-spacing: .12em; }
-.details-copy h2 { margin: 8px 0 4px; font-size: clamp(32px,5vw,62px); line-height: 1.04; }
+.details-copy h2 { margin: 8px 0 4px; font-size: clamp(28px,3.2vw,46px); line-height: 1.04; }
 #details-artist { margin: 0; color: var(--ink); font-size: clamp(19px,2.3vw,28px); }
 #details-subtitle { min-height: 1.4em; margin: 8px 0 20px; color: var(--muted); }
-.details-writeup { max-width: 62ch; margin: 0 0 6px; color: #d3d9d6; font-size: 15px; line-height: 1.45; }
+.details-writeup { max-width: 62ch; margin: 0 0 10px; color: #d3d9d6; font-size: 15px; line-height: 1.5; }
 .details-writeup:empty,.details-source:empty { display: none; }
 .details-source { margin: 0 0 15px; color: #68736f; font-size: 9px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
 .details-facts { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px 24px; margin: 0 0 18px; }
 .details-facts div { min-width: 0; }
 .details-facts dt { color: #68736f; font-size: 10px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
 .details-facts dd { margin: 2px 0 0; color: var(--ink); font-size: 15px; }
-.details-tracks { max-height: 34vh; margin: 0; padding: 0; overflow-y: auto; list-style: none; scrollbar-width: none; }
+.details-tracks { max-height: 38vh; margin: 0; padding: 0; overflow-y: auto; list-style: none; scrollbar-width: none; }
 .details-tracks::-webkit-scrollbar { display: none; }
 .details-tracks li { display: grid; grid-template-columns: 28px 1fr; gap: 8px; padding: 7px 0; border-top: 1px solid var(--line); color: var(--muted); }
 .details-tracks li > span:last-child { display: grid; }
@@ -295,14 +296,22 @@ h1 {
   .queue-row { min-height: 70px; grid-template-columns: 52px minmax(0,1fr) auto; gap: 10px; padding: 7px 9px; }
   .queue-art { width: 50px; height: 50px; }
   .details-view { inset: 54px 0 62px; }
-  .details-panel { width: calc(100% - 32px); margin-top: -30px; padding-top: 46px; grid-template-columns: 1fr; gap: 20px; align-items: start; }
-  .details-art { width: min(72vw, 330px); margin: 0 auto; }
-  .details-copy { text-align: center; }
-  .details-writeup { margin-right: auto; margin-left: auto; }
+  .details-panel { width: calc(100% - 24px); padding: 12px 0 24px; grid-template-columns: 1fr; gap: 14px; align-items: start; }
+  .details-entity { grid-template-columns: minmax(150px,36%) minmax(0,1fr); gap: 18px; padding: 16px; }
+  .details-art { width: 100%; margin: 0; }
+  .details-copy { text-align: left; }
   .details-facts { text-align: left; }
   .details-tracks { max-height: none; text-align: left; }
   .web-nav { left: 0; right: 0; bottom: 0; padding: 0 18px max(8px, env(safe-area-inset-bottom)); border: 0; border-radius: 0; }
   .web-nav a { padding: 12px 8px 10px; }
+}
+
+@media (orientation: portrait) and (min-width: 701px) {
+  .details-panel { grid-template-columns: 1fr; gap: 18px; }
+  .details-entity { grid-template-columns: minmax(250px,38%) minmax(0,1fr); }
+  .details-copy h2 { font-size: clamp(32px,4.2vw,48px); }
+  .details-writeup { font-size: 17px; }
+  .details-tracks { max-height: 28vh; }
 }
 
 /* Section rail and artist overview: controls never cover album artwork. */

@@ -1,6 +1,6 @@
 # Pi Home
 
-Alpine testing release: **1.1.3-beta.14**, with reliable direct Wikipedia album summaries that bypass MusicBrainz delays and retry blank lookups, refined album and track popovers, a corrected official Netdata stable-agent migration, persistent Search navigation, and optional per-device touchscreen white balance using measured RGB gains. See [activation and reset commands](docs/display-white-balance.md). Select Beta explicitly to test; Stable remains 1.1.2.
+Alpine testing release: **1.1.3-beta.15**, with a visible standalone Netdata installer, a responsive artist-and-album fact sheet with full write-ups, reliable direct Wikipedia album summaries, refined popovers, persistent Search navigation, and optional per-device touchscreen white balance using measured RGB gains. See [activation and reset commands](docs/display-white-balance.md). Select Beta explicitly to test; Stable remains 1.1.2.
 
 The current Alpine stable release is **1.1.2**: an in-place correction for 10-inch Touch Display 2 touch rotation. Update through System → Software on the Stable channel, then reboot manually to apply input calibration. Physical touch acceptance is still required. The 1.1.1 full image remains available for fresh installs. Raspberry Pi OS releases remain separate.
 
