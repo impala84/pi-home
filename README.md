@@ -1,6 +1,6 @@
 # Pi Home
 
-Alpine testing release: **1.1.3-beta.17**, with a full-screen artist-and-album fact sheet, compact daily Netdata/background controls, darker touchscreen dropdowns and refined portrait bus typography. It retains the verified fresh Roon artwork controller, standalone Netdata installer, full write-ups and optional per-device touchscreen white balance using measured RGB gains. See [activation and reset commands](docs/display-white-balance.md). Select Beta explicitly to test; Stable remains 1.1.2.
+Alpine testing release: **1.1.3-beta.18**, with the artist-and-album fact sheet implemented on the physical native touchscreen as a solid full-screen page with an explicit close button, separate artist and album artwork, biographies and release information. It retains the compact daily controls, portrait bus refinements, standalone Netdata installer and optional per-device touchscreen white balance using measured RGB gains. See [activation and reset commands](docs/display-white-balance.md). Select Beta explicitly to test; Stable remains 1.1.2.
 
 The current Alpine stable release is **1.1.2**: an in-place correction for 10-inch Touch Display 2 touch rotation. Update through System → Software on the Stable channel, then reboot manually to apply input calibration. Physical touch acceptance is still required. The 1.1.1 full image remains available for fresh installs. Raspberry Pi OS releases remain separate.
 

@@ -5,6 +5,12 @@
 - Disables Wi-Fi power saving in the Alpine image and on Wi-Fi profiles created by setup, preventing the severe local-network latency spikes observed with Roon Discover.
 - Keeps album write-ups to a concise two-sentence preview with Wikipedia attribution and Bandcamp fallback.
 
+## 1.1.3-beta.18 Alpine — 8 October 2026
+
+- Implements the full-screen artist-and-album fact sheet in the native GTK touchscreen actually used by Alpine, rather than only in the separate browser interface.
+- Adds a fixed close button, solid black full-screen takeover, independent artist and album artwork, the full album write-up, artist biography, release facts and track list.
+- Adds a 1200×1920 native visual acceptance check that verifies the fact sheet covers the physical display edge to edge and exposes its close control.
+
 ## 1.1.3-beta.17 Alpine — 8 October 2026
 
 - Makes the album-and-artist fact sheet a true full-screen view with an explicit close button, two balanced information columns and no hidden navigation behind it.

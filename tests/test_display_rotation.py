@@ -179,7 +179,7 @@ class DisplayRotationTests(unittest.TestCase):
         self.assertIn("[[ ${profile} == touch2-10 ]] && mode=1200x1920", appliance)
         self.assertIn('(\"high-resolution\", max(width, height) >= 1200)', display)
 
-    def test_landscape_artwork_is_fixed_smaller_and_detail_art_can_close(self):
+    def test_landscape_artwork_is_fixed_smaller_and_native_fact_sheet_has_close_button(self):
         display = (ROOT / "native-display" / "pi_bus_native.py").read_text(encoding="utf-8")
         web_html = (ROOT / "roon-controller" / "static" / "index.html").read_text(encoding="utf-8")
         web_js = (ROOT / "roon-controller" / "static" / "app.js").read_text(encoding="utf-8")
@@ -187,7 +187,13 @@ class DisplayRotationTests(unittest.TestCase):
         self.assertIn("* .8) if portrait else (324 if width >= 1200", display)
         self.assertIn("self.artwork.set_size_request(artwork_size, artwork_size)", display)
         self.assertIn("self.artwork_button.set_size_request(artwork_size, artwork_size)", display)
-        self.assertIn('detail_artwork_button.connect("clicked", lambda *_: self.set_roon_view("now"))', display)
+        self.assertIn('close = self.icon_button("close", lambda *_: self.set_roon_view("now"), "detail-close")', display)
+        self.assertIn('takeover.set_halign(Gtk.Align.FILL); takeover.set_valign(Gtk.Align.FILL)', display)
+        self.assertIn('takeover.add_css_class("detail-takeover")', display)
+        self.assertIn('.detail-takeover { padding: 0; background: #000; }', display)
+        self.assertIn('self.detail_artist_artwork', display)
+        self.assertIn('self.detail_album_artwork', display)
+        self.assertIn('metadata.get("full_writeup") or metadata.get("writeup")', display)
         self.assertNotIn('id="details-artwork-close"', web_html)
         self.assertIn('id="details-close"', web_html)
         self.assertIn("$('details-close').onclick = () => setMusicView('now')", web_js)

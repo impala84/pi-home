@@ -446,6 +446,18 @@ display.artwork.set_filename(str(fixture_art("now-playing", "NOW PLAYING")))
 display.adapt_display()
 display.render_bluos_inputs({"inputs": [{"id": "tv", "name": "Watch TV"}, {"id": "rega", "name": "Rega P3"}]}, True)
 capture("now-playing")
+display.detail_artist_profile_name = "Emancipator"
+display.detail_artist_profile = {"full_writeup": "Emancipator is an American electronic producer known for richly layered downtempo compositions.", "source": "Wikipedia"}
+display.render_details({"status":"ready", "album":"Soon It Will Be Cold Enough", "artist":"Emancipator", "subtitle":"2006", "metadata":{"full_writeup":"The debut album blends acoustic instrumentation, field recordings and patient electronic rhythms into a cinematic whole.", "writeup_source":"Wikipedia", "release_date":"2006-01-17", "genres":["Electronic", "Downtempo"], "type":"Album", "label":"Loci Records", "format":"CD", "track_count":3}, "tracks":[{"title":"Eve"},{"title":"Soon It Will Be Cold Enough"},{"title":"First Snow"}]})
+display.detail_artist_artwork.set_filename(str(fixture_art("artist-fact", "ARTIST")))
+display.detail_album_artwork.set_filename(str(fixture_art("album-fact", "ALBUM")))
+display.set_roon_view("details")
+capture("album-artist-fact-sheet")
+takeover_bounds = display.detail_takeover.compute_bounds(window)[1]
+assert takeover_bounds.get_x() == 0 and takeover_bounds.get_y() == 0, (takeover_bounds.get_x(), takeover_bounds.get_y())
+assert takeover_bounds.get_width() == screen_width and takeover_bounds.get_height() == screen_height, (takeover_bounds.get_width(), takeover_bounds.get_height(), screen_width, screen_height)
+assert display.detail_close.get_visible()
+display.set_roon_view("now")
 if min(screen_width, screen_height) >= 1000:
     for control in (display.library_add, display.prev, display.next):
         assert control.get_width() == control.get_height(), (control.get_width(), control.get_height())
@@ -582,7 +594,7 @@ if screen_height > screen_width:
 settings = display.build_settings()
 window.set_child(settings)
 display.configure_settings_layout(screen_width, screen_height)
-display.device_status.set_text("v1.1.3-beta.17 Alpine")
+display.device_status.set_text("v1.1.3-beta.18 Alpine")
 display.touch_diagnostics.set_text("Memory 6.1%  ·  Load 0.65  ·  62.8°C  ·  Controller ready  ·  Bridge offline")
 capture("settings")
 assert window.get_width() == screen_width and window.get_height() == screen_height, (window.get_width(), window.get_height())
