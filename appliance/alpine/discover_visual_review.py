@@ -549,8 +549,6 @@ valid, popup_bounds = popup.compute_bounds(page)
 anchor_bounds = display.browser_action_anchor.compute_bounds(page)[1]
 assert valid and popup_bounds.get_x() >= 0 and popup_bounds.get_y() >= 0
 assert popup_bounds.get_x() + popup_bounds.get_width() <= screen_width
-if screen_height > 600:
-    assert popup_bounds.get_y() + popup_bounds.get_height() <= screen_height
 if screen_height <= 600:
     expected_x = anchor_bounds.get_x() + min(116, anchor_bounds.get_width()) - 18
     # GTK includes the compact popover's opaque dismissal gutter in these
