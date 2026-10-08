@@ -32,6 +32,7 @@ gi.require_foreign("cairo")
 from gi.repository import Gdk, GdkPixbuf, Gio, GLib, Graphene, Gsk, Gtk, Pango
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from icon_family import FamilyIcon
+from white_balance import create_display_window
 
 BUS = "http://127.0.0.1:8765"
 ROON = "http://127.0.0.1:8766"
@@ -786,7 +787,7 @@ class Display(Gtk.Application):
     def do_activate(self):
         provider = Gtk.CssProvider(); provider.load_from_data(CSS)
         Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
-        self.window = Gtk.ApplicationWindow(application=self); self.window.set_decorated(False); self.window.set_default_size(800, 480); self.window.fullscreen()
+        self.window = create_display_window(application=self); self.window.set_decorated(False); self.window.set_default_size(800, 480); self.window.fullscreen()
         # Apply saved theme before the first frame, not after an API poll.
         try:
             initial_config = tomllib.loads(Path("/etc/pi-home/config.toml").read_text())
