@@ -328,6 +328,14 @@ if screen_height > screen_width:
 display.render_browser({"status": "ready", "section": "genres", "layout": "tiles", "show_labels": True,
     "items": [{"title": name, "item_key": name} for name in ("Pop/Rock", "Classical", "Electronic", "Jazz", "Stage & Screen", "International", "Vocal", "Blues", "Easy Listening")]})
 capture("genres")
+tabs_y = display.browser_section_buttons["genres"].compute_bounds(window)[1].get_y()
+display.render_browser({"status":"ready", "section":"genres", "layout":"menu", "can_back":True,
+    "items":[{"title":name, "item_key":name} for name in ("Shuffle Genre", "Artists", "Albums", "G-Funk")]})
+capture("genre-navigation")
+if screen_height > screen_width:
+    assert abs(display.browser_section_buttons["genres"].compute_bounds(window)[1].get_y() - tabs_y) <= 1
+    card = display.browser_list.get_first_child().get_first_child()
+    assert abs(card.get_width() - card.get_height()) <= 2, (card.get_width(), card.get_height())
 for batch, names in enumerate((("R&B", "Rap", "Avant-Garde", "Folk", "New Age", "Reggae"), ("Country", "Latin", "Religious", "Holiday", "Children’s", "Comedy")), 2):
     display.render_browser({"status": "ready", "section": "genres", "layout": "tiles", "show_labels": True,
         "items": [{"title": name, "item_key": name} for name in names]})
@@ -582,6 +590,10 @@ window.set_child(bus)
 capture("bus-times-black")
 window.set_child(page)
 capture("music-black")
+display.set_roon_view("queue")
+display.render_queue({"items":[{"title":name, "artist":"Bloc Party", "album":"Silent Alarm", "queue_item_id":index, "image_key":"queue-fixture", "length":234, "is_current":index==1} for index, name in enumerate(("Helicopter", "Positive Tension", "She's Hearing Voices"))]})
+for picture in display.queue_pictures.get("queue-fixture", []): picture.set_filename(str(fixture_art("queue", "SILENT ALARM")))
+capture("queue-black")
 window.remove_css_class("background-black")
 
 window.set_child(None)

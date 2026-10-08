@@ -106,6 +106,12 @@ test('MusicBrainz matching requires the exact album and artist', () => {
   assert.equal(chooseMusicBrainzGroup(groups, 'Unknown', 'Emancipator'), null);
 });
 
+test('browse album notes reject a title-only match for a different artist', async () => {
+  const fetchJson = async () => ({'release-groups':[{id:'wrong',title:'Album','artist-credit':[{name:'Someone Else'}]}]});
+  const facts = await loadMusicBrainzMetadata('Album', 'Artist', 0, fetchJson, true);
+  assert.equal(facts.writeup || '', '');
+});
+
 test('MusicBrainz matching accepts the album artist within Roon track credits', () => {
   assert.deepEqual(artistCandidates('Emancipator / SunSquabi / Stephanie Starnes'), ['Emancipator', 'SunSquabi', 'Stephanie Starnes', 'Emancipator / SunSquabi / Stephanie Starnes']);
   const groups = [{id: 'chrysalis', title: 'Chrysalis', score: 100, 'artist-credit': [{name: 'Emancipator'}]}];
