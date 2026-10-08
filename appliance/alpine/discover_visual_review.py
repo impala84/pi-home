@@ -364,8 +364,14 @@ keyboard_bounds = keyboard.compute_bounds(window)[1]
 # gutter.  Guard the useful invariant here: the panel stays inset and its two
 # outer gutters remain symmetrical.
 search_gutter = entry_bounds.get_x()
-assert 10 <= search_gutter <= 30, search_gutter
-assert abs(screen_width - keyboard_bounds.get_x() - keyboard_bounds.get_width() - search_gutter) <= 1
+right_gutter = screen_width - keyboard_bounds.get_x() - keyboard_bounds.get_width()
+if screen_height > screen_width:
+    assert 10 <= search_gutter <= 30, search_gutter
+    assert abs(right_gutter - search_gutter) <= 1, (search_gutter, right_gutter)
+else:
+    # Compact landscape keeps the same left navigation rail as Browse.
+    assert 100 <= search_gutter <= 180, search_gutter
+    assert 10 <= right_gutter <= 30, right_gutter
 
 for track in (display.browser_list, display.queue_list, display.discovery_list):
     for offset in (24.0, -24.0):
