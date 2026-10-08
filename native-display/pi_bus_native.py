@@ -910,7 +910,7 @@ class Display(Gtk.Application):
             self.artwork_viewport.set_size_request(artwork_size, artwork_size)
         elif self.artwork_button.get_child() is self.artwork_viewport:
             self.artwork_viewport.set_child(None); self.artwork_button.set_child(self.artwork)
-        detail_size = max(180, min(round((width - 120) / 2), 430)) if portrait else max(220, min(round((width - 150) / 2), height - 170))
+        detail_size = max(180, min(round((width - 120) / 2), 430)) if portrait else max(220, min(round((width - 260) / 2), height - 190, 500))
         self.detail_album_artwork.set_size_request(detail_size, detail_size)
         self.detail_artist_artwork.set_size_request(detail_size, detail_size)
         if previous is not None and previous != portrait:
