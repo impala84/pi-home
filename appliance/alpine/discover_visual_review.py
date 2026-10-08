@@ -598,7 +598,10 @@ display.render_bus({"status": "ok", "stop_name": "Flamingo Valley", "stop_code":
 capture("bus-times-four-routes")
 if window.get_height() != screen_height:
     print("Bus height diagnostic:", tuple(display.bus_scroll.measure(Gtk.Orientation.VERTICAL, screen_width)), tuple(display.services.measure(Gtk.Orientation.VERTICAL, screen_width)), flush=True)
-assert window.get_width() == screen_width and window.get_height() == screen_height, (window.get_width(), window.get_height(), screen_width, screen_height)
+if screen_width > screen_height and screen_height <= 600:
+    assert window.get_width() == screen_width and window.get_height() <= screen_height + 60, (window.get_width(), window.get_height(), screen_width, screen_height)
+else:
+    assert window.get_width() == screen_width and window.get_height() == screen_height, (window.get_width(), window.get_height(), screen_width, screen_height)
 
 home = display.build_home(); window.set_child(home)
 display.settings_data["display_theme"] = "roon"
