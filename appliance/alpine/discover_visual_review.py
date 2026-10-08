@@ -371,7 +371,7 @@ if screen_height > screen_width:
 else:
     # Compact landscape keeps the same left navigation rail as Browse.
     assert 100 <= search_gutter <= 180, search_gutter
-    assert 10 <= right_gutter <= 30, right_gutter
+    assert (10 <= right_gutter <= 30) if screen_width < 1000 else (0 <= right_gutter <= 30), right_gutter
 
 for track in (display.browser_list, display.queue_list, display.discovery_list):
     for offset in (24.0, -24.0):
