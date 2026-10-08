@@ -1,5 +1,12 @@
 name: Baseline checks
-on: [push, pull_request]
+on:
+  push:
+    paths-ignore:
+      - '**/*.md'
+  pull_request:
+    paths-ignore:
+      - '**/*.md'
+  workflow_dispatch:
 jobs:
   tests:
     runs-on: ubuntu-latest

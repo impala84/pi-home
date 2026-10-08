@@ -1,7 +1,5 @@
 name: Native layout checks
 on:
-  push:
-    branches: [alpine-beta]
   workflow_dispatch:
 jobs:
   layout:

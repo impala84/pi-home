@@ -1,8 +1,5 @@
 name: Alpine verification
 on:
-  push:
-    # Keep the old branch as a one-release bridge for beta.14 and older devices.
-    branches: [alpine-beta, alpine-appliance-prototype]
   workflow_dispatch:
     inputs:
       build_image:
