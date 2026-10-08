@@ -587,6 +587,10 @@ popover.sort-menu > contents { margin-top: 8px; background: #000; border: 1px so
 .large-display .track-menu-action { min-height: 64px; font-size: 24px; }
 .compact-landscape popover.track-menu > contents { padding: 7px; border-radius: 10px; }
 .compact-landscape .track-menu-action { min-height: 42px; padding: 5px 12px; font-size: 16px; }
+.compact-landscape .page { padding: 10px 12px 8px; }
+.compact-landscape .browser-sidebar { min-width: 112px; padding-right: 2px; }
+.compact-landscape .browser-filter { min-height: 44px; padding: 6px; font-size: 14px; }
+.compact-landscape .browser-scrubber { min-width: 44px; }
 .compact-detail .detail-header { min-height: 58px; padding: 5px 16px; }
 .compact-detail .detail-header-title { font-size: 21px; }
 .compact-detail .detail-close { min-width: 46px; min-height: 46px; padding: 0; }
@@ -908,8 +912,8 @@ class Display(Gtk.Application):
         self.portrait_music_tabs.set_margin_end(24 if portrait else 0)
         self.portrait_music_tabs.set_margin_bottom((16 if width < 600 else 24) if portrait else 0)
         self.browser_body.set_margin_end(0)
-        self.browser_scrubber.set_size_request(52 if portrait else 74, -1)
-        self.browser_scrubber.set_margin_end(0 if portrait else 18)
+        self.browser_scrubber.set_size_request(52 if portrait or compact_landscape else 74, -1)
+        self.browser_scrubber.set_margin_end(0 if portrait or compact_landscape else 18)
         self.browser_search_columns.set_orientation(Gtk.Orientation.VERTICAL if portrait and width < 700 else Gtk.Orientation.HORIZONTAL)
         self.discovery_body.set_orientation(Gtk.Orientation.VERTICAL if portrait else Gtk.Orientation.HORIZONTAL)
         self.discovery_sidebar.set_orientation(Gtk.Orientation.HORIZONTAL if portrait else Gtk.Orientation.VERTICAL)
