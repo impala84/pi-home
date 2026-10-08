@@ -1,13 +1,20 @@
 # Changelog
 
-## 1.1.3-beta.11 Alpine — 8 October 2026
+## 1.1.3-beta.12 Alpine — 8 October 2026
 
 - Replaces the unreliable native album sort dropdown with the same high-contrast popover styling used by track actions. Offers full-library title A–Z, title Z–A and artist A–Z sorting on large portrait displays.
 - Keeps the Browse secondary navigation visible above the on-screen search keyboard, so another section is always one tap away.
 - Shows a visible loading, sourced summary or explicit unavailable state on album and artist pages. Retries common remaster, deluxe and anniversary titles against their base album names.
 - Clears an opened Daily mix when switching to For You, so the selected tab and displayed content cannot disagree.
 - Matches Home Controls card corners to Bus Times and increases the spacing between Home panels.
+- Keeps the last valid touchscreen settings during the API/display boot race and retries both display and backend settings loads automatically instead of temporarily applying defaults.
 - Release-date sorting remains unavailable because Roon's public Browse album rows do not expose release dates.
+
+## 1.1.3-beta.11 Alpine — 8 October 2026
+
+- Adds optional per-device RGB white balance to the main GTK touchscreen window, with persistent configuration outside application releases. Missing or invalid profiles preserve original colours.
+- Adds measured-gain activation/reset instructions and real GTK pixel checks. Uses the first practical correction selected by the owner; no claim of full ICC calibration.
+- Includes beta.10 UI improvements. Physical V3D/touchscreen acceptance remains required.
 
 ## 1.1.3-beta.10 Alpine — 8 October 2026
 

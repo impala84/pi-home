@@ -779,6 +779,19 @@ class NativeBrowserControlsTests(unittest.TestCase):
             self.assertIn(section, search)
         self.assertIn('search_active.add_css_class("active")', search)
 
+    def test_touch_popovers_hide_the_cursor_before_opening(self):
+        code = SOURCE.read_text(encoding='utf-8')
+        self.assertGreaterEqual(code.count('self.hide_widget_cursor(popover); popover.popup()'), 2)
+        self.assertIn('getattr(self, "browser_sort_popover", None)', code)
+
+    def test_failed_boot_config_fetch_keeps_last_good_settings_and_retries(self):
+        code = SOURCE.read_text(encoding='utf-8')
+        poll = code.split('def poll(self):', 1)[1].split('def capture_display', 1)[0]
+        self.assertIn('if isinstance(fetched_config, dict) and fetched_config:', poll)
+        self.assertIn('self.last_config_fetch = 0', poll)
+        apply = code.split('def apply(self,', 1)[1].split('def apply_artwork', 1)[0]
+        self.assertIn('effective_config = config if isinstance(config, dict) and config else self.settings_data', apply)
+
     def test_surprise_selection_and_bottom_back_are_present_in_both_interfaces(self):
         code = SOURCE.read_text(encoding='utf-8')
         self.assertIn('and not data.get("surprise_preview")', code)

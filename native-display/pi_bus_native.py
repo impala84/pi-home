@@ -32,6 +32,7 @@ gi.require_foreign("cairo")
 from gi.repository import Gdk, GdkPixbuf, Gio, GLib, Graphene, Gsk, Gtk, Pango
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from icon_family import FamilyIcon
+from white_balance import create_display_window
 
 BUS = "http://127.0.0.1:8765"
 ROON = "http://127.0.0.1:8766"
@@ -786,7 +787,7 @@ class Display(Gtk.Application):
     def do_activate(self):
         provider = Gtk.CssProvider(); provider.load_from_data(CSS)
         Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
-        self.window = Gtk.ApplicationWindow(application=self); self.window.set_decorated(False); self.window.set_default_size(800, 480); self.window.fullscreen()
+        self.window = create_display_window(application=self); self.window.set_decorated(False); self.window.set_default_size(800, 480); self.window.fullscreen()
         # Apply saved theme before the first frame, not after an API poll.
         try:
             initial_config = tomllib.loads(Path("/etc/pi-home/config.toml").read_text())
@@ -1292,7 +1293,14 @@ class Display(Gtk.Application):
             GLib.idle_add(self.apply_display_view_request, dict(view_request))
         now = time.monotonic(); config = None; system = None
         if not self.settings_data or now - self.last_config_fetch >= 60:
-            config = get_json(BUS + "/api/admin/config") or {}; self.last_config_fetch = now
+            fetched_config = get_json(BUS + "/api/admin/config")
+            if isinstance(fetched_config, dict) and fetched_config:
+                config = fetched_config; self.last_config_fetch = now
+            else:
+                # The API and display start independently at boot. Never apply
+                # defaults because one early request lost that race; keep the
+                # last good settings and retry on the next two-second poll.
+                self.last_config_fetch = 0
         if self.settings_open and (not self.system_data or self.update_in_progress or now - self.last_system_fetch >= 15):
             system = get_json(BUS + "/api/admin/system?diagnostics=1") or {}; self.last_system_fetch = now
         zone = (roon or {}).get("zone") or {}; key = (zone.get("now_playing") or {}).get("image_key")
@@ -1332,15 +1340,15 @@ class Display(Gtk.Application):
             self.window.snapshot_child(target, snapshot)
             # Popovers use a separate native surface and are not necessarily
             # included in the page paintable. Composite the visible menu too.
-            popup = getattr(self, "browser_action_popover", None)
-            if popup is not None and popup.get_mapped():
-                valid, bounds = popup.compute_bounds(target)
-                if valid:
-                    snapshot.save()
-                    point = Graphene.Point(); point.init(bounds.get_x(), bounds.get_y())
-                    snapshot.translate(point)
-                    Gtk.WidgetPaintable.new(popup).snapshot(snapshot, float(popup.get_width()), float(popup.get_height()))
-                    snapshot.restore()
+            for popup in (getattr(self, "browser_action_popover", None), getattr(self, "browser_sort_popover", None)):
+                if popup is not None and popup.get_mapped():
+                    valid, bounds = popup.compute_bounds(target)
+                    if valid:
+                        snapshot.save()
+                        point = Graphene.Point(); point.init(bounds.get_x(), bounds.get_y())
+                        snapshot.translate(point)
+                        Gtk.WidgetPaintable.new(popup).snapshot(snapshot, float(popup.get_width()), float(popup.get_height()))
+                        snapshot.restore()
             node = snapshot.to_node()
             if node is None:
                 raise ValueError("Display produced no render node")
@@ -1417,12 +1425,13 @@ class Display(Gtk.Application):
         return False
 
     def apply(self, target, status, roon, config, system, device, image_key, image):
-        background = (config or status or {}).get("display_background")
+        effective_config = config if isinstance(config, dict) and config else self.settings_data
+        background = (effective_config or status or {}).get("display_background")
         if background is not None:
             if background == "black": self.window.add_css_class("background-black")
             else: self.window.remove_css_class("background-black")
         if status and "display_theme" in status and config is None: self.apply_theme(status["display_theme"])
-        if config is not None:
+        if isinstance(config, dict) and config:
             grid_changed = self.settings_data.get("portrait_discovery_columns", 2) != config.get("portrait_discovery_columns", 2)
             self.settings_data = config
             if grid_changed and getattr(self, "responsive_portrait", False) and hasattr(self, "discovery_data"):
@@ -1509,7 +1518,7 @@ class Display(Gtk.Application):
             # same refresh and the panel appears never to wake.
             self.last_interaction = time.monotonic()
             print("Pi Home resuming at the scheduled wake boundary", flush=True)
-        inactivity_seconds = max(0, int(config.get("daytime_inactivity_seconds", 0) or 0))
+        inactivity_seconds = max(0, int(effective_config.get("daytime_inactivity_seconds", 0) or 0))
         playing = ((roon or {}).get("zone") or {}).get("state") == "playing"
         if playing and target != "/sleep.html":
             # Playback is activity: keep the panel lit and start a fresh idle
@@ -1533,7 +1542,7 @@ class Display(Gtk.Application):
         if target == "/sleep.html":
             self.settings_open = False; self.inactivity_sleeping = False; desired = "sleep"
             if self.stack.get_visible_child_name() != "sleep": self.prepare_sleep_wake()
-            self.set_screen_power(bool(config.get("sleep_show_clock", False)))
+            self.set_screen_power(bool(effective_config.get("sleep_show_clock", False)))
         elif self.inactivity_sleeping: self.settings_open = False; desired = "sleep"; self.set_screen_power(False)
         elif target == "/home": desired = "home"; self.set_screen_power(True); self.last_mode = "home"
         elif target == "/" or target.endswith(":8765/"): desired = "bus"; self.set_screen_power(True); self.last_mode = "bus"
@@ -2237,7 +2246,7 @@ class Display(Gtk.Application):
             if getattr(self, "browser_sort_popover", None) is popover: self.browser_sort_popover = None
             popover.unparent()
         popover.connect("closed", closed)
-        popover.set_child(choices); popover.popup(); self.browser_sort_popover = popover
+        popover.set_child(choices); self.hide_widget_cursor(popover); popover.popup(); self.browser_sort_popover = popover
 
     def request_browser(self, action, **payload):
         if action == "search":
@@ -2603,7 +2612,7 @@ class Display(Gtk.Application):
                 self.browser_action_popover = None
                 popover.unparent()
                 if not selected["value"]: self.request_browser("back")
-            popover.connect("closed", closed); popover.set_child(choices); popover.popup()
+            popover.connect("closed", closed); popover.set_child(choices); self.hide_widget_cursor(popover); popover.popup()
             return False
         self.browser_rendering = True; self.browser_loading = True; self.browser_state = data; self.browser_back.set_visible(bool(data.get("can_back")) and not data.get("surprise_preview")); self.browser_back.set_sensitive(bool(data.get("can_back"))); self.browser_scrubber.set_visible(bool(data.get("alpha_scrub")))
         if hasattr(self, "browser_sort"):
@@ -3202,16 +3211,17 @@ class Display(Gtk.Application):
         self.update_in_progress = True; self.update_status_seen = False; self.update_button.set_sensitive(False); self.device_status.set_text("Update · Requesting installation…")
         threading.Thread(target=self._request_update, daemon=True).start()
 
+    def hide_widget_cursor(self, widget):
+        widget.set_cursor_from_name("none")
+        child = widget.get_first_child()
+        while child:
+            self.hide_widget_cursor(child)
+            child = child.get_next_sibling()
+
     def hide_touch_cursor(self):
-        # Child widgets (entries, scales and buttons) can override the window
-        # cursor. Include newly rendered children rather than hiding only once.
-        def hide(widget):
-            widget.set_cursor_from_name("none")
-            child = widget.get_first_child()
-            while child:
-                hide(child)
-                child = child.get_next_sibling()
-        hide(self.window)
+        # Child widgets and newly-created popover surfaces can override the
+        # window cursor. Include every current descendant on each pass.
+        self.hide_widget_cursor(self.window)
         return True
 
     def confirm_reboot(self, *_):

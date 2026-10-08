@@ -14,10 +14,13 @@ jobs:
           mkdir -p dist/native-review
           docker run --rm -v "$PWD:/opt/pi-home:ro" -v "$PWD/dist/native-review:/screenshots" -w /opt/pi-home alpine:3.24.2 sh -ec '
             apk add --no-cache python3 py3-gobject3 py3-cairo gtk4.0 font-inter dbus adwaita-icon-theme librsvg xvfb-run imagemagick mesa-dri-gallium
-            for dimensions in 720x1280 480x800 1200x1920 1280x720; do
+            GDK_BACKEND=x11 GSK_RENDERER=cairo dbus-run-session xvfb-run -a python3 appliance/common/white_balance_smoke.py
+            GDK_BACKEND=x11 GSK_RENDERER=cairo dbus-run-session xvfb-run -a /usr/bin/python3 appliance/common/white_balance_smoke.py
+          for dimensions in 720x1280 480x800 1200x1920 1280x720; do
               width=${dimensions%x*}; height=${dimensions#*x}
               GDK_BACKEND=x11 GSK_RENDERER=cairo PI_HOME_SCREEN_WIDTH=$width PI_HOME_SCREEN_HEIGHT=$height PI_HOME_SCREENSHOT_DIR=/screenshots/$dimensions dbus-run-session xvfb-run -a -s "-screen 0 ${dimensions}x24" python3 appliance/alpine/discover_visual_review.py
             done
+            LIBGL_ALWAYS_SOFTWARE=1 GDK_BACKEND=x11 GSK_RENDERER=gl dbus-run-session xvfb-run -a python3 appliance/common/white_balance_smoke.py
             LIBGL_ALWAYS_SOFTWARE=1 GDK_BACKEND=x11 GSK_RENDERER=gl PI_HOME_REQUIRE_GL=1 PI_HOME_SCREEN_WIDTH=1280 PI_HOME_SCREEN_HEIGHT=720 PI_HOME_SCREENSHOT_DIR=/screenshots/gl-capture dbus-run-session xvfb-run -a -s "-screen 0 1280x720x24" python3 appliance/alpine/discover_visual_review.py'
       - uses: actions/upload-artifact@v4
         if: always()
