@@ -552,8 +552,8 @@ scrolledwindow overshoot, scrolledwindow undershoot { background: transparent; b
 .queue-row:hover, .queue-row:active, .queue-row:focus, .theme-roon .queue-row:hover, .theme-roon .queue-row:active, .theme-roon .queue-row:focus { background: transparent; box-shadow: none; }
 .queue-row.current, .queue-row.current:hover, .queue-row.current:active, .queue-row.current:focus { background: #121e1c; }
 .theme-roon .queue-row.current, .theme-roon .queue-row.current:hover, .theme-roon .queue-row.current:active, .theme-roon .queue-row.current:focus { background: #292733; }
-.queue-play-badge { background: transparent; color: #fff; }
-.queue-play-badge.light-art { color: #392772; }
+.queue-play-badge, .theme-roon .queue-play-badge { background: transparent; color: #fff; }
+.queue-play-badge.light-art, .theme-roon .queue-play-badge.light-art { color: #392772; }
 .large-display .queue-title { font-size: 30px; }
 .large-display .queue-meta, .large-display .queue-duration { font-size: 23px; }
 .large-display .browser-cover-title, .large-display .browser-cover-title.tile { font-size: 26px; }
@@ -2828,7 +2828,7 @@ class Display(Gtk.Application):
         for index, item in enumerate(items):
             row = Gtk.Box(spacing=12); row.set_hexpand(True)
             artwork = Gtk.Overlay(); artwork.add_css_class("queue-art-stack"); artwork.set_size_request(66, 66)
-            picture = Gtk.Picture(); picture.add_css_class("queue-art"); picture.set_size_request(66, 66); picture.set_content_fit(Gtk.ContentFit.COVER); artwork.set_child(picture)
+            picture = Gtk.Picture(); picture.add_css_class("queue-art"); picture.set_size_request(66, 66); picture.set_can_shrink(True); picture.set_content_fit(Gtk.ContentFit.COVER); artwork.set_child(picture)
             if item.get("is_current"):
                 playing = FamilyIcon("play", 76 if getattr(self, "viewport_width", 800) >= 1000 else 48, filled=True); playing.add_css_class("queue-play-badge"); playing.set_halign(Gtk.Align.CENTER); playing.set_valign(Gtk.Align.CENTER); artwork.add_overlay(playing)
                 self.queue_play_badges.setdefault(item.get("image_key"), []).append(playing)
