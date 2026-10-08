@@ -3,6 +3,21 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const {BrowseManager, browserLayout, formatDuration, libraryItems, publicItem, rootItems, safeSession, withAlbumArtist, withFallbackImage} = require('./browse-state');
 
+test('album sorting loads the whole collection and paginates owned keys without playback', async () => {
+  const albums = Array.from({length:65}, (_, i) => ({title:`Album ${65-i}`, subtitle:`Artist ${i%3}`, item_key:`key-${i}`}));
+  const service = {load(options, callback) {callback(null, {items:albums.slice(options.offset, options.offset+options.count)});}};
+  const manager = new BrowseManager(() => service, () => ({}));
+  manager.sections.set('albums', 'albums');
+  manager.store('albums', 'browse', {title:'Albums', level:1, count:65}, albums.slice(0,30), '');
+  const sorted = await manager.sortCollection(service, 'albums', 'title');
+  assert.equal(sorted.items[0].title, 'Album 1');
+  assert.equal(sorted.alpha_scrub, false);
+  const more = await manager.loadMore(service, 'albums');
+  assert.equal(more.items.length,60);
+  assert.equal(new Set(more.items.map(item=>item.item_key)).size,60);
+  await assert.rejects(manager.sortCollection(service, 'albums', 'date'), /Unsupported/);
+});
+
 test('album detail exposes one cover and honest optional metadata without altering track keys', () => {
   const manager = new BrowseManager(() => ({}), () => ({}));
   const state = manager.store('album', 'browse', {title:'Example Album', level:3, count:3}, [

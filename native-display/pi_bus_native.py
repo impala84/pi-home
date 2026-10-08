@@ -69,9 +69,9 @@ class ElasticCarouselTrack(Gtk.Box):
         started = time.monotonic()
         def frame(_widget, _clock):
             elapsed = time.monotonic() - started
-            if elapsed >= .55:
+            if elapsed >= .65:
                 self.elastic_offset = 0.0; self.spring_timer = None; self.queue_draw(); return False
-            self.elastic_offset = initial * math.exp(-9 * elapsed) * math.cos(20 * elapsed)
+            self.elastic_offset = initial * math.exp(-7.5 * elapsed) * math.cos(20 * elapsed)
             self.queue_draw(); return True
         self.spring_timer = self.add_tick_callback(frame)
 
@@ -98,7 +98,7 @@ class ElasticCarouselTrack(Gtk.Box):
                 previous = state["pull"]; state["pull"] += delta
                 if previous and previous * state["pull"] < 0: state["pull"] = 0.0
                 pull = state["pull"]
-                self.elastic_offset = math.copysign(26 * (1 - math.exp(-abs(pull) / 60)), pull) if pull else 0.0
+                self.elastic_offset = math.copysign(34 * (1 - math.exp(-abs(pull) / 60)), pull) if pull else 0.0
                 self.queue_draw()
             else:
                 adjustment.set_value(max(lower, min(upper, value - delta)))
@@ -395,7 +395,7 @@ CSS += b"""
 .touch-landscape .settings-page .settings-action { min-height: 62px; }
 .portrait .settings-page .settings-title { font-size: 26px; }
 .portrait.compact-portrait .settings-page .settings-title { font-size: 22px; }
-.portrait .roon-page { padding-top: 12px; }
+.portrait .roon-page { padding-top: 6px; }
 .portrait .roon-subnav button { border-top: 0; border-bottom: 3px solid transparent; min-height: 32px; padding: 2px 2px; letter-spacing: .6px; font-size: 16px; }
 .portrait .browser-view .queue-scroll { margin-right: 0; }
 .portrait .daily-track { padding-left: 0; }
@@ -523,6 +523,12 @@ scrolledwindow overshoot, scrolledwindow undershoot { background: transparent; b
 .large-display .source-mute { min-width: 240px; min-height: 82px; font-size: 26px; }
 .source-step, .theme-roon .source-step { color: #fff; padding: 0; border-radius: 999px; }
 .large-display .browser-back { min-width: 132px; min-height: 64px; padding: 10px 20px; }
+.portrait .browser-back { min-height: 38px; padding: 4px 16px; }
+.portrait.large-portrait .browser-back { min-height: 52px; }
+.large-display .home-name { font-size: 34px; }
+.large-display .home-state { font-size: 24px; }
+.large-display .browser-home-title { font-size: 24px; }
+.portrait .browser-home-card, .portrait .browser-home-card.compact { min-height: 0; padding: 12px; }
 .large-display .artist-albums-heading { font-size: 24px; }
 .large-display .recommendation-heading { font-size: 21px; margin-top: 18px; margin-bottom: 0; }
 .large-display .recommendation-album { font-size: 25px; }
@@ -1017,10 +1023,15 @@ class Display(Gtk.Application):
         self.browser_search_button = self.button("SEARCH", self.show_browser_search, "browser-filter"); self.browser_search_button.get_child().set_xalign(0); sidebar.append(self.browser_search_button)
         self.browser_surprise_button = self.button("SURPRISE!", lambda *_: self.request_browser("surprise"), "browser-filter"); self.browser_surprise_button.get_child().set_xalign(0); self.browser_surprise_button.add_css_class("browser-surprise"); sidebar.append(self.browser_surprise_button)
         self.browser_back = self.button("BACK", lambda *_: self.request_browser("back"), "browser-back"); self.browser_back.set_visible(False); self.browser_back.set_halign(Gtk.Align.START); self.browser_back.set_valign(Gtk.Align.END)
+        self.browser_sort_updating = False
+        self.browser_sort = Gtk.DropDown.new_from_strings(["Title A–Z", "Title Z–A", "Artist A–Z"])
+        self.browser_sort.add_css_class("browser-filter")
+        self.browser_sort.set_visible(False)
+        self.browser_sort.connect("notify::selected", lambda widget, *_: self.request_browser("sort", order=["title", "reverse", "artist"][widget.get_selected()]) if not self.browser_sort_updating else None)
         self.browser_sidebar = sidebar; browser_body.append(sidebar)
         self.browser_discovery_sidebar = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2); self.browser_discovery_sidebar.add_css_class("browser-sidebar"); self.browser_discovery_sidebar.set_vexpand(True); self.browser_discovery_sidebar.set_visible(False); browser_body.append(self.browser_discovery_sidebar)
         browser_main = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2); browser_main.add_css_class("browser-main"); browser_main.set_vexpand(True); browser_main.set_hexpand(True)
-        sidebar.set_vexpand(True); spacer = Gtk.Box(); spacer.set_vexpand(True); self.browser_sidebar_spacer = spacer; sidebar.append(spacer); sidebar.append(self.browser_back)
+        sidebar.set_vexpand(True); spacer = Gtk.Box(); spacer.set_vexpand(True); self.browser_sidebar_spacer = spacer; sidebar.append(spacer); sidebar.append(self.browser_sort); sidebar.append(self.browser_back)
         self.browser_message = self.label("", "browser-message"); self.browser_message.set_ellipsize(Pango.EllipsizeMode.END); self.browser_message.set_visible(False); browser_main.append(self.browser_message)
         self.browser_list = ElasticVerticalTrack(spacing=2); self.browser_list.add_css_class("queue-list")
         browser_scroll = Gtk.ScrolledWindow(); browser_scroll.add_css_class("queue-scroll"); browser_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC); browser_scroll.set_kinetic_scrolling(True); browser_scroll.set_overlay_scrolling(True); browser_scroll.set_propagate_natural_height(False); browser_scroll.set_propagate_natural_width(False); browser_scroll.set_min_content_height(1); browser_scroll.set_size_request(-1, 1); browser_scroll.set_vexpand(True); browser_scroll.set_hexpand(True); browser_scroll.set_child(self.browser_list); self.browser_scroll = browser_scroll
@@ -1084,7 +1095,7 @@ class Display(Gtk.Application):
 
     def build_home(self):
         page = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=7); page.add_css_class("page"); page.add_css_class("home-page")
-        self.home_clock = self.label("--:--", "clock", 1); page.append(self.header(self.label("PI HOME", "eyebrow"), self.home_clock))
+        self.home_clock = self.label("--:--", "clock", 1); page.append(self.header(self.label("Home Controls", "stop"), self.home_clock))
         self.home_status = self.label("Connecting to Home Assistant…", "muted", .5); page.append(self.home_status)
         self.home_grid = Gtk.Grid(column_spacing=11, row_spacing=11); self.home_grid.add_css_class("home-grid"); self.home_grid.set_column_homogeneous(True); self.home_grid.set_row_homogeneous(True); self.home_grid.set_vexpand(True)
         scroll = Gtk.ScrolledWindow(); scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC); scroll.set_propagate_natural_height(False); scroll.set_min_content_height(1); scroll.set_vexpand(True); scroll.set_child(self.home_grid); page.append(scroll)
@@ -2214,7 +2225,7 @@ class Display(Gtk.Application):
 
     def _request_browser(self, action, payload):
         if action == "current": result = get_json(f"{ROON}/api/browse?session=touch", timeout=3.0)
-        else: result = post_json(ROON + "/api/browse", {"session": "touch", "action": action, **payload}, timeout=35.0 if action in {"jump", "section", "search", "surprise", "artist"} else 15.0 if action in {"surprise_play", "open"} else 4.0)
+        else: result = post_json(ROON + "/api/browse", {"session": "touch", "action": action, **payload}, timeout=35.0 if action in {"sort", "jump", "section", "search", "surprise", "artist"} else 15.0 if action in {"surprise_play", "open"} else 4.0)
         GLib.idle_add(self.apply_browser_response, result or {"status": "ready", "title": "Browse", "items": [], "message": "Roon Browse did not respond.", "error": True})
 
     def apply_browser_response(self, data):
@@ -2424,7 +2435,7 @@ class Display(Gtk.Application):
         return "media-playback-start-symbolic"
 
     def browser_svg_icon(self, name, size=54):
-        icon = FamilyIcon(name, size)
+        icon = FamilyIcon(name, size, stroke_width=.7)
         icon.set_size_request(size, size)
         icon.set_halign(Gtk.Align.CENTER); icon.set_valign(Gtk.Align.CENTER)
         icon.add_css_class("browser-tile-icon")
@@ -2432,11 +2443,16 @@ class Display(Gtk.Application):
 
     def browser_menu_card(self, item, compact=False):
         content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12); content.set_halign(Gtk.Align.CENTER); content.set_valign(Gtk.Align.CENTER)
-        icon = FamilyIcon(self.browser_item_icon(item.get("title")), 58 if compact else 78); icon.add_css_class("browser-home-icon"); content.append(icon)
+        portrait = getattr(self, "responsive_portrait", False)
+        width = getattr(self, "viewport_width", 800)
+        columns = 4 if width >= 1000 else 2
+        side = max(64, (width - 60 - (columns - 1) * 12) // columns)
+        icon = FamilyIcon(self.browser_item_icon(item.get("title")), round(side * .48) if portrait else 58 if compact else 78, stroke_width=.8); icon.add_css_class("browser-home-icon"); content.append(icon)
         title = self.label(item.get("title") or "Roon", "browser-home-title", .5); title.set_wrap(True); title.set_justify(Gtk.Justification.CENTER); content.append(title)
         button = Gtk.Button(); button.add_css_class("browser-home-card");
+        if portrait: button.set_size_request(side, side)
         if compact: button.add_css_class("compact")
-        button.set_hexpand(True); button.set_vexpand(True); button.set_child(content); button.set_sensitive(bool(item.get("item_key"))); button.connect("clicked", self.open_browser_item, item.get("item_key")); return button
+        button.set_hexpand(not portrait); button.set_vexpand(not portrait); button.set_child(content); button.set_sensitive(bool(item.get("item_key"))); button.connect("clicked", self.open_browser_item, item.get("item_key")); return button
 
     def set_browser_placeholder(self, picture, artist=False):
         name = "missing-artist.svg" if artist else "missing-album.svg"
@@ -2495,11 +2511,30 @@ class Display(Gtk.Application):
             link.set_halign(Gtk.Align.START); link.set_tooltip_text("View artist"); copy.append(link)
         if review := profile.get("review"):
             summary = self.label(review[:1800], "queue-meta"); summary.set_wrap(True); summary.set_lines(6); summary.set_ellipsize(Pango.EllipsizeMode.END); summary.set_max_width_chars(50); copy.append(summary)
+        else:
+            self.load_album_notes(profile, copy)
         if play := next((item for item in items if item.get("action") and item.get("title", "").lower() == "play album"), None):
             button = self.labelled_icon_button("play", "Play Album", lambda *_: self.open_browser_item(None, play.get("item_key")), "artist-play")
             button.set_halign(Gtk.Align.START); copy.append(button)
         header.append(copy)
         return header
+
+    def load_album_notes(self, profile, copy):
+        album, artist = profile.get("name"), profile.get("artist")
+        if not album or not artist: return
+        def load():
+            query = urllib.parse.urlencode({"album": album, "artist": artist})
+            notes = get_json(ROON + "/api/album-notes?" + query, timeout=30) or {}
+            def apply():
+                # Navigation may have replaced this album while lookup ran.
+                if copy.get_root() is None or not notes.get("writeup"): return False
+                summary = self.label(notes["writeup"], "queue-meta")
+                summary.set_wrap(True); summary.set_lines(6); summary.set_ellipsize(Pango.EllipsizeMode.END); summary.set_max_width_chars(50)
+                copy.append(summary)
+                if notes.get("source"): copy.append(self.label(notes["source"], "artist-source"))
+                return False
+            GLib.idle_add(apply)
+        threading.Thread(target=load, daemon=True).start()
 
     def render_browser(self, data):
         self.browser_list.cancel_spring()
@@ -2526,6 +2561,11 @@ class Display(Gtk.Application):
             popover.connect("closed", closed); popover.set_child(choices); popover.popup()
             return False
         self.browser_rendering = True; self.browser_loading = True; self.browser_state = data; self.browser_back.set_visible(bool(data.get("can_back")) and not data.get("surprise_preview")); self.browser_back.set_sensitive(bool(data.get("can_back"))); self.browser_scrubber.set_visible(bool(data.get("alpha_scrub")))
+        if hasattr(self, "browser_sort"):
+            self.browser_sort.set_visible(data.get("section") == "albums" and bool(data.get("section_root")) and getattr(self, "responsive_portrait", False) and getattr(self, "viewport_width", 800) >= 1000)
+            self.browser_sort_updating = True
+            self.browser_sort.set_selected(["title", "reverse", "artist"].index(data.get("sort_order", "title")))
+            self.browser_sort_updating = False
         active_section = "surprise" if data.get("surprise_preview") else (data.get("section") or "albums")
         from_discover = self.discovery_active and self.discovery_browser_origin
         self.browser_sidebar.set_visible(not data.get("surprise_preview") and not from_discover)
@@ -2601,7 +2641,8 @@ class Display(Gtk.Application):
                 play_controls.set_margin_top(round(getattr(self, "viewport_height", 1280) * .072)); preview.append(play_controls)
             self.browser_list.append(preview)
         elif items and layout in {"home", "menu"}:
-            grid = Gtk.Grid(column_spacing=12, row_spacing=12); grid.add_css_class("browser-home-grid"); grid.set_column_homogeneous(True); grid.set_row_homogeneous(True); columns = 4
+            grid = Gtk.Grid(column_spacing=12, row_spacing=12); grid.add_css_class("browser-home-grid"); grid.set_column_homogeneous(True); grid.set_row_homogeneous(True); columns = 4 if not getattr(self, "responsive_portrait", False) or getattr(self, "viewport_width", 800) >= 1000 else 2
+            if getattr(self, "responsive_portrait", False): grid.set_valign(Gtk.Align.START); grid.set_vexpand(False)
             for index, item in enumerate(item for item in items if item.get("hint") != "header"): grid.attach(self.browser_menu_card(item, layout == "menu"), index % columns, index // columns, 1, 1)
             self.browser_list.append(grid)
         elif items and layout in {"covers", "tiles"}:

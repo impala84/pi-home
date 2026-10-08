@@ -102,6 +102,7 @@ class BrowseManager {
     this.surpriseOrigins = new Map();
     this.artistContexts = new Map();
     this.searchSources = new Map();
+    this.sortedCollections = new Map();
   }
 
   clear() { this.sessions.clear(); this.pending.clear(); this.sections.clear(); this.alphabetIndexes.clear(); this.activeSessions.clear(); this.lastSurprises.clear(); this.surpriseOrigins.clear(); this.artistContexts.clear(); this.searchSources.clear(); }
@@ -150,6 +151,7 @@ class BrowseManager {
     const service = this.service(); const zone = this.zone();
     if (!service || !zone) return {status: 'unavailable', title: 'Browse', items: [], can_back: false, has_more: false};
     if (command === 'current' && this.sessions.has(session)) return this.sessions.get(session);
+    if (command === 'sort') return this.sortCollection(service, session, data.order);
     if (command === 'more') return this.loadMore(service, session);
     if (command === 'previous') return this.loadPrevious(service, session);
     if (command === 'jump') return this.jumpTo(service, session, String(data.letter || 'A'));
@@ -440,11 +442,34 @@ class BrowseManager {
   async loadMore(service, session) {
     const state = this.sessions.get(session);
     if (!state || !state.has_more) return state || this._run(session, 'root', {});
+    const sorted = this.sortedCollections.get(session);
+    if (state.section_root && state.sort_order && sorted) {
+      const items = sorted.slice(0, state.items.length + PAGE_SIZE);
+      return this.save(session, {...state, items, has_more: items.length < sorted.length});
+    }
     const nextOffset = Number(state.offset || 0) + state.items.length;
     const loaded = await request(service, 'load', {hierarchy: state.hierarchy, multi_session_key: session, level: state.level, offset: nextOffset, count: PAGE_SIZE});
     const items = withAlbumArtist([...state.items, ...withFallbackImage((loaded.items || []).map(publicItem), state.fallback_image_key)]);
     const count = Number(loaded.list?.count ?? state.count);
     return this.save(session, {...state, items, count, has_more: Number(state.offset || 0) + items.length < count, message: ''});
+  }
+
+  async sortCollection(service, session, order) {
+    const state = this.sessions.get(session);
+    if (!state?.section_root || state.section !== 'albums') return state;
+    if (!['title', 'reverse', 'artist'].includes(order)) throw new Error('Unsupported album sort');
+    if (state.count > 10000) throw new Error('This collection is too large to sort safely');
+    let items = []; const started = Date.now();
+    while (items.length < state.count) {
+      if (Date.now() - started > 30000) throw new Error('Album sorting timed out; please retry');
+      const loaded = await request(service, 'load', {hierarchy: state.hierarchy, multi_session_key: session, level: state.level, offset: items.length, count: 200});
+      if (!loaded.items?.length) throw new Error('Could not load the complete album collection');
+      items.push(...loaded.items.map(publicItem));
+    }
+    const compare = (a, b) => String(a || '').localeCompare(String(b || ''), undefined, {numeric: true, sensitivity: 'base'});
+    items.sort((a, b) => (order === 'artist' ? compare(a.subtitle, b.subtitle) : 0) || compare(a.title, b.title) * (order === 'reverse' ? -1 : 1));
+    this.sortedCollections.set(session, items);
+    return this.save(session, {...state, items: items.slice(0, PAGE_SIZE), offset: 0, sort_order: order, alpha_scrub: false, has_more: items.length > PAGE_SIZE});
   }
 
   async jumpTo(service, session, letter) {

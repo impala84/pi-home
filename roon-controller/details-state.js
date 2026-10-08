@@ -192,7 +192,7 @@ function musicBrainzFacts(group, trackCount = 0, releaseDetails = null) {
   };
 }
 
-async function loadMusicBrainzMetadata(album, artist, trackCount = 0, fetchJson = musicBrainzJson) {
+async function loadMusicBrainzMetadata(album, artist, trackCount = 0, fetchJson = musicBrainzJson, strictArtist = false) {
   if (!album || !artist) return musicBrainzFacts(null, trackCount);
   let match = null;
   for (const candidate of artistCandidates(artist)) {
@@ -201,7 +201,7 @@ async function loadMusicBrainzMetadata(album, artist, trackCount = 0, fetchJson 
     match = chooseMusicBrainzGroup(search?.['release-groups'], album, artist);
     if (match) break;
   }
-  if (!match) {
+  if (!match && !strictArtist) {
     const query = `releasegroup:"${album.replace(/["\\]/g, ' ')}"`;
     const search = await fetchJson(`/ws/2/release-group/?query=${encodeURIComponent(query)}&fmt=json&limit=10`);
     match = chooseUniqueTitleGroup(search?.['release-groups'], album);

@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1.3-beta.10 Alpine — 8 October 2026
+
+- Enlarges Home control labels and states, with a white Home Controls heading.
+- Aligns portrait music headers with Bus Times and prevents Back from shifting Browse tabs.
+- Uses finer strokes for large genre/playlist icons and top-aligned square genre navigation cards.
+- Adds full-collection title and artist sorting on large portrait album browsers; Roon does not expose date sorting.
+- Loads source-labelled Wikipedia/Bandcamp album notes asynchronously through MusicBrainz links when available.
+- Makes the touch spring slightly stronger while retaining clipping and exact settling.
+
 ## 1.1.3-beta.9 Alpine — 8 October 2026
 
 - Adds Display → Appearance → Screen background: Current or Pure black across all physical display pages, with no reboot required.

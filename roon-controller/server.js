@@ -10,7 +10,7 @@ const RoonApiStatus = require('node-roon-api-status');
 const RoonApiTransport = require('node-roon-api-transport');
 const {publicQueueItems, updateQueueState} = require('./queue-state');
 const {displayArtist} = require('./artist-name');
-const {playingMetadata, loadDetails, loadArtistProfile} = require('./details-state');
+const {playingMetadata, loadDetails, loadArtistProfile, loadMusicBrainzMetadata} = require('./details-state');
 const artistProfileCache = new Map();
 const {BluOSClient, discoverPlayers} = require('./bluos-client');
 const {BrowseManager} = require('./browse-state');
@@ -44,6 +44,7 @@ let detailsKey = '';
 let detailsRequest = 0;
 let detailsRetryCount = 0;
 const detailsCache = new Map();
+const albumNotesCache = new Map();
 const listeners = new Set();
 const imageCache = new Map();
 const QUEUE_LIMIT = 100;
@@ -329,6 +330,19 @@ http.createServer(async (request, response) => {
       return json(response, 200, await artistProfileCache.get(name));
     }
     if (request.method === 'GET' && url.pathname === '/api/state') { ensureQueueSubscription(); return json(response, 200, publicState()); }
+    if (request.method === 'GET' && url.pathname === '/api/album-notes') {
+      const album = String(url.searchParams.get('album') || '').trim().slice(0, 300);
+      const artist = String(url.searchParams.get('artist') || '').trim().slice(0, 300);
+      if (!album || !artist) return json(response, 400, {error:'Album and artist required'});
+      const key = JSON.stringify([album, artist]);
+      if (!albumNotesCache.has(key)) {
+        albumNotesCache.set(key, loadMusicBrainzMetadata(album, artist, 0, undefined, true).then(facts => ({
+          album, artist, writeup:facts.writeup || '', source:facts.writeup_source || ''
+        })).catch(() => { albumNotesCache.delete(key); return {album, artist, writeup:'', source:''}; }));
+        while (albumNotesCache.size > 48) albumNotesCache.delete(albumNotesCache.keys().next().value);
+      }
+      return json(response, 200, await albumNotesCache.get(key));
+    }
     if (request.method === 'GET' && url.pathname === '/api/browse') {
       if (!configuredRuntime().browserEnabled) return json(response, 404, {error: 'Roon Browse is disabled'});
       return json(response, 200, await browser.run(url.searchParams.get('session'), 'current'));
@@ -387,7 +401,7 @@ http.createServer(async (request, response) => {
       }
       if (url.pathname === '/api/browse') {
         if (!configuredRuntime().browserEnabled) return json(response, 404, {error: 'Roon Browse is disabled'});
-        const action = ['root', 'open', 'back', 'more', 'previous', 'jump', 'section', 'search', 'surprise', 'surprise_play', 'current', 'route', 'artist'].includes(data.action) ? data.action : 'current';
+        const action = ['root', 'open', 'back', 'more', 'previous', 'jump', 'section', 'sort', 'search', 'surprise', 'surprise_play', 'current', 'route', 'artist'].includes(data.action) ? data.action : 'current';
         return json(response, 200, await browser.run(data.session, action, data));
       }
       if (url.pathname === '/api/control' && data.action === 'resume') resumeRoon(zone);
