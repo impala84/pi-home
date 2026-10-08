@@ -525,6 +525,8 @@ scrolledwindow overshoot, scrolledwindow undershoot { background: transparent; b
 .large-display .browser-back { min-width: 132px; min-height: 64px; padding: 10px 20px; }
 .portrait .browser-back { min-height: 38px; padding: 4px 16px; }
 .portrait.large-portrait .browser-back { min-height: 52px; }
+.browser-sidebar dropdown.browser-filter button { color: #aaa; background: transparent; border: 0; padding: 4px 6px; }
+.browser-sidebar dropdown.browser-filter popover { color: #f4f0e6; background: #242424; }
 .large-display .home-name { font-size: 34px; }
 .large-display .home-state { font-size: 24px; }
 .large-display .browser-home-title { font-size: 24px; }
