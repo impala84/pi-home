@@ -2440,6 +2440,10 @@ class Display(Gtk.Application):
 
     def set_browser_placeholder(self, picture, artist=False):
         name = "missing-artist.svg" if artist else "missing-album.svg"
+        # Gtk.Picture rasterises SVGs at their intrinsic size before scaling.
+        # Keep thumbnails small, but never magnify a 256px disc on Now Playing.
+        if not artist and picture is getattr(self, "artwork", None):
+            name = "missing-album-large.svg"
         picture.set_filename(str(Path(__file__).with_name("icons") / name))
 
     def browser_cover_card(self, item, show_labels, tile_kind=None):

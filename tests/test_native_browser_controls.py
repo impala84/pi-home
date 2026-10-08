@@ -652,6 +652,9 @@ class NativeBrowserControlsTests(unittest.TestCase):
         self.assertEqual(Path(picture.set_filename.call_args.args[0]), SOURCE.parent / "icons/missing-artist.svg")
         method(SimpleNamespace(), picture)
         self.assertEqual(Path(picture.set_filename.call_args.args[0]), SOURCE.parent / "icons/missing-album.svg")
+        method(SimpleNamespace(artwork=picture), picture)
+        self.assertEqual(Path(picture.set_filename.call_args.args[0]), SOURCE.parent / "icons/missing-album-large.svg")
+        self.assertIn('width="1200" height="1200"', (SOURCE.parent / "icons/missing-album-large.svg").read_text())
         for name in ("missing-artist.svg", "missing-album.svg"):
             self.assertTrue((SOURCE.parent / "icons" / name).is_file())
 

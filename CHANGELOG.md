@@ -3,6 +3,7 @@
 ## 1.1.3-beta.9 Alpine — 8 October 2026
 
 - Adds Display → Appearance → Screen background: Current or Pure black across all physical display pages, with no reboot required.
+- Uses a 1200px loading-disc placeholder on Now Playing instead of magnifying the 256px thumbnail asset.
 
 - Sizes genre and playlist icons to their cards, adds genre caption padding and consistent space below Browse tabs.
 - Refines track action pop-up alignment, shadow and action spacing; strengthens static gradient dithering.
