@@ -473,7 +473,7 @@ CSS += b"""
 .portrait.large-portrait .browser-filter { font-size: 24px; min-height: 52px; }
 .portrait.large-portrait .browser-cover-grid { padding-left: 0; }
 .portrait.large-portrait .nav button { font-size: 26px; min-height: 72px; }
-.portrait .roon-page { padding-top: 15px; }
+.portrait .roon-page { padding-top: 9px; }
 .portrait .settings-page { padding-top: 17px; }
 .portrait .settings-page .settings-title { font-size: 30px; }
 .portrait .settings-page .settings-version { font-size: 15px; }
@@ -538,7 +538,7 @@ scrolledwindow overshoot, scrolledwindow undershoot { background: transparent; b
 .large-display .service-no { font-weight: 300; }
 .large-display.portrait .now-volume-row { margin-top: 30px; }
 .large-display.portrait .now-mute { margin-top: 36px; }
-.portrait.large-portrait .roon-page { padding-top: 21px; }
+.portrait.large-portrait .roon-page { padding-top: 15px; }
 .large-display.display-landscape .roon-page { padding-top: 5px; }
 .compact-portrait .source-step { min-width: 64px; min-height: 64px; border-radius: 32px; }
 .compact-portrait .source-volume { font-size: 84px; }

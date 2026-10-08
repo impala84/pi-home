@@ -250,7 +250,7 @@ display.set_roon_view("browse")
 for name, button in display.discover_tabs.items():
     (button.add_css_class if name == "browse" else button.remove_css_class)("active")
 def browse_fixture(section, labels):
-    display.render_browser({"status": "ready", "section": section, "layout": "covers", "show_labels": labels, "alpha_scrub": True, "items": [{"title": value["title"] + (" and a particularly long artist name" if labels else ""), "subtitle": value["artist"], "item_key": value["key"], "image_key": value["artwork_key"]} for value in recent * 3]})
+    display.render_browser({"status": "ready", "section": section, "section_root": True, "layout": "covers", "show_labels": labels, "alpha_scrub": True, "items": [{"title": value["title"] + (" and a particularly long artist name" if labels else ""), "subtitle": value["artist"], "item_key": value["key"], "image_key": value["artwork_key"]} for value in recent * 3]})
     for key, pictures in display.browser_pictures.items():
         for picture in pictures: picture.set_filename(str(fixture_art(key, "LOADED COVER")))
     settle()
