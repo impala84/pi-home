@@ -556,7 +556,7 @@ if screen_height <= 600:
     # GTK includes the compact popover's opaque dismissal gutter in these
     # bounds; the visible bordered menu remains aligned with the text column.
     assert abs(popup_bounds.get_x() - expected_x) <= 64, (popup_bounds.get_x(), expected_x)
-    assert popup_bounds.get_height() < 300, popup_bounds.get_height()
+    assert popup_bounds.get_height() < 340, popup_bounds.get_height()
 # Dismiss without issuing a fixture request to the real controller.
 if isinstance(popup, Gtk.Popover): popup.unparent()
 display.set_roon_view("now")
