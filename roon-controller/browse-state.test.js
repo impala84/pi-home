@@ -26,7 +26,12 @@ test('artist links use fresh exact-match core keys and preserve artist profile',
     load(options, done) { done(false, {list:{title:'Example Artist', level:2}, items:[{title:'Play Artist',hint:'action',item_key:'play'},{title:'Album',item_key:'album'}]}); },
   };
   const manager = new BrowseManager(() => service, () => ({zone_id:'zone'}));
-  manager.search = async (_service, _zone, session) => manager.save(session, {hierarchy:'search', level:1, items:[{title:'ARTISTS',hint:'header'},{title:'Example Artist',item_key:'fresh-artist',image_key:'portrait'}]});
+  manager.search = async (_service, _zone, session, name, source, category) => {
+    assert.equal(name, 'Example Artist');
+    assert.equal(source, 'all');
+    assert.equal(category, 'artists', 'artist navigation must not wait for unrelated album/track previews');
+    return manager.save(session, {hierarchy:'search', level:1, items:[{title:'ARTISTS',hint:'header'},{title:'Example Artist',item_key:'fresh-artist',image_key:'portrait'}]});
+  };
   const result = await manager.run('links', 'artist', {name:'Example Artist'});
   assert.deepEqual(result.artist_profile, {name:'Example Artist', image_key:'portrait'});
 });

@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.3-beta.9 Alpine — 8 October 2026
+
+- Sizes genre and playlist icons to their cards, adds genre caption padding and consistent space below Browse tabs.
+- Refines track action pop-up alignment, shadow and action spacing; strengthens static gradient dithering.
+- Artist links search only artist results and use the same response deadline as other multi-step Browse operations.
+- Refines portrait route badge weight and arrival spacing without changing landscape bus layouts.
+- Album reviews remain optional: displayed only when Roon supplies review metadata.
+
 ## 1.1.3-beta.8 Alpine — 8 October 2026
 
 - Implements the approved portrait-only bus layout: coloured route badge, prominent next arrival, divider and THEN with two following arrivals.

@@ -327,7 +327,7 @@ class BrowseManager {
     return this.follow(service, session, 'browse', result);
   }
 
-  async search(service, zone, session, query, source = 'library') {
+  async search(service, zone, session, query, source = 'library', categoryFilter = null) {
     if (!query) return this._run(session, 'root', {});
     this.searchSources.set(session, source === 'all' ? 'all' : source === 'tidal' ? 'tidal' : 'library');
     this.save(session, {status: 'ready', hierarchy: source === 'tidal' ? 'browse' : 'search', level: 0, section: 'search', search_source: this.searchSources.get(session), title: source === 'tidal' ? 'TIDAL Search' : 'Search', items: [], can_back: false, has_more: false});
@@ -351,7 +351,7 @@ class BrowseManager {
     const root = await this.follow(service, session, 'search', result);
     const categoryOrder = ['artists', 'albums', 'tracks'];
     const allCategories = root.items.filter(item => /^(albums|artists|tracks|playlists|composers|works)$/i.test(item.title.trim()) && item.item_key);
-    const categories = allCategories.filter(item => categoryOrder.includes(item.title.trim().toLowerCase())).sort((a, b) => categoryOrder.indexOf(a.title.trim().toLowerCase()) - categoryOrder.indexOf(b.title.trim().toLowerCase()));
+    const categories = allCategories.filter(item => categoryOrder.includes(item.title.trim().toLowerCase()) && (!categoryFilter || item.title.trim().toLowerCase() === categoryFilter)).sort((a, b) => categoryOrder.indexOf(a.title.trim().toLowerCase()) - categoryOrder.indexOf(b.title.trim().toLowerCase()));
     if (!categories.length) return root;
     const groups = await Promise.all(categories.map(async (category, index) => {
       const items = [], routes = {};
@@ -495,7 +495,7 @@ class BrowseManager {
     // Resolve a fresh core-owned key; track subtitles aren't durable artist IDs.
     const session = `${baseSession}-artist-link`;
     this.sections.set(session, 'search'); this.activeSessions.set(baseSession, session);
-    const results = await this.search(service, zone, session, name, 'all');
+    const results = await this.search(service, zone, session, name, 'all', 'artists');
     let group = '';
     const artist = results.items.find(item => {
       if (item.hint === 'header') { group = item.title; return false; }

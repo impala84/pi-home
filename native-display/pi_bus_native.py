@@ -409,7 +409,8 @@ CSS += b"""
 .portrait .bus-next { font-weight: 700; color: #f4f4f4; }
 .portrait .bus-next-unit { color: #e1e7e5; font-weight: 400; }
 .portrait .bus-rule { min-height: 1px; background: rgba(220,230,230,.35); }
-.portrait .bus-then { color: #91a3a4; font-weight: 600; }
+.portrait .bus-then { color: #708383; font-weight: 500; }
+.portrait .bus-route-badge .service-no { font-weight: 600; }
 .portrait .bus-following { color: #f4f4f4; font-weight: 600; }
 .portrait .service.compact, .portrait .service.dense { padding: 12px; }
 .portrait .roon-subnav button.active { border-bottom-color: #5bcbd6; }
@@ -559,7 +560,7 @@ scrolledwindow overshoot, scrolledwindow undershoot { background: transparent; b
        PORTRAIT_PAGE_MARGIN, PORTRAIT_PAGE_MARGIN, PANEL_STROKE, CAROUSEL_START_INSET)).encode()
 
 CSS += b"""
-popover.track-menu > contents { background: #222225; color: #eceaef; border: 1px solid #45434e; border-radius: 12px; padding: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.35); }
+popover.track-menu > contents { background: #222225; color: #eceaef; border: 1px solid #45434e; border-radius: 12px; padding: 12px; box-shadow: 0 12px 48px rgba(0,0,0,.55); }
 .track-menu-action { min-height: 52px; padding: 10px 16px; border-radius: 8px; background: #282828; color: #817aeb; font-size: 18px; }
 .track-menu-action:hover, .track-menu-action:active { background: #383541; }
 .large-display .track-menu-action { min-height: 64px; font-size: 24px; }
@@ -1023,6 +1024,7 @@ class Display(Gtk.Application):
         previous_scroll.connect("scroll", self.browser_previous_scroll); browser_scroll.add_controller(previous_scroll)
         previous_drag = Gtk.GestureDrag.new(); previous_drag.set_propagation_phase(Gtk.PropagationPhase.CAPTURE); previous_drag.connect("drag-update", lambda _gesture, x, y: self.browser_previous_scroll(None, 0, -1) if y > 30 and y > abs(x) * 2 else None); previous_drag.connect("drag-end", self.browser_swipe_back); browser_scroll.add_controller(previous_drag)
         content = Gtk.Box(spacing=2); content.set_vexpand(True); content.set_hexpand(True)
+        content.set_margin_top(16)
         self.browser_artist_panel = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12); self.browser_artist_panel.add_css_class("artist-profile"); self.browser_artist_panel.set_visible(False)
         self.browser_artist_scroll = Gtk.ScrolledWindow(); self.browser_artist_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC); self.browser_artist_scroll.set_propagate_natural_height(False); self.browser_artist_scroll.set_min_content_height(1); self.browser_artist_scroll.set_size_request(-1, 1); self.browser_artist_scroll.set_child(self.browser_artist_panel); self.browser_artist_scroll.set_visible(False); content.append(self.browser_artist_scroll); content.append(browser_scroll)
         # Independent result scrollers must not be nested in the ordinary
@@ -1650,6 +1652,7 @@ class Display(Gtk.Application):
             label.set_attributes(attrs)
             return label
         badge = Gtk.Box(spacing=12); badge.add_css_class("bus-route-badge"); badge.set_halign(Gtk.Align.CENTER)
+        badge.set_margin_top(max(6, round(budget * .025)))
         badge.append(sized("ROUTE", "bus-route-word", caption_size))
         number = sized(str(service.get("service", "")), "service-no", route_size)
         number.add_css_class("solid-route"); badge.append(number); row.append(badge)
@@ -1658,6 +1661,7 @@ class Display(Gtk.Application):
         text = "Due" if minutes == 0 else "—" if minutes is None else str(minutes)
         primary = Gtk.Box(orientation=Gtk.Orientation.VERTICAL); primary.set_vexpand(True); primary.set_valign(Gtk.Align.FILL)
         content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL); content.set_vexpand(True); content.set_valign(Gtk.Align.CENTER)
+        content.set_margin_bottom(max(8, round(budget * .07)))
         primary_size = min(primary_size, round((width - 100) / (max(2, len(text)) * .75)))
         content.append(sized(text, "bus-next", primary_size))
         content.append(sized("arriving now" if minutes == 0 else "minutes" if minutes is not None else "no prediction", "bus-next-unit", caption_size))
@@ -1666,6 +1670,7 @@ class Display(Gtk.Application):
         rule.set_margin_start(round(width * .055)); rule.set_margin_end(round(width * .055)); row.append(rule)
         row.append(sized("THEN", "bus-then", max(11, round(caption_size * .65))))
         following = Gtk.Box(spacing=12); following.set_homogeneous(True)
+        following.set_margin_bottom(max(8, round(budget * .025)))
         for index in (1, 2):
             value = arrivals[index].get("minutes") if len(arrivals) > index else None
             text = "Due" if value == 0 else "—" if value is None else str(value) + " min"
@@ -2198,7 +2203,7 @@ class Display(Gtk.Application):
 
     def _request_browser(self, action, payload):
         if action == "current": result = get_json(f"{ROON}/api/browse?session=touch", timeout=3.0)
-        else: result = post_json(ROON + "/api/browse", {"session": "touch", "action": action, **payload}, timeout=35.0 if action in {"jump", "section", "search", "surprise"} else 15.0 if action in {"surprise_play", "open"} else 4.0)
+        else: result = post_json(ROON + "/api/browse", {"session": "touch", "action": action, **payload}, timeout=35.0 if action in {"jump", "section", "search", "surprise", "artist"} else 15.0 if action in {"surprise_play", "open"} else 4.0)
         GLib.idle_add(self.apply_browser_response, result or {"status": "ready", "title": "Browse", "items": [], "message": "Roon Browse did not respond.", "error": True})
 
     def apply_browser_response(self, data):
@@ -2441,11 +2446,12 @@ class Display(Gtk.Application):
             texture = self.queue_thumbnail_cache.get(key)
             if texture: picture.set_paintable(texture)
         elif tile_kind:
-            icon = self.browser_svg_icon(self.browser_tile_symbol(item.get("title"), tile_kind)); icon.set_halign(Gtk.Align.CENTER); icon.set_valign(Gtk.Align.CENTER); icon.set_margin_bottom(20); artwork.add_overlay(icon)
+            icon = self.browser_svg_icon(self.browser_tile_symbol(item.get("title"), tile_kind), size=max(54, round(size * .65))); icon.set_halign(Gtk.Align.CENTER); icon.set_valign(Gtk.Align.CENTER); icon.set_margin_bottom(round(size * .12)); artwork.add_overlay(icon)
         if show_labels:
             title = self.label(item.get("title") or "Untitled", "browser-cover-title", .5); title.set_max_width_chars(22); title.set_ellipsize(Pango.EllipsizeMode.END); content.append(title)
             if tile_kind == "genres":
                 content.remove(title); title.add_css_class("tile"); title.set_wrap(True); title.set_lines(2); title.set_ellipsize(Pango.EllipsizeMode.END); title.set_halign(Gtk.Align.FILL); title.set_valign(Gtk.Align.END); artwork.add_overlay(title)
+                title.set_margin_bottom(max(12, round(size * .075)))
             elif tile_kind == "playlists":
                 title.set_wrap(True); title.set_lines(2); title.set_max_width_chars(18); title.set_justify(Gtk.Justification.CENTER); title.set_size_request(-1, 42)
             if item.get("subtitle") and not tile_kind:
@@ -2487,9 +2493,10 @@ class Display(Gtk.Application):
             anchor = getattr(self, "browser_action_anchor", None) or self.browser_body
             popover = Gtk.Popover(); popover.add_css_class("track-menu"); popover.set_parent(anchor); popover.set_autohide(True)
             popover.set_has_arrow(False); popover.set_position(Gtk.PositionType.RIGHT)
-            rect = Gdk.Rectangle(); rect.x = 0; rect.y = 0; rect.width = min(116, max(1, anchor.get_width())); rect.height = max(1, anchor.get_height()); popover.set_pointing_to(rect)
+            popover.set_valign(Gtk.Align.START)
+            rect = Gdk.Rectangle(); rect.x = 0; rect.y = 0; rect.width = min(116, max(1, anchor.get_width())); rect.height = 1; popover.set_pointing_to(rect)
             self.browser_action_popover = popover
-            choices = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+            choices = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
             selected = {"value": False}
             self.browser_action_selected = selected
             def choose(_button, key):
