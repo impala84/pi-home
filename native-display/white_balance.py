@@ -6,6 +6,7 @@ import sys
 
 PROFILE = Path('/etc/pi-home/display-white-balance.json')
 IDENTITY = (1.0, 1.0, 1.0)
+_balanced_window_type = None
 
 
 def read_gains(path=PROFILE):
@@ -42,18 +43,21 @@ def create_display_window(*, application=None, gains=None):
     if gains == IDENTITY:
         return Gtk.ApplicationWindow(application=application)
 
-    class WhiteBalancedWindow(Gtk.ApplicationWindow):
-        def __init__(self):
-            super().__init__(application=application)
-            self.balance_matrix = Graphene.Matrix()
-            self.balance_matrix.init_from_float(gain_matrix(gains))
-            self.balance_offset = Graphene.Vec4()
-            self.balance_offset.init(0, 0, 0, 0)
+    global _balanced_window_type
+    if _balanced_window_type is None:
+        class WhiteBalancedWindow(Gtk.ApplicationWindow):
+            def __init__(self, application, gains):
+                super().__init__(application=application)
+                self.balance_matrix = Graphene.Matrix()
+                self.balance_matrix.init_from_float(gain_matrix(gains))
+                self.balance_offset = Graphene.Vec4()
+                self.balance_offset.init(0, 0, 0, 0)
 
-        def do_snapshot(self, snapshot):
-            snapshot.push_color_matrix(self.balance_matrix, self.balance_offset)
-            Gtk.ApplicationWindow.do_snapshot(self, snapshot)
-            snapshot.pop()
+            def do_snapshot(self, snapshot):
+                snapshot.push_color_matrix(self.balance_matrix, self.balance_offset)
+                Gtk.ApplicationWindow.do_snapshot(self, snapshot)
+                snapshot.pop()
+        _balanced_window_type = WhiteBalancedWindow
 
     print('Pi Home: display white-balance RGB gains ' + ', '.join(f'{gain:.4f}' for gain in gains), flush=True)
-    return WhiteBalancedWindow()
+    return _balanced_window_type(application, gains)

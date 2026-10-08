@@ -1,6 +1,6 @@
 # Pi Home
 
-Alpine testing release: **1.1.3-beta.10**, with larger Home Controls text, aligned music headers and Browse menus, fine-stroke icons, square genre navigation, album title/artist sorting on large portrait screens, asynchronous sourced album notes and a stronger spring. Black backgrounds remain supported. Select Beta explicitly to test; Stable remains 1.1.2.
+Alpine testing release: **1.1.3-beta.11**, adding optional per-device touchscreen white balance using measured RGB gains. See [activation and reset commands](docs/display-white-balance.md). Select Beta explicitly to test; Stable remains 1.1.2.
 
 The current Alpine stable release is **1.1.2**: an in-place correction for 10-inch Touch Display 2 touch rotation. Update through System → Software on the Stable channel, then reboot manually to apply input calibration. Physical touch acceptance is still required. The 1.1.1 full image remains available for fresh installs. Raspberry Pi OS releases remain separate.
 

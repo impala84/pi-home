@@ -20,6 +20,7 @@ jobs:
               width=${dimensions%x*}; height=${dimensions#*x}
               GDK_BACKEND=x11 GSK_RENDERER=cairo PI_HOME_SCREEN_WIDTH=$width PI_HOME_SCREEN_HEIGHT=$height PI_HOME_SCREENSHOT_DIR=/screenshots/$dimensions dbus-run-session xvfb-run -a -s "-screen 0 ${dimensions}x24" python3 appliance/alpine/discover_visual_review.py
             done
+            LIBGL_ALWAYS_SOFTWARE=1 GDK_BACKEND=x11 GSK_RENDERER=gl dbus-run-session xvfb-run -a python3 appliance/common/white_balance_smoke.py
             LIBGL_ALWAYS_SOFTWARE=1 GDK_BACKEND=x11 GSK_RENDERER=gl PI_HOME_REQUIRE_GL=1 PI_HOME_SCREEN_WIDTH=1280 PI_HOME_SCREEN_HEIGHT=720 PI_HOME_SCREENSHOT_DIR=/screenshots/gl-capture dbus-run-session xvfb-run -a -s "-screen 0 1280x720x24" python3 appliance/alpine/discover_visual_review.py'
       - uses: actions/upload-artifact@v4
         if: always()
