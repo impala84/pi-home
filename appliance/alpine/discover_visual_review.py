@@ -574,6 +574,16 @@ capture("settings")
 assert window.get_width() == screen_width and window.get_height() == screen_height, (window.get_width(), window.get_height())
 assert display.settings_actions.get_last_child().has_css_class("reboot-action")
 
+# The optional black canvas preserves all foreground controls and works on
+# every native page without changing the selected colour theme.
+window.add_css_class("background-black")
+capture("settings-black")
+window.set_child(bus)
+capture("bus-times-black")
+window.set_child(page)
+capture("music-black")
+window.remove_css_class("background-black")
+
 window.set_child(None)
 display.root_overlay = Gtk.Overlay(); display.root_overlay.set_child(home); window.set_child(display.root_overlay)
 display.confirm_reboot()

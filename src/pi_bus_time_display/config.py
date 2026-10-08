@@ -25,6 +25,7 @@ class Config:
     roon_zone_name: str = ""
     roon_display_name: str = "Roon"
     display_theme: str = "fresh-mint"
+    display_background: str = "current"
     portrait_discovery_columns: int = 2
     landscape_music_clock: str = "icon"
     roon_now_playing_name: str = "Now Playing"
@@ -87,6 +88,8 @@ def load_config(path: Path) -> Config:
         raise ValueError("release_channel must be stable or beta")
     if config.landscape_music_clock not in {"icon", "full"}:
         raise ValueError("landscape_music_clock must be icon or full")
+    if config.display_background not in {"current", "black"}:
+        raise ValueError("display_background must be current or black")
     if config.display_theme not in {"fresh-mint", "roon"}:
         raise ValueError("display_theme must be fresh-mint or roon")
     if not (5 <= config.poll_seconds <= 300):

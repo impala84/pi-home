@@ -568,6 +568,13 @@ popover.track-menu > contents { background: #222225; color: #eceaef; border: 1px
 # Small static texture: no animation, full-screen image download or per-frame work.
 CSS += ('.theme-roon .roon-page { background-image: url("%s"), linear-gradient(120deg, #242338, #181818 60%%, #251c22); background-repeat: repeat, no-repeat; background-size: 128px 128px, cover; }' %
         (Path(__file__).resolve().parent / 'icons/gradient-dither.svg').as_uri()).encode()
+CSS += b"""
+window.background-black, window.background-black .page,
+window.background-black .roon-page, window.background-black .home-page,
+window.background-black .settings-page, window.background-black .sleep {
+    background-color: #000; background-image: none;
+}
+"""
 
 
 def get_json(url: str, timeout: float = .8):
@@ -1390,6 +1397,10 @@ class Display(Gtk.Application):
         return False
 
     def apply(self, target, status, roon, config, system, device, image_key, image):
+        background = (config or status or {}).get("display_background")
+        if background is not None:
+            if background == "black": self.window.add_css_class("background-black")
+            else: self.window.remove_css_class("background-black")
         if status and "display_theme" in status and config is None: self.apply_theme(status["display_theme"])
         if config is not None:
             grid_changed = self.settings_data.get("portrait_discovery_columns", 2) != config.get("portrait_discovery_columns", 2)

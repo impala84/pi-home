@@ -144,6 +144,16 @@ class DisplayModeTests(unittest.TestCase):
             write_config(path, Config(display_theme="invalid"))
             with self.assertRaises(ValueError): load_config(path)
 
+    def test_display_background_round_trip_and_validation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "config.toml"
+            self.assertEqual(Config().display_background, "current")
+            write_config(path, Config(display_background="black"))
+            self.assertEqual(load_config(path).display_background, "black")
+            self.assertEqual(State(Config(display_background="black"), Path(directory)).snapshot()["display_background"], "black")
+            write_config(path, Config(display_background="invalid"))
+            with self.assertRaises(ValueError): load_config(path)
+
     def test_custom_roon_display_name_persists(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "config.toml"

@@ -84,6 +84,7 @@ class State:
             "roon_display_url": self.config.roon_display_url,
             "roon_display_name": self.config.roon_display_name,
             "display_theme": self.config.display_theme,
+            "display_background": self.config.display_background,
             "bus_enabled": self.config.bus_enabled,
             "stale": bool(self.last_success and (now - self.last_success).total_seconds() > self.config.stale_after_seconds),
         })
@@ -326,6 +327,7 @@ def write_config(path: Path, config: Config) -> None:
         f"roon_zone_name = {json.dumps(config.roon_zone_name)}",
         f"roon_display_name = {json.dumps(config.roon_display_name)}",
         f"display_theme = {json.dumps(config.display_theme)}",
+        f"display_background = {json.dumps(config.display_background)}",
         f"portrait_discovery_columns = {config.portrait_discovery_columns}",
         f"landscape_music_clock = {json.dumps(config.landscape_music_clock)}",
         f"bus_enabled = {str(config.bus_enabled).lower()}",
@@ -910,6 +912,7 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
                     "roon_zone_name": config.roon_zone_name,
                     "roon_display_name": config.roon_display_name,
                     "display_theme": config.display_theme,
+                    "display_background": config.display_background,
                     "portrait_discovery_columns": config.portrait_discovery_columns,
                     "landscape_music_clock": config.landscape_music_clock,
                     "bus_enabled": config.bus_enabled,
@@ -1326,6 +1329,7 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
                     roon_zone_name=str(data.get("roon_zone_name", current.roon_zone_name)).strip(),
                     roon_display_name=str(data.get("roon_display_name", current.roon_display_name)).strip() or "Roon",
                     display_theme=str(data.get("display_theme", current.display_theme)),
+                    display_background=str(data.get("display_background", current.display_background)),
                     portrait_discovery_columns=int(data.get("portrait_discovery_columns", current.portrait_discovery_columns)),
                     landscape_music_clock=str(data.get("landscape_music_clock", current.landscape_music_clock)),
                     bus_enabled=bool(data.get("bus_enabled", current.bus_enabled)),
@@ -1359,6 +1363,8 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
                     raise ValueError("Bus stop code must be five digits")
                 if candidate.display_theme not in {"fresh-mint", "roon"}:
                     raise ValueError("Choose Fresh Mint or Roon for the display style")
+                if candidate.display_background not in {"current", "black"}:
+                    raise ValueError("Choose Current background or Pure black")
                 if candidate.portrait_discovery_columns not in {2, 3}:
                     raise ValueError("Choose 2 or 3 portrait Discover columns")
                 if candidate.landscape_music_clock not in {"icon", "full"}:
