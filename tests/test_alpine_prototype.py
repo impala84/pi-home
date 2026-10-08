@@ -156,6 +156,7 @@ class AlpinePrototypeTests(unittest.TestCase):
         self.assertIn("e2fsprogs-extra", dockerfile)
         self.assertIn("pi-home-storage", provision)
         self.assertIn("need localmount pi-home-storage", firstboot)
+        self.assertIn("wifi.powersave=2", provision)
 
 
 if __name__ == "__main__":

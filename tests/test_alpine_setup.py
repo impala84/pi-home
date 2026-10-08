@@ -154,8 +154,10 @@ class AlpineSetupTests(unittest.TestCase):
         self.assertTrue(self.setup.saved()["complete"])
 
     def test_wifi_uses_argument_list_not_shell_and_keeps_secrets_out_of_progress(self):
+        self.run.side_effect = lambda args: "Home\n" if "GENERAL.CONNECTION" in args else "connected"
         self.setup.handle({"action": "wifi", "ssid": "Home;not-a-command", "password": "private-secret"})
         self.assertEqual(self.run.call_args_list[0].args[0][-3:], ["Home;not-a-command", "password", "private-secret"])
+        self.run.assert_any_call(["nmcli", "connection", "modify", "Home", "802-11-wireless.powersave", "2"])
         self.assertNotIn("private-secret", self.setup.progress.read_text())
 
     def test_display_block_is_idempotent_and_preserves_kernel(self):

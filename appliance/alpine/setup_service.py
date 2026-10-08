@@ -752,6 +752,9 @@ class Setup:
             if password: args += ["password", password]
             self.run(args)
             if not self.connected(): raise ValueError("Wi-Fi is not connected yet. Please try again.")
+            profile = self.run(["nmcli", "-g", "GENERAL.CONNECTION", "device", "show", "wlan0"]).strip()
+            if profile and profile != "--":
+                self.run(["nmcli", "connection", "modify", profile, "802-11-wireless.powersave", "2"])
             state["network"] = True
         elif action == "network":
             if not self.connected(): raise ValueError("Connect Ethernet or Wi-Fi first.")

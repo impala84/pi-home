@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased Alpine
+
+- Disables Wi-Fi power saving in the Alpine image and on Wi-Fi profiles created by setup, preventing the severe local-network latency spikes observed with Roon Discover.
+- Keeps album write-ups to a concise two-sentence preview with Wikipedia attribution and Bandcamp fallback.
+
 ## 1.1.3-beta.17 Alpine — 8 October 2026
 
 - Makes the album-and-artist fact sheet a true full-screen view with an explicit close button, two balanced information columns and no hidden navigation behind it.

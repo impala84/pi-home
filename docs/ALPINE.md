@@ -289,7 +289,9 @@ Use at least eight characters. Simple passwords produce advice but remain the
 owner's choice. The password is stored privately, not printed in logs or embedded
 in the build artifact. The Finish screen shows the named
 device's `.local:8765/admin` address. Use the assigned IP if mDNS is unavailable.
-NetworkManager handles Ethernet DHCP and saved Wi-Fi connections. Wi-Fi/DSI,
+NetworkManager handles Ethernet DHCP and saved Wi-Fi connections. Pi Home
+disables Wi-Fi power saving globally and on newly created Wi-Fi profiles to
+avoid latency spikes in Roon's persistent LAN connections. Wi-Fi/DSI,
 touch keyboard behaviour and Roon LAN pairing still require physical acceptance.
 
 Display auto-detection is initially enabled. The build must include the Pi 5 device tree
