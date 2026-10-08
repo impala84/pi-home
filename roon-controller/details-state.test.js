@@ -1,7 +1,14 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const {loadArtistProfile, playingMetadata, chooseItem, artistCandidates, chooseMusicBrainzGroup, chooseUniqueTitleGroup, musicBrainzFacts, parseBandcampPage, loadAlbumWriteup, loadMusicBrainzMetadata, loadDetails} = require('./details-state');
+const {clipWriteup, loadArtistProfile, playingMetadata, chooseItem, artistCandidates, chooseMusicBrainzGroup, chooseUniqueTitleGroup, musicBrainzFacts, parseBandcampPage, loadAlbumWriteup, loadMusicBrainzMetadata, loadDetails} = require('./details-state');
+
+test('album writeups stay to a two-sentence preview', () => {
+  assert.equal(clipWriteup('First sentence. Second sentence! Third sentence should not appear.'), 'First sentence. Second sentence!');
+  const clipped = clipWriteup('A'.repeat(360));
+  assert.equal(clipped.length, 321);
+  assert.ok(clipped.endsWith('…'));
+});
 
 test('artist background follows only a unique exact MusicBrainz identity', async () => {
   const id = '12345678-1234-1234-1234-123456789abc';

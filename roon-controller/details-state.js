@@ -69,10 +69,14 @@ function decodeHtml(value) {
     .replace(/&#(\d+);/g, (_, code) => String.fromCodePoint(Number(code))).replace(/\s+/g, ' ').replace(/\s+([.,;:!?])/g, '$1').trim();
 }
 
-function clipWriteup(value, limit = 520) {
+function clipWriteup(value, limit = 320, sentenceLimit = 2) {
   const text = decodeHtml(value);
-  if (text.length <= limit) return text;
-  const clipped = text.slice(0, limit + 1); const sentence = clipped.lastIndexOf('. ');
+  const sentences = text.match(/[^.!?]+(?:[.!?]+(?=\s|$)|$)/g) || [];
+  const brief = sentences.slice(0, sentenceLimit).map(sentence => sentence.trim()).join(' ').trim() || text;
+  if (brief.length <= limit) return brief;
+  const first = sentences[0]?.trim();
+  if (first && first.length <= limit) return first;
+  const clipped = brief.slice(0, limit + 1); const sentence = clipped.lastIndexOf('. ');
   return `${clipped.slice(0, sentence > limit * .55 ? sentence + 1 : limit).trim()}…`;
 }
 
@@ -284,4 +288,4 @@ async function loadDetails(service, zone, enrich = loadMusicBrainzMetadata) {
   return base;
 }
 
-module.exports = {loadArtistProfile, playingMetadata, chooseItem, artistCandidates, chooseMusicBrainzGroup, chooseUniqueTitleGroup, musicBrainzFacts, parseBandcampPage, loadAlbumWriteup, loadMusicBrainzMetadata, loadDetails};
+module.exports = {clipWriteup, loadArtistProfile, playingMetadata, chooseItem, artistCandidates, chooseMusicBrainzGroup, chooseUniqueTitleGroup, musicBrainzFacts, parseBandcampPage, loadAlbumWriteup, loadMusicBrainzMetadata, loadDetails};
