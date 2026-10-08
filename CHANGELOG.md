@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1.3-beta.11 Alpine — 8 October 2026
+
+- Replaces the unreliable native album sort dropdown with the same high-contrast popover styling used by track actions. Offers full-library title A–Z, title Z–A and artist A–Z sorting on large portrait displays.
+- Keeps the Browse secondary navigation visible above the on-screen search keyboard, so another section is always one tap away.
+- Shows a visible loading, sourced summary or explicit unavailable state on album and artist pages. Retries common remaster, deluxe and anniversary titles against their base album names.
+- Clears an opened Daily mix when switching to For You, so the selected tab and displayed content cannot disagree.
+- Matches Home Controls card corners to Bus Times and increases the spacing between Home panels.
+- Release-date sorting remains unavailable because Roon's public Browse album rows do not expose release dates.
+
 ## 1.1.3-beta.10 Alpine — 8 October 2026
 
 - Enlarges Home control labels and states, with a white Home Controls heading.

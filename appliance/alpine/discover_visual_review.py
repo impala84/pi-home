@@ -284,6 +284,12 @@ def browse_fixture(section, labels):
 browse_fixture("albums", False)
 settle()
 capture("browse")
+if screen_height > screen_width and screen_width >= 1000:
+    assert display.browser_sort.get_visible()
+    display.show_browser_sort(display.browser_sort)
+    settle(); capture("browse-sort-menu")
+    popup = display.browser_sort_popover
+    if isinstance(popup, Gtk.Popover): popup.unparent()
 if screen_width >= 1000 and screen_height < screen_width:
     tabs = display.discover_subnav.compute_bounds(page)[1]
     cog = display.music_settings_button.compute_bounds(page)[1]
@@ -576,7 +582,7 @@ if screen_height > screen_width:
 settings = display.build_settings()
 window.set_child(settings)
 display.configure_settings_layout(screen_width, screen_height)
-display.device_status.set_text("v1.1.3-beta.10 Alpine")
+display.device_status.set_text("v1.1.3-beta.11 Alpine")
 display.touch_diagnostics.set_text("Memory 6.1%  ·  Load 0.65  ·  62.8°C  ·  Controller ready  ·  Bridge offline")
 capture("settings")
 assert window.get_width() == screen_width and window.get_height() == screen_height, (window.get_width(), window.get_height())

@@ -147,6 +147,13 @@ function artistCandidates(artist) {
   return [...new Set([...(split.length > 1 ? split : []), original])];
 }
 
+function albumCandidates(album) {
+  const original = String(album || '').trim();
+  if (!original) return [];
+  const base = original.replace(/\s*[\[(](?:(?:\d{4}\s+)?(?:re)?master(?:ed)?(?:\s+\d{4})?|(?:\d+(?:st|nd|rd|th)\s+)?anniversary(?:\s+edition)?|(?:deluxe|expanded|special)\s+edition)[\])]/ig, '').trim();
+  return [...new Set([original, base].filter(Boolean))];
+}
+
 function chooseMusicBrainzGroup(groups, album, artist) {
   const wantedAlbum = clean(album); const wantedArtists = artistCandidates(artist).map(clean);
   const ranked = (groups || []).map(group => {
@@ -199,10 +206,13 @@ function musicBrainzFacts(group, trackCount = 0, releaseDetails = null) {
 async function loadMusicBrainzMetadata(album, artist, trackCount = 0, fetchJson = musicBrainzJson, strictArtist = false) {
   if (!album || !artist) return musicBrainzFacts(null, trackCount);
   let match = null;
-  for (const candidate of artistCandidates(artist)) {
-    const query = `releasegroup:"${album.replace(/["\\]/g, ' ')}" AND artist:"${candidate.replace(/["\\]/g, ' ')}"`;
-    const search = await fetchJson(`/ws/2/release-group/?query=${encodeURIComponent(query)}&fmt=json&limit=5`);
-    match = chooseMusicBrainzGroup(search?.['release-groups'], album, artist);
+  for (const albumName of albumCandidates(album)) {
+    for (const candidate of artistCandidates(artist)) {
+      const query = `releasegroup:"${albumName.replace(/["\\]/g, ' ')}" AND artist:"${candidate.replace(/["\\]/g, ' ')}"`;
+      const search = await fetchJson(`/ws/2/release-group/?query=${encodeURIComponent(query)}&fmt=json&limit=5`);
+      match = chooseMusicBrainzGroup(search?.['release-groups'], albumName, artist);
+      if (match) break;
+    }
     if (match) break;
   }
   if (!match && !strictArtist) {
@@ -288,4 +298,4 @@ async function loadDetails(service, zone, enrich = loadMusicBrainzMetadata) {
   return base;
 }
 
-module.exports = {clipWriteup, loadArtistProfile, playingMetadata, chooseItem, artistCandidates, chooseMusicBrainzGroup, chooseUniqueTitleGroup, musicBrainzFacts, parseBandcampPage, loadAlbumWriteup, loadMusicBrainzMetadata, loadDetails};
+module.exports = {clipWriteup, loadArtistProfile, playingMetadata, chooseItem, artistCandidates, albumCandidates, chooseMusicBrainzGroup, chooseUniqueTitleGroup, musicBrainzFacts, parseBandcampPage, loadAlbumWriteup, loadMusicBrainzMetadata, loadDetails};

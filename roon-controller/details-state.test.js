@@ -1,7 +1,13 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const {clipWriteup, loadArtistProfile, playingMetadata, chooseItem, artistCandidates, chooseMusicBrainzGroup, chooseUniqueTitleGroup, musicBrainzFacts, parseBandcampPage, loadAlbumWriteup, loadMusicBrainzMetadata, loadDetails} = require('./details-state');
+const {clipWriteup, loadArtistProfile, playingMetadata, chooseItem, artistCandidates, albumCandidates, chooseMusicBrainzGroup, chooseUniqueTitleGroup, musicBrainzFacts, parseBandcampPage, loadAlbumWriteup, loadMusicBrainzMetadata, loadDetails} = require('./details-state');
+
+test('album metadata retries the base title for common edition suffixes', () => {
+  assert.deepEqual(albumCandidates('Hunting High and Low (2015 Remaster)'), ['Hunting High and Low (2015 Remaster)', 'Hunting High and Low']);
+  assert.deepEqual(albumCandidates('(What\'s the Story) Morning Glory? [Remastered 2020]'), ['(What\'s the Story) Morning Glory? [Remastered 2020]', '(What\'s the Story) Morning Glory?']);
+  assert.deepEqual(albumCandidates('Vessel (Deluxe Edition)'), ['Vessel (Deluxe Edition)', 'Vessel']);
+});
 
 test('album writeups stay to a two-sentence preview', () => {
   assert.equal(clipWriteup('First sentence. Second sentence! Third sentence should not appear.'), 'First sentence. Second sentence!');

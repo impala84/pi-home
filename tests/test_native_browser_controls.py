@@ -381,6 +381,13 @@ class NativeBrowserControlsTests(unittest.TestCase):
             owner.discovery_section=section
             self.assertEqual(navigation(owner), ((), ""))
 
+    def test_switching_an_open_mix_to_for_you_returns_to_daily_home(self):
+        owner = SimpleNamespace(discovery_section="daily", discovery_mix="mix-id", responsive_portrait=True,
+            discovery_daily_tab="mixes", open_discover=Mock())
+        native_method("select_discovery_secondary")(owner, "recommendations")
+        self.assertEqual(owner.discovery_daily_tab, "recommendations")
+        owner.open_discover.assert_called_once_with("daily")
+
     def test_secondary_rail_uses_browse_filters_and_bottom_back_outside_scroll(self):
         def button(label, callback, style):
             widget=LayoutWidget(label=label, callback=callback); widget.add_css_class(style); return widget
@@ -765,12 +772,21 @@ class NativeBrowserControlsTests(unittest.TestCase):
             native_method('submit_browser_search')(owner)
             self.assertEqual(calls, ['browse',('search',{'query':'Radiohead','source':'all'})])
 
+    def test_search_keyboard_keeps_browse_secondary_navigation_visible(self):
+        code = SOURCE.read_text(encoding='utf-8')
+        search = code.split('search_panel = Gtk.Box', 1)[1].split('self.roon_views.add_named(search_panel', 1)[0]
+        for section in ('albums', 'artists', 'genres', 'playlists'):
+            self.assertIn(section, search)
+        self.assertIn('search_active.add_css_class("active")', search)
+
     def test_surprise_selection_and_bottom_back_are_present_in_both_interfaces(self):
         code = SOURCE.read_text(encoding='utf-8')
         self.assertIn('and not data.get("surprise_preview")', code)
         self.assertIn('active_section = "surprise" if data.get("surprise_preview")',code)
         self.assertIn('spacer.set_vexpand(True); self.browser_sidebar_spacer = spacer; sidebar.append(spacer); sidebar.append(self.browser_sort); sidebar.append(self.browser_back)',code)
         self.assertIn('self.button("BACK"', code)
+        self.assertIn('self.browser_sort = self.button("SORT: TITLE A–Z  ▾", self.show_browser_sort', code)
+        self.assertNotIn('Gtk.DropDown.new_from_strings(["Sort: Title A–Z"', code)
         web = (SOURCE.parents[1] / 'roon-controller/static/app.js').read_text(encoding='utf-8')
         self.assertIn("const activeSection = data.surprise_preview ? 'surprise'", web)
         self.assertIn('!data.can_back || Boolean(data.surprise_preview)',web)
