@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.3-beta.14 Alpine — 8 October 2026
+
+- Loads identity-checked Wikipedia album summaries before the slower MusicBrainz enrichment path, so a MusicBrainz timeout cannot suppress a valid summary.
+- Stops caching blank album-summary responses, allowing transient network failures to recover on the next album view instead of persisting until restart.
+
 ## 1.1.3-beta.13 Alpine — 8 October 2026
 
 - Retrieves album summaries directly from a matching Wikipedia album page when MusicBrainz has no explicit article link, while rejecting unrelated and disambiguation results. This covers `(What's the Story) Morning Glory?` and other well-known albums that previously showed an unavailable message.

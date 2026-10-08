@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const {clipWriteup, loadArtistProfile, playingMetadata, chooseItem, artistCandidates, albumCandidates, chooseMusicBrainzGroup, chooseUniqueTitleGroup, musicBrainzFacts, parseBandcampPage, loadAlbumWriteup, loadWikipediaAlbumWriteup, loadMusicBrainzMetadata, loadDetails} = require('./details-state');
+const {clipWriteup, loadArtistProfile, playingMetadata, chooseItem, artistCandidates, albumCandidates, chooseMusicBrainzGroup, chooseUniqueTitleGroup, musicBrainzFacts, parseBandcampPage, loadAlbumWriteup, loadWikipediaAlbumWriteup, loadAlbumNotes, loadMusicBrainzMetadata, loadDetails} = require('./details-state');
 
 test('album metadata retries the base title for common edition suffixes', () => {
   assert.deepEqual(albumCandidates('Hunting High and Low (2015 Remaster)'), ['Hunting High and Low (2015 Remaster)', 'Hunting High and Low']);
@@ -198,6 +198,21 @@ test('Wikipedia album fallback rejects unrelated and disambiguation pages', asyn
   assert.equal(unrelated.writeup, '');
   const ambiguous = await loadWikipediaAlbumWriteup('Home', 'Example Artist', async () => JSON.stringify({type: 'disambiguation', description: 'Albums and songs by Example Artist', extract: 'Home may refer to several albums.'}));
   assert.equal(ambiguous.writeup, '');
+});
+
+test('album notes use Wikipedia before MusicBrainz can time out', async () => {
+  let musicBrainzCalled = false;
+  const result = await loadAlbumNotes("(What's the Story) Morning Glory?", 'Oasis', async () => {
+    musicBrainzCalled = true;
+    throw new Error('MusicBrainz timeout');
+  }, async () => JSON.stringify({
+    type: 'standard',
+    description: '1995 studio album by Oasis',
+    extract: "(What's the Story) Morning Glory? is the second studio album by the English rock band Oasis."
+  }));
+  assert.equal(musicBrainzCalled, false);
+  assert.equal(result.source, 'Wikipedia');
+  assert.match(result.writeup, /second studio album/);
 });
 
 test('MusicBrainz album metadata uses the title fallback when relations contain no writeup', async () => {

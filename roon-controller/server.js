@@ -10,7 +10,7 @@ const RoonApiStatus = require('node-roon-api-status');
 const RoonApiTransport = require('node-roon-api-transport');
 const {publicQueueItems, updateQueueState} = require('./queue-state');
 const {displayArtist} = require('./artist-name');
-const {playingMetadata, loadDetails, loadArtistProfile, loadMusicBrainzMetadata} = require('./details-state');
+const {playingMetadata, loadDetails, loadArtistProfile, loadAlbumNotes} = require('./details-state');
 const artistProfileCache = new Map();
 const {BluOSClient, discoverPlayers} = require('./bluos-client');
 const {BrowseManager} = require('./browse-state');
@@ -336,9 +336,14 @@ http.createServer(async (request, response) => {
       if (!album || !artist) return json(response, 400, {error:'Album and artist required'});
       const key = JSON.stringify([album, artist]);
       if (!albumNotesCache.has(key)) {
-        albumNotesCache.set(key, loadMusicBrainzMetadata(album, artist, 0, undefined, true).then(facts => ({
-          album, artist, writeup:facts.writeup || '', source:facts.writeup_source || ''
-        })).catch(() => { albumNotesCache.delete(key); return {album, artist, writeup:'', source:''}; }));
+        const pending = loadAlbumNotes(album, artist).then(notes => {
+          if (!notes.writeup) albumNotesCache.delete(key);
+          return notes;
+        }).catch(() => {
+          albumNotesCache.delete(key);
+          return {album, artist, writeup:'', source:''};
+        });
+        albumNotesCache.set(key, pending);
         while (albumNotesCache.size > 48) albumNotesCache.delete(albumNotesCache.keys().next().value);
       }
       return json(response, 200, await albumNotesCache.get(key));

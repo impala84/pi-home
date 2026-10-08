@@ -158,6 +158,20 @@ async function loadWikipediaAlbumWriteup(album, artist, fetchText = externalText
   return empty;
 }
 
+async function loadAlbumNotes(album, artist, fetchJson = musicBrainzJson, fetchText = externalText) {
+  const empty = {album, artist, writeup: '', source: ''};
+  try {
+    const direct = await loadWikipediaAlbumWriteup(album, artist, fetchText);
+    if (direct.writeup) return {...empty, writeup: direct.writeup, source: direct.source};
+  } catch (_) {}
+  try {
+    const facts = await loadMusicBrainzMetadata(album, artist, 0, fetchJson, true, fetchText);
+    return {...empty, writeup: facts.writeup || '', source: facts.writeup_source || ''};
+  } catch (_) {
+    return empty;
+  }
+}
+
 function creditedArtist(group) {
   return (group?.['artist-credit'] || []).map(credit => credit?.name || credit?.artist?.name || '').join('');
 }
@@ -324,4 +338,4 @@ async function loadDetails(service, zone, enrich = loadMusicBrainzMetadata) {
   return base;
 }
 
-module.exports = {clipWriteup, loadArtistProfile, playingMetadata, chooseItem, artistCandidates, albumCandidates, chooseMusicBrainzGroup, chooseUniqueTitleGroup, musicBrainzFacts, parseBandcampPage, loadAlbumWriteup, loadWikipediaAlbumWriteup, loadMusicBrainzMetadata, loadDetails};
+module.exports = {clipWriteup, loadArtistProfile, playingMetadata, chooseItem, artistCandidates, albumCandidates, chooseMusicBrainzGroup, chooseUniqueTitleGroup, musicBrainzFacts, parseBandcampPage, loadAlbumWriteup, loadWikipediaAlbumWriteup, loadAlbumNotes, loadMusicBrainzMetadata, loadDetails};
