@@ -2237,7 +2237,7 @@ class Display(Gtk.Application):
         threading.Thread(target=load, daemon=True).start()
 
     def show_browser_sort(self, button):
-        popover = Gtk.Popover(); popover.add_css_class("track-menu"); popover.add_css_class("sort-menu"); popover.set_parent(button); popover.set_has_arrow(False); popover.set_autohide(True); popover.set_position(Gtk.PositionType.BOTTOM); popover.set_halign(Gtk.Align.START)
+        popover = Gtk.Popover(); popover.add_css_class("track-menu"); popover.add_css_class("sort-menu"); popover.set_parent(button); popover.set_has_arrow(False); popover.set_autohide(True); popover.set_position(Gtk.PositionType.BOTTOM); popover.set_halign(Gtk.Align.START); popover.set_offset(-18, 4)
         choices = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6); choices.set_size_request(max(1, button.get_width()), -1)
         for order, title in (("title", "Title, A to Z"), ("reverse", "Title, Z to A"), ("artist", "Artist, A to Z")):
             def choose(_choice, value=order, menu=popover):
@@ -2599,7 +2599,7 @@ class Display(Gtk.Application):
             popover = Gtk.Popover(); popover.add_css_class("track-menu"); popover.set_parent(anchor); popover.set_autohide(True)
             popover.set_has_arrow(False); popover.set_position(Gtk.PositionType.RIGHT)
             popover.set_valign(Gtk.Align.START)
-            rect = Gdk.Rectangle(); rect.x = max(1, anchor.get_width()) + 12; rect.y = 0; rect.width = 1; rect.height = 1; popover.set_pointing_to(rect)
+            rect = Gdk.Rectangle(); rect.x = min(116, max(1, anchor.get_width())) + 14; rect.y = 0; rect.width = 1; rect.height = 1; popover.set_pointing_to(rect)
             self.browser_action_popover = popover
             choices = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
             selected = {"value": False}
