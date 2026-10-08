@@ -166,7 +166,9 @@ class PortraitRefinementTests(unittest.TestCase):
 
     def test_bus_count_matches_orientation_and_route_is_solid(self):
         source = SOURCE.read_text()
-        self.assertIn('[:2 if portrait else 3]', source)
+        self.assertIn('service.get("arrivals", [])[:3]', source)
+        self.assertIn('self.render_portrait_bus_card(row, service, len(visible))', source)
+        self.assertIn('sized("THEN", "bus-then"', source)
         self.assertIn('number.add_css_class("solid-route")', source)
         self.assertIn('row.append(number)', source)
 
@@ -197,6 +199,27 @@ LAYOUT_GTK = SimpleNamespace(Box=LayoutWidget, Picture=LayoutWidget, ScrolledWin
 
 
 class NativeBrowserControlsTests(unittest.TestCase):
+    def test_portrait_bus_card_has_one_primary_and_two_following_predictions(self):
+        gtk = SimpleNamespace(Box=LayoutWidget, Separator=LayoutWidget,
+            Orientation=SimpleNamespace(VERTICAL="vertical", HORIZONTAL="horizontal"),
+            Align=SimpleNamespace(CENTER="center", FILL="fill"))
+        pango = SimpleNamespace(AttrList=lambda:SimpleNamespace(insert=lambda _:None),
+            attr_size_new_absolute=lambda value:value, SCALE=1024)
+        labels = []
+        def label(text, css, align):
+            widget = LayoutWidget(text=text); widget.add_css_class(css); labels.append(widget)
+            return widget
+        owner = SimpleNamespace(window=SimpleNamespace(get_height=lambda:1920,get_width=lambda:1200),label=label)
+        method = native_method("render_portrait_bus_card", {"Gtk":gtk,"Pango":pango})
+        row = LayoutWidget()
+        method(owner, row, {"service":"42","arrivals":[{"minutes":0},{"minutes":11},{"minutes":25}]},2)
+        self.assertEqual([widget.properties['text'] for widget in labels],
+            ["ROUTE","42","Due","arriving now","THEN","11 min","25 min"])
+        self.assertEqual(len(row.children[-1].children),2)
+        labels.clear()
+        method(owner, LayoutWidget(), {"service":"40","arrivals":[]},4)
+        self.assertEqual([widget.properties['text'] for widget in labels][-3:],["THEN","—","—"])
+
     def test_late_loaded_source_buttons_follow_current_orientation(self):
         for portrait in (True, False):
             owner = SimpleNamespace(responsive_portrait=portrait, roon_subnav=LayoutWidget(),

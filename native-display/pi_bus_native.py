@@ -404,6 +404,13 @@ CSS += b"""
 .portrait .stop, .portrait .stop-code { font-size: 26px; }
 .portrait.compact-portrait .stop, .portrait.compact-portrait .stop-code { font-size: 22px; }
 .portrait .service { padding: 18px 12px; }
+.portrait .bus-route-badge { border-radius: 60px; padding: 6px 24px; background: rgba(255,255,255,.045); }
+.portrait .bus-route-word { color: #e1e7e5; font-weight: 500; }
+.portrait .bus-next { font-weight: 700; color: #f4f4f4; }
+.portrait .bus-next-unit { color: #e1e7e5; font-weight: 400; }
+.portrait .bus-rule { min-height: 1px; background: rgba(220,230,230,.35); }
+.portrait .bus-then { color: #91a3a4; font-weight: 600; }
+.portrait .bus-following { color: #f4f4f4; font-weight: 600; }
 .portrait .service.compact, .portrait .service.dense { padding: 12px; }
 .portrait .roon-subnav button.active { border-bottom-color: #5bcbd6; }
 .portrait.theme-roon .roon-subnav button.active { border-bottom-color: #817aeb; }
@@ -1593,7 +1600,9 @@ class Display(Gtk.Application):
             if len(visible) == 3: row.add_css_class("compact")
             elif len(visible) >= 4: row.add_css_class("dense")
             if portrait:
-                row.set_orientation(Gtk.Orientation.VERTICAL); row.set_vexpand(False); row.set_spacing(12)
+                self.render_portrait_bus_card(row, service, len(visible))
+                self.services.append(row)
+                continue
             number = self.label(str(service.get("service", "")), "service-no"); number.set_size_request((150 if len(visible) > 2 else 188) if self.window.has_css_class("high-resolution") else (100 if len(visible) > 2 else 125), -1); number.set_valign(Gtk.Align.CENTER)
             arrivals = Gtk.Box(spacing=8); arrivals.set_hexpand(True)
             if portrait:
@@ -1619,6 +1628,49 @@ class Display(Gtk.Application):
             row.append(arrivals); self.services.append(row)
         self.bus_status.set_text("Live from LTA DataMall" if data.get("status") == "ok" and not data.get("stale") else "Offline / last known arrivals")
         updated = data.get("updated_at"); self.updated.set_text("Updated " + updated[11:19] if updated else "")
+
+    def render_portrait_bus_card(self, row, service, count):
+        count = max(1, count)
+        height = getattr(self, "viewport_height", self.window.get_height())
+        width = getattr(self, "viewport_width", self.window.get_width())
+        budget = max(180, (height - 240 - (count - 1) * 24) / count)
+        route_size = max(24, min(100, round(budget * .13)))
+        primary_size = max(46, min(248, round(budget * .34)))
+        secondary_size = max(18, min(64, round(budget * .085)))
+        caption_size = max(12, min(36, round(budget * .045)))
+        row.set_orientation(Gtk.Orientation.VERTICAL); row.set_vexpand(False)
+        row.set_spacing(max(4, min(16, round(budget * .02))))
+        # Budget includes CSS padding, so compact screens can scroll rather
+        # than forcing the native window beyond its physical dimensions.
+        row.set_size_request(-1, round(budget - (36 if count < 3 else 24)))
+        def sized(text, css, size):
+            label = self.label(text, css, .5)
+            attrs = Pango.AttrList(); attrs.insert(Pango.attr_size_new_absolute(size * Pango.SCALE))
+            label.set_attributes(attrs)
+            return label
+        badge = Gtk.Box(spacing=12); badge.add_css_class("bus-route-badge"); badge.set_halign(Gtk.Align.CENTER)
+        badge.append(sized("ROUTE", "bus-route-word", caption_size))
+        number = sized(str(service.get("service", "")), "service-no", route_size)
+        number.add_css_class("solid-route"); badge.append(number); row.append(badge)
+        arrivals = service.get("arrivals", [])[:3]
+        minutes = arrivals[0].get("minutes") if arrivals else None
+        text = "Due" if minutes == 0 else "—" if minutes is None else str(minutes)
+        primary = Gtk.Box(orientation=Gtk.Orientation.VERTICAL); primary.set_vexpand(True); primary.set_valign(Gtk.Align.FILL)
+        content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL); content.set_vexpand(True); content.set_valign(Gtk.Align.CENTER)
+        primary_size = min(primary_size, round((width - 100) / (max(2, len(text)) * .75)))
+        content.append(sized(text, "bus-next", primary_size))
+        content.append(sized("arriving now" if minutes == 0 else "minutes" if minutes is not None else "no prediction", "bus-next-unit", caption_size))
+        primary.append(content); row.append(primary)
+        rule = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL); rule.add_css_class("bus-rule")
+        rule.set_margin_start(round(width * .055)); rule.set_margin_end(round(width * .055)); row.append(rule)
+        row.append(sized("THEN", "bus-then", max(11, round(caption_size * .65))))
+        following = Gtk.Box(spacing=12); following.set_homogeneous(True)
+        for index in (1, 2):
+            value = arrivals[index].get("minutes") if len(arrivals) > index else None
+            text = "Due" if value == 0 else "—" if value is None else str(value) + " min"
+            size = min(secondary_size, round((width - 110) / (2 * max(3, len(text)) * .65)))
+            following.append(sized(text, "bus-following", max(12, size)))
+        row.append(following)
 
     def render_roon(self, data):
         self.state = data; self.render_queue((data or {}).get("queue") or {}); self.render_details((data or {}).get("details") or {}); zone = (data or {}).get("zone")

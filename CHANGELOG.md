@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.3-beta.8 Alpine — 8 October 2026
+
+- Implements the approved portrait-only bus layout: coloured route badge, prominent next arrival, divider and THEN with two following arrivals.
+- Fits text to portrait screen/card budgets, bounds Due and long arrival values, and displays dashes for missing predictions. Keeps the existing landscape bus layout unchanged.
+- No changes to display capture, touch, GPU or network configuration. Physical touchscreen acceptance remains required.
+
 ## 1.1.3-beta.7 Alpine — 8 October 2026
 
 - Captures the current page through its parent and exports with the live display renderer instead of a separate Cairo renderer, preserving GPU-backed content.
