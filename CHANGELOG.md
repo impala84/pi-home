@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.1-beta.18 — 8 October 2026
+
+- Adds optional RGB white-balance correction to the main GTK touchscreen window, saved outside application releases. No profile preserves the original rendering; invalid profiles fall back safely.
+- Includes per-device activation/reset instructions and real GTK pixel checks. This is practical white balance, not full ICC profiling; physical GPU/touchscreen acceptance remains required.
+
 ## 1.1.1-beta.17 — 7 October 2026
 
 - Replaces the native library/favourite “Updating Roon…” row with a softly pulsing accent ring around the button; keeps confirmed results, errors and duplicate-request protection.

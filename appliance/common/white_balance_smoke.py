@@ -12,7 +12,7 @@ gi.require_version('Gtk', '4.0')
 from gi.repository import Gtk, GLib
 
 Gtk.init()
-for gains, expected in [(IDENTITY, (255,255,255)), ((.9665,.8712,1), (246,222,255))]:
+for gains, expected in [(IDENTITY, (255,255,255)), ((.9665,.8712,1), (246,222,255)), ((.8,.9,1), (204,230,255))]:
     window = create_display_window(gains=gains)
     window.set_decorated(False)
     window.set_default_size(64,64)
