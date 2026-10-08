@@ -1290,9 +1290,10 @@ class Display(Gtk.Application):
             target = self.window.get_child()
             if target is None:
                 raise ValueError("Display has no visible page")
-            paintable = Gtk.WidgetPaintable.new(target)
             snapshot = Gtk.Snapshot()
-            paintable.snapshot(snapshot, float(width), float(height))
+            # Snapshot through the parent instead of exporting a paintable's
+            # cached frame, which can be stale after display navigation.
+            self.window.snapshot_child(target, snapshot)
             # Popovers use a separate native surface and are not necessarily
             # included in the page paintable. Composite the visible menu too.
             popup = getattr(self, "browser_action_popover", None)
@@ -1307,21 +1308,32 @@ class Display(Gtk.Application):
             node = snapshot.to_node()
             if node is None:
                 raise ValueError("Display produced no render node")
-            # Export without GPU readback; live display acceleration is unchanged.
-            renderer = Gsk.CairoRenderer.new()
-            try:
-                if not renderer.realize_for_display(self.window.get_display()):
-                    raise RuntimeError("Screenshot renderer could not be initialized")
-                texture = renderer.render_texture(node, None)
-            finally:
-                if renderer.is_realized(): renderer.unrealize()
+            # Use the live renderer: the page may contain GPU-backed textures
+            # that a separate Cairo renderer cannot faithfully export.
+            renderer = self.window.get_renderer()
+            if renderer is None:
+                raise RuntimeError("Display renderer is unavailable")
+            texture = renderer.render_texture(node, None)
+            pixels = Gdk.pixbuf_get_from_texture(texture)
+            if pixels is None:
+                raise ValueError("Screenshot pixels are unavailable")
+            raw = pixels.get_pixels()
+            channels, stride = pixels.get_n_channels(), pixels.get_rowstride()
+            # Reject wholly black/transparent captures, not merely invalid PNGs.
+            visible = any(raw[y * stride + x * channels + c] > 8
+                          and (channels != 4 or raw[y * stride + x * channels + 3] > 8)
+                          for y in range(0, pixels.get_height(), 8)
+                          for x in range(0, pixels.get_width(), 8)
+                          for c in range(3))
+            if not visible:
+                raise ValueError("Display capture contains no visible content")
             image = bytes(texture.save_to_png_bytes().get_data())
             if len(image) > 8_388_608 or not image.startswith(b"\x89PNG\r\n\x1a\n"):
                 raise ValueError("Invalid screenshot")
             data["image"] = base64.b64encode(image).decode("ascii")
         except Exception as error:
             print(f"Pi Home display capture failed: {error}", flush=True)
-            data["error"] = "The live display could not be rendered. Ensure the touchscreen application is running and try again."
+            data["error"] = "The display capture was empty or could not be rendered. The previous preview is unchanged. Check that the Pi display is awake and try again."
         if post_json(BUS + "/api/device/display-capture", data, timeout=15) is None:
             print("Pi Home display capture delivery failed", flush=True)
         return False

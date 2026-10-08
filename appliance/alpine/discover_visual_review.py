@@ -451,6 +451,8 @@ assert not display.library_message.get_visible()
 display.set_library_busy(False); display.library_add.set_sensitive(True)
 assert not display.library_add.has_css_class("library-busy")
 capture_results = []
+if os.environ.get("PI_HOME_REQUIRE_GL"):
+    assert "GL" in type(window.get_renderer()).__name__, type(window.get_renderer()).__name__
 native.post_json = lambda url, data, **kwargs: capture_results.append(data)
 display.capture_display("native-capture-check")
 assert capture_results and "image" in capture_results[-1], capture_results
@@ -562,7 +564,7 @@ if screen_height > screen_width:
 settings = display.build_settings()
 window.set_child(settings)
 display.configure_settings_layout(screen_width, screen_height)
-display.device_status.set_text("v1.1.3-beta.6 Alpine")
+display.device_status.set_text("v1.1.3-beta.7 Alpine")
 display.touch_diagnostics.set_text("Memory 6.1%  ·  Load 0.65  ·  62.8°C  ·  Controller ready  ·  Bridge offline")
 capture("settings")
 assert window.get_width() == screen_width and window.get_height() == screen_height, (window.get_width(), window.get_height())

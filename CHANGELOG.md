@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.3-beta.7 Alpine — 8 October 2026
+
+- Captures the current page through its parent and exports with the live display renderer instead of a separate Cairo renderer, preserving GPU-backed content.
+- Rejects black or transparent captures with an inline error instead of reporting successful preview updates. Keeps the previous successful screenshot.
+- Adds an OpenGL capture regression check alongside native layout verification. Physical Pi acceptance remains required; no boot, rotation or network changes.
+
 ## 1.1.3-beta.6 Alpine — 8 October 2026
 
 - Replaces the confusing Diagnostics preview controls with a dedicated Screen Preview page. Section buttons and a Discover-view dropdown lead to searchable browse results; tap an album/track to open it without separate Load/Open steps.
