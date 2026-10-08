@@ -286,7 +286,7 @@ CSS += b"""
 .browser-scrubber { padding: 0; }
 .browser-surprise { font-size: 14px; }
 .surprise-action { min-width: 72px; min-height: 72px; padding: 8px; border-radius: 12px; background: #18211f; color: #6ed9ae; }
-.browser-search-panel { padding: 2px 4px 10px; margin: 0; }
+.browser-search-panel { padding: 2px 0 10px; margin: 0; }
 .touch-landscape .browser-search-panel { margin: 0; }
 .portrait .browser-search-panel { margin-left: 0; margin-right: 0; }
 .browser-search-entry { min-height: 60px; font-size: 28px; padding: 8px 14px; background: #18211f; color: #f4f0e6; border-radius: 8px; }
@@ -464,7 +464,7 @@ CSS += b"""
 .portrait .browser-main { padding-left: 0; }
 .portrait .browser-cover-grid { padding: 0 0 18px; }
 .portrait.large-portrait .browser-cover-grid { padding-left: 0; }
-.portrait .browser-search-panel { padding: 2px 4px 10px; }
+.portrait .browser-search-panel { padding: 2px 0 10px; }
 .portrait .artist-profile { padding: 8px 0 24px; }
 .portrait .recommendation-album { color: #fff; font-size: 18px; }
 .portrait .page, .portrait .roon-page, .portrait.compact-portrait .page,
