@@ -29,7 +29,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Graphene", "1.0")
 gi.require_version("Gsk", "4.0")
 gi.require_foreign("cairo")
-from gi.repository import Gdk, Gio, GLib, Graphene, Gsk, Gtk, Pango
+from gi.repository import Gdk, GdkPixbuf, Gio, GLib, Graphene, Gsk, Gtk, Pango
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from icon_family import FamilyIcon
 
@@ -549,6 +549,11 @@ scrolledwindow overshoot, scrolledwindow undershoot { background: transparent; b
 .large-display .discovery-card .queue-title { font-size: 27px; }
 .large-display .discovery-card .queue-subtitle { font-size: 22px; }
 .large-display .queue-row { min-height: 138px; }
+.queue-row:hover, .queue-row:active, .queue-row:focus, .theme-roon .queue-row:hover, .theme-roon .queue-row:active, .theme-roon .queue-row:focus { background: transparent; box-shadow: none; }
+.queue-row.current, .queue-row.current:hover, .queue-row.current:active, .queue-row.current:focus { background: #121e1c; }
+.theme-roon .queue-row.current, .theme-roon .queue-row.current:hover, .theme-roon .queue-row.current:active, .theme-roon .queue-row.current:focus { background: #292733; }
+.queue-play-badge { background: transparent; color: #fff; }
+.queue-play-badge.light-art { color: #392772; }
 .large-display .queue-title { font-size: 30px; }
 .large-display .queue-meta, .large-display .queue-duration { font-size: 23px; }
 .large-display .browser-cover-title, .large-display .browser-cover-title.tile { font-size: 26px; }
@@ -2814,7 +2819,7 @@ class Display(Gtk.Application):
         items = queue.get("items") or []
         signature = json.dumps(items, sort_keys=True, separators=(",", ":"), default=str)
         if signature == self.queue_signature: return
-        self.queue_signature = signature; self.queue_pictures = {}; self.queue_artwork_keys = []
+        self.queue_signature = signature; self.queue_pictures = {}; self.queue_artwork_keys = []; self.queue_play_badges = {}
         while child := self.queue_list.get_first_child(): self.queue_list.remove(child)
         if not items:
             message = "Loading…" if queue.get("status") == "loading" else "Nothing is queued"
@@ -2825,7 +2830,9 @@ class Display(Gtk.Application):
             artwork = Gtk.Overlay(); artwork.add_css_class("queue-art-stack"); artwork.set_size_request(66, 66)
             picture = Gtk.Picture(); picture.add_css_class("queue-art"); picture.set_size_request(66, 66); picture.set_content_fit(Gtk.ContentFit.COVER); artwork.set_child(picture)
             if item.get("is_current"):
-                playing = FamilyIcon("play", 38); playing.add_css_class("queue-play-badge"); playing.set_halign(Gtk.Align.CENTER); playing.set_valign(Gtk.Align.CENTER); artwork.add_overlay(playing)
+                playing = FamilyIcon("play", 76 if getattr(self, "viewport_width", 800) >= 1000 else 48, filled=True); playing.add_css_class("queue-play-badge"); playing.set_halign(Gtk.Align.CENTER); playing.set_valign(Gtk.Align.CENTER); artwork.add_overlay(playing)
+                self.queue_play_badges.setdefault(item.get("image_key"), []).append(playing)
+                if getattr(self, "queue_artwork_light", {}).get(item.get("image_key"), False): playing.add_css_class("light-art")
             row.append(artwork)
             key = item.get("image_key")
             self.queue_artwork_keys.append(key)
@@ -2838,7 +2845,7 @@ class Display(Gtk.Application):
             meta = " · ".join(filter(None, (item.get("artist"), item.get("album"))))
             metadata = self.label(meta or "Roon", "queue-meta"); metadata.set_ellipsize(Pango.EllipsizeMode.END); detail.append(metadata); row.append(detail)
             length = item.get("length"); row.append(self.label(self.format_time(int(length)) if length else "", "queue-duration", 1))
-            button = Gtk.Button(); button.add_css_class("queue-row"); button.set_child(row)
+            button = Gtk.Button(); button.add_css_class("queue-row"); button.set_child(row); button.set_focus_on_click(False)
             if item.get("is_current"): button.add_css_class("current"); self.queue_current_index = index
             elif item.get("is_previous"): button.add_css_class("previous"); button.connect("clicked", self.play_queue_item, item.get("queue_item_id"))
             else: button.connect("clicked", self.play_queue_item, item.get("queue_item_id"))
@@ -2892,7 +2899,25 @@ class Display(Gtk.Application):
             key = self.queue_thumbnail_jobs.get()
             url = f"{ROON}/api/discovery/image?key={quote(key[9:], safe='')}" if key.startswith("discover:") else f"{ROON}/api/image?key={quote(key, safe='')}&size=256"
             image = get_bytes(url, timeout=2.5)
+            if image:
+                if not hasattr(self, "queue_artwork_light"): self.queue_artwork_light = {}
+                self.queue_artwork_light[key] = self.artwork_is_light(image)
             GLib.idle_add(self.apply_queue_thumbnail, key, self.decode_artwork(image), True)
+
+    def artwork_is_light(self, image):
+        try:
+            loader = GdkPixbuf.PixbufLoader.new(); loader.write(image); loader.close()
+            pixbuf = loader.get_pixbuf(); pixels = pixbuf.get_pixels()
+            width, height, stride, channels = pixbuf.get_width(), pixbuf.get_height(), pixbuf.get_rowstride(), pixbuf.get_n_channels()
+            values = []
+            # Sample the central artwork beneath the marker, not its border.
+            for fy in (.35, .45, .55, .65):
+                for fx in (.35, .45, .55, .65):
+                    offset = int(height * fy) * stride + int(width * fx) * channels
+                    red, green, blue = pixels[offset:offset + 3]
+                    values.append(.2126 * red + .7152 * green + .0722 * blue)
+            return sum(values) / len(values) >= 145
+        except (GLib.Error, ValueError, TypeError): return False
 
     def decode_artwork(self, image):
         # Gdk.Texture loading is thread-safe. Keep image decoding out of the
@@ -2924,7 +2949,11 @@ class Display(Gtk.Application):
         self.queue_thumbnail_order.append(key)
         while len(self.queue_thumbnail_order) > 192:
             old = self.queue_thumbnail_order.pop(0); self.queue_thumbnail_cache.pop(old, None)
+            getattr(self, "queue_artwork_light", {}).pop(old, None)
         for picture in self.queue_pictures.get(key, []): picture.set_paintable(texture)
+        for badge in getattr(self, "queue_play_badges", {}).get(key, []):
+            if getattr(self, "queue_artwork_light", {}).get(key, False): badge.add_css_class("light-art")
+            else: badge.remove_css_class("light-art")
         for picture in self.browser_pictures.get(key, []): picture.set_paintable(texture)
         for picture in self.discovery_pictures.get(key, []): picture.set_paintable(texture)
         return False

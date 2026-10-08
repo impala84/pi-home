@@ -8,6 +8,7 @@
 - Adds full-collection title and artist sorting on large portrait album browsers; Roon does not expose date sorting.
 - Loads source-labelled Wikipedia/Bandcamp album notes asynchronously through MusicBrainz links when available.
 - Makes the touch spring slightly stronger while retaining clipping and exact settling.
+- Highlights only the playing queue track, with a larger filled play marker that adapts to artwork brightness.
 
 ## 1.1.3-beta.9 Alpine — 8 October 2026
 
