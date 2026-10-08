@@ -893,7 +893,7 @@ class Display(Gtk.Application):
         self.browser_search_columns.set_orientation(Gtk.Orientation.VERTICAL if portrait and width < 700 else Gtk.Orientation.HORIZONTAL)
         self.discovery_body.set_orientation(Gtk.Orientation.VERTICAL if portrait else Gtk.Orientation.HORIZONTAL)
         self.discovery_sidebar.set_orientation(Gtk.Orientation.HORIZONTAL if portrait else Gtk.Orientation.VERTICAL)
-        self.detail_panel.set_orientation(Gtk.Orientation.VERTICAL if portrait and width < 700 else Gtk.Orientation.HORIZONTAL)
+        self.detail_panel.set_orientation(Gtk.Orientation.VERTICAL if portrait and width < 1000 else Gtk.Orientation.HORIZONTAL)
         # Ask GTK how much height the actual text and controls need. Long
         # titles must shrink the artwork instead of expanding the window.
         reserved = max(560, 120 + sum(widget.measure(Gtk.Orientation.VERTICAL, max(1, width - 64))[0] for widget in (self.discover_toolbar, self.now_playing_centre, self.music_navigation))) if portrait else 0
