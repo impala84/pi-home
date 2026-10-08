@@ -880,6 +880,7 @@ class Display(Gtk.Application):
         if hasattr(self, "settings_controls"):
             self.configure_settings_layout(width, height)
         self.browser_body.set_orientation(Gtk.Orientation.VERTICAL if portrait else Gtk.Orientation.HORIZONTAL)
+        self.browser_search_panel.set_orientation(Gtk.Orientation.VERTICAL if portrait else Gtk.Orientation.HORIZONTAL)
         self.browser_sidebar.set_orientation(Gtk.Orientation.HORIZONTAL if portrait else Gtk.Orientation.VERTICAL)
         self.browser_discovery_sidebar.set_orientation(Gtk.Orientation.HORIZONTAL if portrait else Gtk.Orientation.VERTICAL)
         self.browser_sidebar_spacer.set_hexpand(portrait); self.browser_sidebar_spacer.set_vexpand(not portrait)
@@ -1101,27 +1102,28 @@ class Display(Gtk.Application):
         scrub_gesture = Gtk.GestureDrag.new(); scrub_gesture.connect("drag-begin", self.browser_scrub_begin); scrub_gesture.connect("drag-update", self.browser_scrub_drag); scrub_gesture.connect("drag-end", self.browser_scrub_end); self.browser_scrubber.add_controller(scrub_gesture)
         content.append(self.browser_scrubber); browser_main.append(content); browser_body.append(browser_main)
         self.roon_views.add_named(browser, "browse")
-        search_panel = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12); search_panel.add_css_class("browser-search-panel")
+        search_panel = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12); search_panel.add_css_class("browser-search-panel"); self.browser_search_panel = search_panel
         search_nav = Gtk.Box(spacing=2); search_nav.add_css_class("browser-sidebar"); self.search_nav = search_nav
         for section in ("albums", "artists", "genres", "playlists"):
             button = self.button(section.upper(), lambda _button, value=section: (self.set_roon_view("browse"), self.request_browser("section", section=value)), "browser-filter"); button.get_child().set_xalign(0); search_nav.append(button)
         search_active = self.button("SEARCH", lambda *_: None, "browser-filter"); search_active.add_css_class("active"); search_nav.append(search_active); search_panel.append(search_nav)
-        self.search_results_scroll = Gtk.ScrolledWindow(); self.search_results_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC); self.search_results_scroll.set_vexpand(True); self.search_results_scroll.set_hexpand(True); self.search_results_scroll.set_propagate_natural_width(False); self.search_results_scroll.set_propagate_natural_height(False); self.search_results_scroll.set_min_content_height(1); self.search_results_scroll.set_visible(False); search_panel.append(self.search_results_scroll)
+        search_main = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12); search_main.set_hexpand(True); search_main.set_vexpand(True); self.search_main = search_main
+        self.search_results_scroll = Gtk.ScrolledWindow(); self.search_results_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC); self.search_results_scroll.set_vexpand(True); self.search_results_scroll.set_hexpand(True); self.search_results_scroll.set_propagate_natural_width(False); self.search_results_scroll.set_propagate_natural_height(False); self.search_results_scroll.set_min_content_height(1); self.search_results_scroll.set_visible(False); search_main.append(self.search_results_scroll)
         self.browser_search_timer = None
         elastic_vertical_scroll(self.browser_artist_scroll)
         self.search_results_scroll.get_vadjustment().connect("value-changed", lambda *_: self.load_visible_browser_artwork())
         self.browser_list.attach_touch_pull(self.search_results_scroll, vertical=True)
-        search_header = Gtk.Box(spacing=12); self.browser_search_entry = Gtk.Entry(); self.browser_search_entry.add_css_class("browser-search-entry"); self.browser_search_entry.set_placeholder_text("Search Roon"); self.browser_search_entry.set_hexpand(True); self.browser_search_entry.connect("activate", self.submit_browser_search); search_header.append(self.browser_search_entry); search_header.append(self.button("CANCEL", lambda *_: self.set_roon_view("browse"), "browser-key")); search_panel.append(search_header)
+        search_header = Gtk.Box(spacing=12); self.browser_search_entry = Gtk.Entry(); self.browser_search_entry.add_css_class("browser-search-entry"); self.browser_search_entry.set_placeholder_text("Search Roon"); self.browser_search_entry.set_hexpand(True); self.browser_search_entry.connect("activate", self.submit_browser_search); search_header.append(self.browser_search_entry); search_header.append(self.button("CANCEL", lambda *_: self.set_roon_view("browse"), "browser-key")); search_main.append(search_header)
         for keys in ("QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM", "1234567890"):
             key_row = Gtk.Box(spacing=7); key_row.set_homogeneous(True)
             for key in keys: key_row.append(self.button(key, lambda _button, value=key: self.browser_keyboard_key(value), "browser-key"))
-            search_panel.append(key_row)
+            search_main.append(key_row)
         keyboard_actions = Gtk.Box(spacing=10); keyboard_actions.set_homogeneous(True)
         for title, value in (("SPACE", " "), ("Backspace", "BACKSPACE"), ("CLEAR", "CLEAR")):
             callback = lambda _button, value=value: self.browser_keyboard_key(value)
             key = self.icon_button("erase", callback, "browser-key") if value == "BACKSPACE" else self.button(title, callback, "browser-key")
             key.set_tooltip_text(title); keyboard_actions.append(key)
-        search_submit = self.button("SEARCH", self.submit_browser_search, "browser-key"); search_submit.add_css_class("browser-search-submit"); keyboard_actions.append(search_submit); search_panel.append(keyboard_actions); self.roon_views.add_named(search_panel, "search")
+        search_submit = self.button("SEARCH", self.submit_browser_search, "browser-key"); search_submit.add_css_class("browser-search-submit"); keyboard_actions.append(search_submit); search_main.append(keyboard_actions); search_panel.append(search_main); self.roon_views.add_named(search_panel, "search")
         detail_panel = Gtk.Box(spacing=24); detail_panel.add_css_class("detail-panel"); detail_panel.set_hexpand(True); detail_panel.set_vexpand(True); detail_panel.set_homogeneous(True); self.detail_panel = detail_panel
         self.browser_search_entry.connect("changed", self.schedule_browser_search)
         self.browser_search_entry.set_width_chars(1)
