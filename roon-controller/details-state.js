@@ -136,6 +136,28 @@ async function loadAlbumWriteup(group, release, fetchText = externalText) {
   return {writeup: '', source: '', tags: []};
 }
 
+async function loadWikipediaAlbumWriteup(album, artist, fetchText = externalText) {
+  const empty = {writeup: '', source: '', tags: []};
+  const albumName = String(album || '').trim();
+  const artistName = String(artist || '').trim();
+  if (!albumName || !artistName) return empty;
+  const titles = [...new Set([albumName, `${albumName} (album)`])];
+  for (const title of titles) {
+    try {
+      const encoded = encodeURIComponent(title.replace(/\s+/g, '_'));
+      const summary = JSON.parse(await fetchText(`https://en.wikipedia.org/api/rest_v1/page/summary/${encoded}`));
+      const context = clean(`${summary.description || ''} ${summary.extract || ''}`);
+      const artistWords = clean(artistName).split(' ').filter(word => word.length > 1);
+      const artistMatch = artistWords.length && artistWords.every(word => context.includes(word));
+      const albumMatch = /\b(album|record|mixtape|extended play| ep)\b/.test(context);
+      if (summary.type !== 'disambiguation' && summary.extract && artistMatch && albumMatch) {
+        return {writeup: clipWriteup(summary.extract), source: 'Wikipedia', tags: []};
+      }
+    } catch (_) {}
+  }
+  return empty;
+}
+
 function creditedArtist(group) {
   return (group?.['artist-credit'] || []).map(credit => credit?.name || credit?.artist?.name || '').join('');
 }
@@ -203,7 +225,7 @@ function musicBrainzFacts(group, trackCount = 0, releaseDetails = null) {
   };
 }
 
-async function loadMusicBrainzMetadata(album, artist, trackCount = 0, fetchJson = musicBrainzJson, strictArtist = false) {
+async function loadMusicBrainzMetadata(album, artist, trackCount = 0, fetchJson = musicBrainzJson, strictArtist = false, fetchText = externalText) {
   if (!album || !artist) return musicBrainzFacts(null, trackCount);
   let match = null;
   for (const albumName of albumCandidates(album)) {
@@ -220,14 +242,18 @@ async function loadMusicBrainzMetadata(album, artist, trackCount = 0, fetchJson 
     const search = await fetchJson(`/ws/2/release-group/?query=${encodeURIComponent(query)}&fmt=json&limit=10`);
     match = chooseUniqueTitleGroup(search?.['release-groups'], album);
   }
-  if (!match?.id) return musicBrainzFacts(null, trackCount);
+  if (!match?.id) {
+    const writeup = await loadWikipediaAlbumWriteup(album, artist, fetchText);
+    return {...musicBrainzFacts(null, trackCount), writeup: writeup.writeup, writeup_source: writeup.source};
+  }
   const group = await fetchJson(`/ws/2/release-group/${encodeURIComponent(match.id)}?inc=genres+releases+url-rels&fmt=json`);
   const preferred = preferredMusicBrainzRelease(group);
   let release = null;
   if (preferred?.id) {
     try { release = await fetchJson(`/ws/2/release/${encodeURIComponent(preferred.id)}?inc=labels+recordings+url-rels&fmt=json`); } catch (_) {}
   }
-  const writeup = await loadAlbumWriteup(group, release);
+  let writeup = await loadAlbumWriteup(group, release, fetchText);
+  if (!writeup.writeup) writeup = await loadWikipediaAlbumWriteup(album, artist, fetchText);
   const facts = musicBrainzFacts(group, trackCount, release);
   facts.genres = [...new Set([...facts.genres, ...writeup.tags])].slice(0, 4);
   return {...facts, writeup: writeup.writeup, writeup_source: writeup.source};
@@ -298,4 +324,4 @@ async function loadDetails(service, zone, enrich = loadMusicBrainzMetadata) {
   return base;
 }
 
-module.exports = {clipWriteup, loadArtistProfile, playingMetadata, chooseItem, artistCandidates, albumCandidates, chooseMusicBrainzGroup, chooseUniqueTitleGroup, musicBrainzFacts, parseBandcampPage, loadAlbumWriteup, loadMusicBrainzMetadata, loadDetails};
+module.exports = {clipWriteup, loadArtistProfile, playingMetadata, chooseItem, artistCandidates, albumCandidates, chooseMusicBrainzGroup, chooseUniqueTitleGroup, musicBrainzFacts, parseBandcampPage, loadAlbumWriteup, loadWikipediaAlbumWriteup, loadMusicBrainzMetadata, loadDetails};

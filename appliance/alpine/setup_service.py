@@ -394,6 +394,7 @@ class Setup:
         """
         status = self.root / "var/lib/pi-home/netdata-operation-status"
         installer = None
+        migrated_package = False
         try:
             request = urllib.request.Request("https://get.netdata.cloud/kickstart.sh", headers={"User-Agent": "Pi-Home-Netdata-Installer"})
             with urllib.request.urlopen(request, timeout=45) as response, tempfile.NamedTemporaryFile(prefix="pi-home-netdata-", delete=False) as output:
@@ -404,8 +405,20 @@ class Setup:
                     if total > 5_000_000: raise ValueError("The official Netdata installer was unexpectedly large.")
                     output.write(chunk)
             installer.chmod(0o700)
-            atomic(status, "Installing the current official Netdata Agent…\n")
-            arguments = ["/bin/bash", str(installer), "--non-interactive", "--stable-channel", "--static-only", "--auto-update"]
+            packaged_agent = self.root / "usr/sbin/netdata"
+            static_agent = self.root / "opt/netdata/bin/netdata"
+            if packaged_agent.is_file() and not static_agent.is_file():
+                # Netdata's kickstart installer deliberately refuses to replace
+                # distribution-packaged installs. Older Pi Home images shipped
+                # Alpine's package, so remove it only after the new installer
+                # has downloaded successfully. apk retains /etc configuration.
+                atomic(status, "Replacing the older Alpine Netdata package…\n")
+                subprocess.run(["rc-service", "netdata", "stop"], capture_output=True, check=False, timeout=30)
+                self.run(["apk", "del", "netdata"])
+                migrated_package = True
+            atomic(status, "Installing the latest official stable Netdata Agent…\n")
+            arguments = ["/bin/bash", str(installer), "--non-interactive", "--release-channel", "stable", "--static-only", "--auto-update"]
+            if static_agent.is_file(): arguments.append("--reinstall")
             if token: arguments.extend(["--claim-token", token, "--claim-url", claim_url])
             if rooms: arguments.extend(["--claim-rooms", rooms])
             environment = {**os.environ, "DISABLE_TELEMETRY": "1"}
@@ -425,6 +438,13 @@ class Setup:
             # Restart under the managed service to apply the selected profile.
             atomic(status, "Official Netdata Agent installed. " + ("Checking Cloud connection…\n" if token else "Connect to Netdata Cloud from Settings when ready.\n"))
         except Exception as error:
+            if migrated_package and not (self.root / "opt/netdata/bin/netdata").is_file():
+                try:
+                    self.run(["apk", "add", "--no-cache", "netdata"])
+                    self.run(["rc-update", "add", "netdata", "default"])
+                    self.run(["rc-service", "netdata", "start"])
+                except Exception:
+                    pass
             message = str(error) if isinstance(error, ValueError) else "The official Netdata installation failed. Check the network and try again."
             atomic(status, "Failed: " + message + "\n")
         finally:

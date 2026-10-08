@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.3-beta.13 Alpine — 8 October 2026
+
+- Retrieves album summaries directly from a matching Wikipedia album page when MusicBrainz has no explicit article link, while rejecting unrelated and disambiguation results. This covers `(What's the Story) Morning Glory?` and other well-known albums that previously showed an unavailable message.
+- Refines the album sort popover with sentence-case labels, no broken arrow glyph or sticky selection, an immediate sorting state, inset spacing and consistent menu styling.
+- Offsets track-action popovers from the play tile so they align cleanly with track text and do not leave a focused action highlighted.
+- Correctly migrates Alpine's packaged Netdata agent to the official stable static agent before claiming it, using the current installer flags, explicit reinstalls for upgrades and package rollback when migration fails.
+
 ## 1.1.3-beta.12 Alpine — 8 October 2026
 
 - Replaces the unreliable native album sort dropdown with the same high-contrast popover styling used by track actions. Offers full-library title A–Z, title Z–A and artist A–Z sorting on large portrait displays.

@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const {clipWriteup, loadArtistProfile, playingMetadata, chooseItem, artistCandidates, albumCandidates, chooseMusicBrainzGroup, chooseUniqueTitleGroup, musicBrainzFacts, parseBandcampPage, loadAlbumWriteup, loadMusicBrainzMetadata, loadDetails} = require('./details-state');
+const {clipWriteup, loadArtistProfile, playingMetadata, chooseItem, artistCandidates, albumCandidates, chooseMusicBrainzGroup, chooseUniqueTitleGroup, musicBrainzFacts, parseBandcampPage, loadAlbumWriteup, loadWikipediaAlbumWriteup, loadMusicBrainzMetadata, loadDetails} = require('./details-state');
 
 test('album metadata retries the base title for common edition suffixes', () => {
   assert.deepEqual(albumCandidates('Hunting High and Low (2015 Remaster)'), ['Hunting High and Low (2015 Remaster)', 'Hunting High and Low']);
@@ -180,4 +180,33 @@ test('album writeup prefers a linked Wikipedia summary', async () => {
   const group = {relations: [{url: {resource: 'https://en.wikipedia.org/wiki/Example_album'}}]};
   const result = await loadAlbumWriteup(group, null, async () => JSON.stringify({type: 'standard', extract: 'The album story.'}));
   assert.deepEqual(result, {writeup: 'The album story.', source: 'Wikipedia', tags: []});
+});
+
+test('album writeup falls back to the matching Wikipedia album page', async () => {
+  const urls = [];
+  const result = await loadWikipediaAlbumWriteup("(What's the Story) Morning Glory?", 'Oasis', async url => {
+    urls.push(url);
+    return JSON.stringify({type: 'standard', description: '1995 studio album by Oasis', extract: 'Morning Glory is the second studio album by the English rock band Oasis. It was released in 1995.'});
+  });
+  assert.match(urls[0], /Morning_Glory/);
+  assert.equal(result.source, 'Wikipedia');
+  assert.match(result.writeup, /second studio album/);
+});
+
+test('Wikipedia album fallback rejects unrelated and disambiguation pages', async () => {
+  const unrelated = await loadWikipediaAlbumWriteup('Home', 'Example Artist', async () => JSON.stringify({type: 'standard', description: 'A place where someone lives', extract: 'A home is a dwelling.'}));
+  assert.equal(unrelated.writeup, '');
+  const ambiguous = await loadWikipediaAlbumWriteup('Home', 'Example Artist', async () => JSON.stringify({type: 'disambiguation', description: 'Albums and songs by Example Artist', extract: 'Home may refer to several albums.'}));
+  assert.equal(ambiguous.writeup, '');
+});
+
+test('MusicBrainz album metadata uses the title fallback when relations contain no writeup', async () => {
+  const id = '12345678-1234-1234-1234-123456789abc';
+  const fetchJson = async path => path.includes('?query=')
+    ? {'release-groups': [{id, title: "(What's the Story) Morning Glory?", score: 100, 'artist-credit': [{name: 'Oasis'}]}]}
+    : {id, title: "(What's the Story) Morning Glory?", 'artist-credit': [{name: 'Oasis'}], releases: [], relations: []};
+  const facts = await loadMusicBrainzMetadata("(What's the Story) Morning Glory?", 'Oasis', 0, fetchJson, true,
+    async () => JSON.stringify({type: 'standard', description: '1995 studio album by Oasis', extract: 'It is the second studio album by Oasis.'}));
+  assert.equal(facts.writeup_source, 'Wikipedia');
+  assert.equal(facts.writeup, 'It is the second studio album by Oasis.');
 });

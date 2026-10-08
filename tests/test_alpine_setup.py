@@ -291,6 +291,30 @@ class AlpineSetupTests(unittest.TestCase):
         self.run.assert_any_call(["apk", "add", "--no-cache", "curl", "ca-certificates"])
         self.assertNotIn("private-token", (self.root / "var/lib/pi-home/netdata-operation-status").read_text())
 
+    def test_official_agent_replaces_packaged_agent_and_uses_current_stable_flags(self):
+        packaged = self.root / "usr/sbin/netdata"; packaged.parent.mkdir(parents=True); packaged.touch()
+        (self.root / "var/lib/pi-home").mkdir(parents=True)
+        self.setup.netdata_install_lock.acquire()
+        with patch.object(module.urllib.request, "urlopen", return_value=io.BytesIO(b"#!/bin/sh\n")), patch.object(module.subprocess, "run", return_value=Mock(returncode=1)) as run:
+            self.setup.install_official_netdata("private-token", "room-1234")
+        calls = [call.args[0] for call in self.run.call_args_list]
+        self.assertIn(["apk", "del", "netdata"], calls)
+        self.assertIn(["apk", "add", "--no-cache", "netdata"], calls)
+        installer = next(call.args[0] for call in run.call_args_list if call.args[0][0] == "/bin/bash")
+        self.assertIn("--release-channel", installer)
+        self.assertEqual(installer[installer.index("--release-channel") + 1], "stable")
+        self.assertNotIn("--stable-channel", installer)
+
+    def test_official_agent_explicit_upgrade_reinstalls_static_agent(self):
+        static = self.root / "opt/netdata/bin/netdata"; static.parent.mkdir(parents=True); static.touch()
+        (self.root / "var/lib/pi-home").mkdir(parents=True)
+        self.setup.netdata_install_lock.acquire()
+        with patch.object(module.urllib.request, "urlopen", return_value=io.BytesIO(b"#!/bin/sh\n")), patch.object(module.subprocess, "run", return_value=Mock(returncode=1)) as run:
+            self.setup.install_official_netdata()
+        installer = next(call.args[0] for call in run.call_args_list if call.args[0][0] == "/bin/bash")
+        self.assertIn("--reinstall", installer)
+        self.assertNotIn(["apk", "del", "netdata"], [call.args[0] for call in self.run.call_args_list])
+
     def test_netdata_lightweight_preserves_other_settings_and_is_idempotent(self):
         agent = self.root / "opt/netdata/bin/netdata"; agent.parent.mkdir(parents=True); agent.touch()
         config = self.root / "opt/netdata/etc/netdata/netdata.conf"; config.parent.mkdir(parents=True)

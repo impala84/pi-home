@@ -527,7 +527,7 @@ scrolledwindow overshoot, scrolledwindow undershoot { background: transparent; b
 .portrait .browser-back { min-height: 38px; padding: 4px 16px; }
 .portrait.large-portrait .browser-back { min-height: 52px; }
 .browser-sort { min-height: 48px; padding: 8px 12px; border-radius: 8px; background: #282828; color: #817aeb; }
-.browser-sort:hover, .browser-sort:active { background: #383541; }
+.browser-sort:hover { background: #303033; }
 .large-display .home-name { font-size: 34px; }
 .large-display .home-state { font-size: 24px; }
 .large-display .browser-home-title { font-size: 24px; }
@@ -575,8 +575,10 @@ scrolledwindow overshoot, scrolledwindow undershoot { background: transparent; b
 
 CSS += b"""
 popover.track-menu > contents { background: #222225; color: #eceaef; border: 1px solid #45434e; border-radius: 12px; padding: 12px; box-shadow: 0 12px 48px rgba(0,0,0,.55); }
+popover.sort-menu > contents { margin-top: 8px; background: #000; border: 1px solid #45434e; padding: 8px; }
 .track-menu-action { min-height: 52px; padding: 10px 16px; border-radius: 8px; background: #282828; color: #817aeb; font-size: 18px; }
-.track-menu-action:hover, .track-menu-action:active { background: #383541; }
+.track-menu-action:hover { background: #303033; }
+.track-menu-action:active, .track-menu-action:focus { background: #282828; box-shadow: none; }
 .large-display .track-menu-action { min-height: 64px; font-size: 24px; }
 """
 # Small static texture: no animation, full-screen image download or per-frame work.
@@ -1032,7 +1034,7 @@ class Display(Gtk.Application):
         self.browser_surprise_button = self.button("SURPRISE!", lambda *_: self.request_browser("surprise"), "browser-filter"); self.browser_surprise_button.get_child().set_xalign(0); self.browser_surprise_button.add_css_class("browser-surprise"); sidebar.append(self.browser_surprise_button)
         self.browser_back = self.button("BACK", lambda *_: self.request_browser("back"), "browser-back"); self.browser_back.set_visible(False); self.browser_back.set_halign(Gtk.Align.START); self.browser_back.set_valign(Gtk.Align.END)
         self.browser_sort_order = "title"
-        self.browser_sort = self.button("SORT: TITLE A–Z  ▾", self.show_browser_sort, "browser-filter browser-sort")
+        self.browser_sort = self.button("Sort: Title, A to Z", self.show_browser_sort, "browser-filter browser-sort")
         self.browser_sort.set_visible(False)
         self.browser_sidebar = sidebar; browser_body.append(sidebar)
         self.browser_discovery_sidebar = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2); self.browser_discovery_sidebar.add_css_class("browser-sidebar"); self.browser_discovery_sidebar.set_vexpand(True); self.browser_discovery_sidebar.set_visible(False); browser_body.append(self.browser_discovery_sidebar)
@@ -2235,13 +2237,12 @@ class Display(Gtk.Application):
         threading.Thread(target=load, daemon=True).start()
 
     def show_browser_sort(self, button):
-        popover = Gtk.Popover(); popover.add_css_class("track-menu"); popover.set_parent(button); popover.set_has_arrow(False); popover.set_autohide(True); popover.set_position(Gtk.PositionType.BOTTOM)
-        choices = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        selected = {"value": False}
-        for order, title in (("title", "Title A–Z"), ("reverse", "Title Z–A"), ("artist", "Artist A–Z")):
+        popover = Gtk.Popover(); popover.add_css_class("track-menu"); popover.add_css_class("sort-menu"); popover.set_parent(button); popover.set_has_arrow(False); popover.set_autohide(True); popover.set_position(Gtk.PositionType.BOTTOM); popover.set_halign(Gtk.Align.START)
+        choices = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6); choices.set_size_request(max(1, button.get_width()), -1)
+        for order, title in (("title", "Title, A to Z"), ("reverse", "Title, Z to A"), ("artist", "Artist, A to Z")):
             def choose(_choice, value=order, menu=popover):
-                selected["value"] = True; menu.popdown(); self.request_browser("sort", order=value)
-            choices.append(self.button(title, choose, "track-menu-action"))
+                menu.popdown(); self.browser_sort.set_sensitive(False); self.browser_sort.get_child().set_text("Sorting…"); self.request_browser("sort", order=value)
+            choice = self.button(title, choose, "track-menu-action"); choice.set_focusable(False); choices.append(choice)
         def closed(*_):
             if getattr(self, "browser_sort_popover", None) is popover: self.browser_sort_popover = None
             popover.unparent()
@@ -2598,7 +2599,7 @@ class Display(Gtk.Application):
             popover = Gtk.Popover(); popover.add_css_class("track-menu"); popover.set_parent(anchor); popover.set_autohide(True)
             popover.set_has_arrow(False); popover.set_position(Gtk.PositionType.RIGHT)
             popover.set_valign(Gtk.Align.START)
-            rect = Gdk.Rectangle(); rect.x = 0; rect.y = 0; rect.width = min(116, max(1, anchor.get_width())); rect.height = 1; popover.set_pointing_to(rect)
+            rect = Gdk.Rectangle(); rect.x = max(1, anchor.get_width()) + 12; rect.y = 0; rect.width = 1; rect.height = 1; popover.set_pointing_to(rect)
             self.browser_action_popover = popover
             choices = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
             selected = {"value": False}
@@ -2607,7 +2608,7 @@ class Display(Gtk.Application):
                 selected["value"] = True; popover.popdown(); self.request_browser("open", item_key=key)
             for item in data.get("items", []):
                 if item.get("action"):
-                    choices.append(self.labelled_icon_button(self.browser_action_icon(item["title"]), item["title"], lambda button, key=item.get("item_key"): choose(button, key), "track-menu-action"))
+                    choice = self.labelled_icon_button(self.browser_action_icon(item["title"]), item["title"], lambda button, key=item.get("item_key"): choose(button, key), "track-menu-action"); choice.set_focusable(False); choices.append(choice)
             def closed(*_):
                 self.browser_action_popover = None
                 popover.unparent()
@@ -2617,8 +2618,9 @@ class Display(Gtk.Application):
         self.browser_rendering = True; self.browser_loading = True; self.browser_state = data; self.browser_back.set_visible(bool(data.get("can_back")) and not data.get("surprise_preview")); self.browser_back.set_sensitive(bool(data.get("can_back"))); self.browser_scrubber.set_visible(bool(data.get("alpha_scrub")))
         if hasattr(self, "browser_sort"):
             self.browser_sort.set_visible(data.get("section") == "albums" and bool(data.get("section_root")) and getattr(self, "responsive_portrait", False) and getattr(self, "viewport_width", 800) >= 1000)
+            self.browser_sort.set_sensitive(True)
             self.browser_sort_order = data.get("sort_order", "title")
-            self.browser_sort.get_child().set_text({"title":"SORT: TITLE A–Z  ▾", "reverse":"SORT: TITLE Z–A  ▾", "artist":"SORT: ARTIST A–Z  ▾"}.get(self.browser_sort_order, "SORT: TITLE A–Z  ▾"))
+            self.browser_sort.get_child().set_text({"title":"Sort: Title, A to Z", "reverse":"Sort: Title, Z to A", "artist":"Sort: Artist, A to Z"}.get(self.browser_sort_order, "Sort: Title, A to Z"))
         active_section = "surprise" if data.get("surprise_preview") else (data.get("section") or "albums")
         from_discover = self.discovery_active and self.discovery_browser_origin
         self.browser_sidebar.set_visible(not data.get("surprise_preview") and not from_discover)
