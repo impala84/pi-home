@@ -326,7 +326,13 @@ http.createServer(async (request, response) => {
       const name = String(url.searchParams.get('name') || '').trim().slice(0, 200);
       if (!name) return json(response, 400, {error:'Artist name required'});
       if (!artistProfileCache.has(name)) {
-        const pending = loadArtistProfile(name).catch(()=>({name,writeup:'',source:''}));
+        const pending = loadArtistProfile(name).then(profile => {
+          if (!profile.writeup) artistProfileCache.delete(name);
+          return profile;
+        }).catch(()=>{
+          artistProfileCache.delete(name);
+          return {name,writeup:'',source:''};
+        });
         artistProfileCache.set(name, pending);
         while (artistProfileCache.size > 64) artistProfileCache.delete(artistProfileCache.keys().next().value);
       }

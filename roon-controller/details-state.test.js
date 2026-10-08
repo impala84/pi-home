@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const {clipWriteup, loadArtistProfile, playingMetadata, chooseItem, artistCandidates, albumCandidates, chooseMusicBrainzGroup, chooseUniqueTitleGroup, musicBrainzFacts, parseBandcampPage, loadAlbumWriteup, loadWikipediaAlbumWriteup, loadAlbumNotes, loadMusicBrainzMetadata, loadDetails} = require('./details-state');
+const {clipWriteup, loadArtistProfile, loadWikipediaArtistWriteup, chooseArtistCandidate, playingMetadata, chooseItem, artistCandidates, albumCandidates, chooseMusicBrainzGroup, chooseUniqueTitleGroup, musicBrainzFacts, parseBandcampPage, loadAlbumWriteup, loadWikipediaAlbumWriteup, loadAlbumNotes, loadMusicBrainzMetadata, loadDetails} = require('./details-state');
 
 test('album metadata retries the base title for common edition suffixes', () => {
   assert.deepEqual(albumCandidates('Hunting High and Low (2015 Remaster)'), ['Hunting High and Low (2015 Remaster)', 'Hunting High and Low']);
@@ -21,15 +21,31 @@ test('artist background follows only a unique exact MusicBrainz identity', async
   const calls = [];
   const json = async path => {
     calls.push(path);
-    return path.includes('?query=') ? {artists:[{name:'Radiohead',id}]} : {relations:[{url:{resource:'https://en.wikipedia.org/wiki/Radiohead'}}]};
+    return path.includes('?query=') ? {artists:[{name:'Radiohead',id}]} : {type:'Group',area:{name:'Oxfordshire'},country:'GB','life-span':{begin:'1985'},tags:[{name:'rock',count:8},{name:'alternative',count:4}],relations:[{url:{resource:'https://en.wikipedia.org/wiki/Radiohead'}}]};
   };
   const result = await loadArtistProfile('Radiohead', json, async()=>JSON.stringify({extract:'A British rock band.'}));
   assert.equal(result.writeup, 'A British rock band.'); assert.equal(result.source,'Wikipedia');
+  assert.equal(result.type, 'Group'); assert.equal(result.area, 'Oxfordshire'); assert.equal(result.country, 'GB'); assert.equal(result.formed, '1985'); assert.deepEqual(result.genres, ['rock','alternative']);
   assert.match(calls[1], /inc=url-rels/);
   for (const artists of [[{name:'Other',id}], [{name:'Radiohead',id},{name:'Radiohead',id}]]) {
     const result = await loadArtistProfile('Radiohead', async()=>({artists}), async()=>{throw Error('Must not request a biography')});
     assert.equal(result.writeup,'');
   }
+});
+
+test('artist matching accepts a decisive canonical result but rejects tied names', () => {
+  const canonical = {name:'Phoenix',id:'canonical',score:100};
+  assert.equal(chooseArtistCandidate([canonical,{name:'Phoenix',id:'tribute',score:82}]), canonical);
+  assert.equal(chooseArtistCandidate([{name:'Phoenix',score:100},{name:'Phoenix',score:100}]), null);
+});
+
+test('artist background can use a clearly musical Wikipedia page when MusicBrainz is ambiguous', async () => {
+  const result = await loadWikipediaArtistWriteup('Air', async url => {
+    if (url.includes('(band)')) return JSON.stringify({type:'standard',title:'Air (French band)',description:'French musical duo',extract:'Air are a French music duo formed in Versailles.'});
+    return JSON.stringify({type:'disambiguation',title:'Air',extract:'Air may refer to several subjects.'});
+  });
+  assert.equal(result.source, 'Wikipedia');
+  assert.match(result.writeup, /French music duo/);
 });
 
 test('playingMetadata reads three-line Roon metadata', () => {
@@ -192,6 +208,18 @@ test('album writeup falls back to the matching Wikipedia album page', async () =
   assert.equal(result.source, 'Wikipedia');
   assert.match(result.writeup, /second studio album/);
   assert.match(result.full_writeup, /released in 1995/);
+});
+
+test('Wikipedia album fallback handles initialled artists and artist-qualified titles', async () => {
+  const urls = [];
+  const result = await loadWikipediaAlbumWriteup('Monster', 'R.E.M.', async url => {
+    urls.push(url);
+    if (!url.includes('R.E.M.')) return JSON.stringify({type:'disambiguation',description:'Several works',extract:'Monster may refer to several works.'});
+    return JSON.stringify({type:'standard',description:'1994 studio album by R.E.M.',extract:'Monster is the ninth studio album by American rock band R.E.M.'});
+  });
+  assert.equal(urls.length, 3);
+  assert.equal(result.source, 'Wikipedia');
+  assert.match(result.writeup, /ninth studio album/);
 });
 
 test('Wikipedia album fallback rejects unrelated and disambiguation pages', async () => {

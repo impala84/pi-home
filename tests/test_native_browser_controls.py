@@ -41,13 +41,15 @@ class PortraitRefinementTests(unittest.TestCase):
         self.assertIs(owner.queue_thumbnail_cache["cover"], texture)
         self.assertNotIn("cover", owner.queue_thumbnail_pending)
 
-    def test_large_preview_avoids_thumbnail_cache_and_requests_900px(self):
+    def test_large_preview_uses_its_own_full_resolution_cache_and_requests_900px(self):
         code = SOURCE.read_text()
         render = code.split('if items and data.get("surprise_preview"):', 1)[1].split('title = self.label', 1)[0]
         self.assertIn('self.load_preview_artwork(picture, key)', render)
         self.assertNotIn('queue_thumbnail_cache', render)
         preview = code.split('def load_preview_artwork', 1)[1].split('def apply_queue_thumbnail', 1)[0]
         self.assertIn('&size=900', preview)
+        self.assertIn('self.preview_artwork_cache.get(key)', preview)
+        self.assertIn('self.preview_artwork_cache[key] = texture', preview)
 
     def test_large_settings_and_dynamic_play_icon_keep_their_size(self):
         code = SOURCE.read_text()
@@ -788,7 +790,8 @@ class NativeBrowserControlsTests(unittest.TestCase):
 
     def test_touch_popovers_hide_the_cursor_before_opening(self):
         code = SOURCE.read_text(encoding='utf-8')
-        self.assertGreaterEqual(code.count('self.hide_widget_cursor(popover); popover.popup()'), 2)
+        self.assertGreaterEqual(code.count('self.hide_widget_cursor(popover); popover.popup(); self.hide_native_cursor(popover)'), 2)
+        self.assertGreaterEqual(code.count('GLib.idle_add(self.hide_native_cursor, widget)'), 2)
         self.assertIn('getattr(self, "browser_sort_popover", None)', code)
 
     def test_failed_boot_config_fetch_keeps_last_good_settings_and_retries(self):

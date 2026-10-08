@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.1.3-beta.19 Alpine — 9 October 2026
+
+- Reworks the native Album & Artist fact sheet into a clean full-screen two-column layout with larger headings, circular SVG close control, richer artist facts and direct Browse Artist / Artist Albums actions.
+- Adds a deliberately reduced fact-sheet layout for 800×480 landscape displays, keeping both artworks, useful facts, short summaries and actions readable without the previous oversized crop.
+- Corrects the track play menu anchor and touch sizing on compact landscape screens, keeps its cursor hidden, aligns its grays with the shared palette and prevents album art flashing when it closes.
+- Improves metadata coverage by following safe Wikipedia redirects, handling initialled artist names, trying artist-qualified album pages, accepting decisively ranked duplicate-name artists and allowing more realistic lookup times; blank artist results are no longer cached after transient failures.
+- Keeps Browse’s secondary navigation in exactly the same position when Search opens.
+- Moves Background beside Theme under Appearance on every settings layout.
+- Extends Screen Preview to open Settings, Album & Artist, Search and deeper Browse categories before capturing the physical display.
+
 ## Unreleased Alpine
 
 - Disables Wi-Fi power saving in the Alpine image and on Wi-Fi profiles created by setup, preventing the severe local-network latency spikes observed with Roon Discover.

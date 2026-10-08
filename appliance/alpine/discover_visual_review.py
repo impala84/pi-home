@@ -447,7 +447,7 @@ display.adapt_display()
 display.render_bluos_inputs({"inputs": [{"id": "tv", "name": "Watch TV"}, {"id": "rega", "name": "Rega P3"}]}, True)
 capture("now-playing")
 display.detail_artist_profile_name = "Emancipator"
-display.detail_artist_profile = {"full_writeup": "Emancipator is an American electronic producer known for richly layered downtempo compositions.", "source": "Wikipedia"}
+display.detail_artist_profile = {"full_writeup": "Emancipator is an American electronic producer known for richly layered downtempo compositions.", "source": "Wikipedia", "type": "Person", "area": "Portland", "country": "US", "formed": "2003", "genres": ["downtempo", "electronic"]}
 display.render_details({"status":"ready", "album":"Soon It Will Be Cold Enough", "artist":"Emancipator", "subtitle":"2006", "metadata":{"full_writeup":"The debut album blends acoustic instrumentation, field recordings and patient electronic rhythms into a cinematic whole.", "writeup_source":"Wikipedia", "release_date":"2006-01-17", "genres":["Electronic", "Downtempo"], "type":"Album", "label":"Loci Records", "format":"CD", "track_count":3}, "tracks":[{"title":"Eve"},{"title":"Soon It Will Be Cold Enough"},{"title":"First Snow"}]})
 display.detail_artist_artwork.set_filename(str(fixture_art("artist-fact", "ARTIST")))
 display.detail_album_artwork.set_filename(str(fixture_art("album-fact", "ALBUM")))
@@ -528,8 +528,17 @@ capture("track-actions")
 display.capture_display("track-menu-capture-check")
 assert "image" in capture_results[-1], capture_results[-1]
 (OUTPUT / "track-actions-live-capture.png").write_bytes(base64.b64decode(capture_results[-1]["image"]))
-# Dismiss without issuing a fixture request to the real controller.
 popup = display.browser_action_popover
+valid, popup_bounds = popup.compute_bounds(page)
+anchor_bounds = display.browser_action_anchor.compute_bounds(page)[1]
+assert valid and popup_bounds.get_x() >= 0 and popup_bounds.get_y() >= 0
+assert popup_bounds.get_x() + popup_bounds.get_width() <= screen_width
+assert popup_bounds.get_y() + popup_bounds.get_height() <= screen_height
+if screen_height <= 600:
+    expected_x = anchor_bounds.get_x() + min(116, anchor_bounds.get_width()) - 18
+    assert abs(popup_bounds.get_x() - expected_x) <= 24, (popup_bounds.get_x(), expected_x)
+    assert popup_bounds.get_height() < 300, popup_bounds.get_height()
+# Dismiss without issuing a fixture request to the real controller.
 if isinstance(popup, Gtk.Popover): popup.unparent()
 display.set_roon_view("now")
 
@@ -594,7 +603,7 @@ if screen_height > screen_width:
 settings = display.build_settings()
 window.set_child(settings)
 display.configure_settings_layout(screen_width, screen_height)
-display.device_status.set_text("v1.1.3-beta.18 Alpine")
+display.device_status.set_text("v1.1.3-beta.19 Alpine")
 display.touch_diagnostics.set_text("Memory 6.1%  ·  Load 0.65  ·  62.8°C  ·  Controller ready  ·  Bridge offline")
 capture("settings")
 assert window.get_width() == screen_width and window.get_height() == screen_height, (window.get_width(), window.get_height())

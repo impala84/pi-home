@@ -27,7 +27,7 @@ function musicBrainzJson(path) {
     lastMusicBrainzRequest = Date.now();
     return new Promise((resolve, reject) => {
       const request = https.get({
-        hostname: 'musicbrainz.org', path, timeout: 3500,
+        hostname: 'musicbrainz.org', path, timeout: 6000,
         headers: {'Accept': 'application/json', 'User-Agent': 'PiHome/0.11.8 (https://github.com/impala84/pi-home)'}
       }, response => {
         let body = '';
@@ -47,16 +47,24 @@ function musicBrainzJson(path) {
   return queued;
 }
 
-function externalText(url) {
+function externalText(url, redirects = 0) {
   const target = new URL(url);
   const allowed = target.hostname === 'wikipedia.org' || target.hostname.endsWith('.wikipedia.org') || target.hostname === 'bandcamp.com' || target.hostname.endsWith('.bandcamp.com') || (target.hostname === 'www.wikidata.org' && /^\/wiki\/Special:EntityData\/Q\d+\.json$/.test(target.pathname));
   if (!allowed || target.protocol !== 'https:') return Promise.reject(new Error('Unsupported metadata source'));
   return new Promise((resolve, reject) => {
-    const request = https.get(target, {timeout: 3500, headers: {'Accept': 'text/html,application/json', 'User-Agent': 'PiHome/0.11.8 (https://github.com/impala84/pi-home)'}}, response => {
+    const request = https.get(target, {timeout: 7000, headers: {'Accept': 'text/html,application/json', 'User-Agent': 'PiHome/0.11.8 (https://github.com/impala84/pi-home)'}}, response => {
       let body = '';
       response.setEncoding('utf8');
       response.on('data', chunk => { body += chunk; if (body.length > 2 * 1024 * 1024) request.destroy(new Error('Metadata response too large')); });
-      response.on('end', () => response.statusCode >= 200 && response.statusCode < 300 ? resolve(body) : reject(new Error(`Metadata HTTP ${response.statusCode}`)));
+      response.on('end', () => {
+        if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
+          if (redirects >= 3) return reject(new Error('Metadata redirected too many times'));
+          let redirected;
+          try { redirected = new URL(response.headers.location, target).toString(); } catch (error) { return reject(error); }
+          return externalText(redirected, redirects + 1).then(resolve, reject);
+        }
+        return response.statusCode >= 200 && response.statusCode < 300 ? resolve(body) : reject(new Error(`Metadata HTTP ${response.statusCode}`));
+      });
     });
     request.on('timeout', () => request.destroy(new Error('Metadata timeout')));
     request.on('error', reject);
@@ -71,7 +79,9 @@ function decodeHtml(value) {
 
 function clipWriteup(value, limit = 320, sentenceLimit = 2) {
   const text = decodeHtml(value);
-  const sentences = text.match(/[^.!?]+(?:[.!?]+(?=\s|$)|$)/g) || [];
+  // Do not mistake initials such as R.E.M. for four one-letter sentences.
+  const protectedText = text.replace(/\b(?:[A-Za-z]\.){2,}/g, initials => initials.replaceAll('.', '\u2024'));
+  const sentences = (protectedText.match(/[^.!?]+(?:[.!?]+(?=\s|$)|$)/g) || []).map(sentence => sentence.replaceAll('\u2024', '.'));
   const brief = sentences.slice(0, sentenceLimit).map(sentence => sentence.trim()).join(' ').trim() || text;
   if (brief.length <= limit) return brief;
   const first = sentences[0]?.trim();
@@ -92,14 +102,18 @@ function relationResources(...entities) {
 }
 
 async function loadArtistProfile(name, fetchJson = musicBrainzJson, fetchText = externalText) {
-  const empty = {name, writeup: '', source: ''};
+  const empty = {name, writeup: '', source: '', type: '', area: '', country: '', formed: '', ended: '', genres: []};
   const escaped = String(name || '').slice(0, 200).replace(/["\\]/g, ' ');
   if (!escaped.trim()) return empty;
   const search = await fetchJson('/ws/2/artist/?query=' + encodeURIComponent('artist:"' + escaped + '"') + '&fmt=json&limit=10');
   const exact = (search.artists || []).filter(artist => clean(artist.name) === clean(name));
+  const candidate = chooseArtistCandidate(exact);
   // Do not show the biography of an unrelated same-name artist.
-  if (exact.length !== 1 || !/^[a-f0-9-]{36}$/i.test(exact[0].id || '')) return empty;
-  const artist = await fetchJson('/ws/2/artist/' + exact[0].id + '?inc=url-rels&fmt=json');
+  if (!candidate || !/^[a-f0-9-]{36}$/i.test(candidate.id || '')) {
+    const fallback = await loadWikipediaArtistWriteup(name, fetchText);
+    return {...empty, ...fallback};
+  }
+  const artist = await fetchJson('/ws/2/artist/' + candidate.id + '?inc=url-rels+tags&fmt=json');
   const wikiData = relationResources(artist).find(resource=>/^https:\/\/www.wikidata.org\/wiki\/Q\d+$/.test(resource));
   if (wikiData && !relationResources(artist).some(resource=>resource.includes('.wikipedia.org/wiki/'))) {
     try {
@@ -109,8 +123,44 @@ async function loadArtistProfile(name, fetchJson = musicBrainzJson, fetchText = 
       if (title) artist.relations.push({url:{resource:'https://en.wikipedia.org/wiki/' + encodeURIComponent(title)}});
     } catch (_) {}
   }
-  const result = await loadAlbumWriteup(artist, null, fetchText);
-  return {...empty, writeup: result.writeup, full_writeup: result.full_writeup || result.writeup, source: result.source};
+  let result = await loadAlbumWriteup(artist, null, fetchText);
+  if (!result.writeup) result = await loadWikipediaArtistWriteup(name, fetchText);
+  const genres = (artist.tags || []).filter(tag => tag?.name).sort((a,b)=>(b.count||0)-(a.count||0)).map(tag=>tag.name).slice(0,4);
+  return {...empty,
+    type: artist.type || '', area: artist.area?.name || artist['begin-area']?.name || '', country: artist.country || '',
+    formed: artist['life-span']?.begin || '', ended: artist['life-span']?.ended ? (artist['life-span']?.end || '') : '', genres,
+    writeup: result.writeup, full_writeup: result.full_writeup || result.writeup, source: result.source};
+}
+
+async function loadWikipediaArtistWriteup(name, fetchText = externalText) {
+  const empty = {writeup: '', full_writeup: '', source: ''};
+  const artistName = String(name || '').trim();
+  if (!artistName) return empty;
+  const titles = [...new Set([artistName, `${artistName} (band)`, `${artistName} (musician)`, `${artistName} (singer)`])];
+  for (const title of titles) {
+    try {
+      const encoded = encodeURIComponent(title.replace(/\s+/g, '_'));
+      const summary = JSON.parse(await fetchText(`https://en.wikipedia.org/api/rest_v1/page/summary/${encoded}`));
+      const pageTitle = clean(summary.title || '');
+      const wanted = clean(artistName);
+      const context = clean(`${summary.description || ''} ${summary.extract || ''}`);
+      const musicProfile = /\b(band|musical group|musician|singer|rapper|composer|disc jockey|record producer|recording artist|duo|trio|orchestra)\b/.test(context);
+      if (summary.type !== 'disambiguation' && summary.extract && pageTitle.startsWith(wanted) && musicProfile) {
+        return {writeup: clipWriteup(summary.extract), full_writeup: decodeHtml(summary.extract), source: 'Wikipedia'};
+      }
+    } catch (_) {}
+  }
+  return empty;
+}
+
+function chooseArtistCandidate(artists) {
+  if ((artists || []).length === 1) return artists[0];
+  const ranked = [...(artists || [])].sort((a,b)=>Number(b.score || 0)-Number(a.score || 0));
+  // MusicBrainz commonly returns an alias or tribute act with the same exact
+  // display name. Accept the canonical result only when its search score is
+  // decisively ahead; tied names remain deliberately unresolved.
+  if (Number(ranked[0]?.score || 0) >= 95 && Number(ranked[0]?.score || 0) - Number(ranked[1]?.score || 0) >= 5) return ranked[0];
+  return null;
 }
 
 async function loadAlbumWriteup(group, release, fetchText = externalText) {
@@ -141,14 +191,17 @@ async function loadWikipediaAlbumWriteup(album, artist, fetchText = externalText
   const albumName = String(album || '').trim();
   const artistName = String(artist || '').trim();
   if (!albumName || !artistName) return empty;
-  const titles = [...new Set([albumName, `${albumName} (album)`])];
+  const titles = [...new Set([albumName, `${albumName} (album)`, `${albumName} (${artistName} album)`])];
   for (const title of titles) {
     try {
       const encoded = encodeURIComponent(title.replace(/\s+/g, '_'));
       const summary = JSON.parse(await fetchText(`https://en.wikipedia.org/api/rest_v1/page/summary/${encoded}`));
       const context = clean(`${summary.description || ''} ${summary.extract || ''}`);
-      const artistWords = clean(artistName).split(' ').filter(word => word.length > 1);
-      const artistMatch = artistWords.length && artistWords.every(word => context.includes(word));
+      const cleanedArtist = clean(artistName);
+      const artistWords = cleanedArtist.split(' ').filter(word => word.length > 1 && !['the','and','with','feat','featuring'].includes(word));
+      const compactArtist = cleanedArtist.replace(/\s+/g, '');
+      const compactContext = context.replace(/\s+/g, '');
+      const artistMatch = (artistWords.length && artistWords.every(word => context.includes(word))) || (compactArtist.length >= 2 && compactContext.includes(compactArtist));
       const albumMatch = /\b(album|record|mixtape|extended play| ep)\b/.test(context);
       if (summary.type !== 'disambiguation' && summary.extract && artistMatch && albumMatch) {
         return {writeup: clipWriteup(summary.extract), full_writeup: decodeHtml(summary.extract), source: 'Wikipedia', tags: []};
@@ -165,7 +218,7 @@ async function loadAlbumNotes(album, artist, fetchJson = musicBrainzJson, fetchT
     if (direct.writeup) return {...empty, writeup: direct.writeup, source: direct.source};
   } catch (_) {}
   try {
-    const facts = await loadMusicBrainzMetadata(album, artist, 0, fetchJson, true, fetchText);
+    const facts = await loadMusicBrainzMetadata(album, artist, 0, fetchJson, false, fetchText);
     return {...empty, writeup: facts.writeup || '', source: facts.writeup_source || ''};
   } catch (_) {
     return empty;
@@ -338,4 +391,4 @@ async function loadDetails(service, zone, enrich = loadMusicBrainzMetadata) {
   return base;
 }
 
-module.exports = {clipWriteup, loadArtistProfile, playingMetadata, chooseItem, artistCandidates, albumCandidates, chooseMusicBrainzGroup, chooseUniqueTitleGroup, musicBrainzFacts, parseBandcampPage, loadAlbumWriteup, loadWikipediaAlbumWriteup, loadAlbumNotes, loadMusicBrainzMetadata, loadDetails};
+module.exports = {clipWriteup, loadArtistProfile, loadWikipediaArtistWriteup, chooseArtistCandidate, playingMetadata, chooseItem, artistCandidates, albumCandidates, chooseMusicBrainzGroup, chooseUniqueTitleGroup, musicBrainzFacts, parseBandcampPage, loadAlbumWriteup, loadWikipediaAlbumWriteup, loadAlbumNotes, loadMusicBrainzMetadata, loadDetails};

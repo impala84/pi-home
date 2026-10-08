@@ -1,6 +1,6 @@
 # Pi Home
 
-Alpine testing release: **1.1.3-beta.18**, with the artist-and-album fact sheet implemented on the physical native touchscreen as a solid full-screen page with an explicit close button, separate artist and album artwork, biographies and release information. It retains the compact daily controls, portrait bus refinements, standalone Netdata installer and optional per-device touchscreen white balance using measured RGB gains. See [activation and reset commands](docs/display-white-balance.md). Select Beta explicitly to test; Stable remains 1.1.2.
+Alpine testing release: **1.1.3-beta.19**, with a cleaner, richer artist-and-album fact sheet and a reduced 800×480 landscape version; corrected compact play-menu positioning; more reliable album and artist summaries; Appearance settings grouped consistently; and deeper Screen Preview capture controls. It retains the portrait bus refinements, standalone Netdata installer and optional per-device touchscreen white balance using measured RGB gains. See [activation and reset commands](docs/display-white-balance.md). Select Beta explicitly to test; Stable remains 1.1.2.
 
 The current Alpine stable release is **1.1.2**: an in-place correction for 10-inch Touch Display 2 touch rotation. Update through System → Software on the Stable channel, then reboot manually to apply input calibration. Physical touch acceptance is still required. The 1.1.1 full image remains available for fresh installs. Raspberry Pi OS releases remain separate.
 
