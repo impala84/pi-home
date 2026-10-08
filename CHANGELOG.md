@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.3-beta.6 Alpine — 8 October 2026
+
+- Replaces the confusing Diagnostics preview controls with a dedicated Screen Preview page. Section buttons and a Discover-view dropdown lead to searchable browse results; tap an album/track to open it without separate Load/Open steps.
+- Waits for a request-matched native display acknowledgement before updating results and automatically capturing the screen. Shows loading/errors inline rather than in the settings save banner.
+- Uses asynchronous screenshot tickets and short status requests. Keeps the last successful image and timestamp when capture fails, with a download link and manual refresh.
+- Separates playback actions from browsing and requests explicit confirmation before running them. Protects preview APIs with settings authentication and restricts display acknowledgements to local, non-forwarded requests.
+- Beta only; no changes to bus sizing, live GPU acceleration, rotation or network configuration. Physical-Pi screenshot acceptance remains required.
+
 ## 1.1.3-beta.5 Alpine — 8 October 2026
 
 - Doubles arrival numeral sizing on large portrait bus layouts while preserving the compact-screen limits.

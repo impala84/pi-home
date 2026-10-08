@@ -38,10 +38,12 @@ class DisplayRotationTests(unittest.TestCase):
     def test_diagnostics_can_select_physical_views_and_theme_the_favicon(self):
         html = (ROOT / "src/pi_bus_time_display/static/admin.html").read_text()
         javascript = (ROOT / "src/pi_bus_time_display/static/admin.js").read_text()
-        self.assertIn('data-display-view="recent"', html)
-        self.assertIn('data-display-view="daily"', html)
-        self.assertIn('data-display-view="releases"', html)
-        self.assertIn("view:button.dataset.displayView", javascript)
+        self.assertIn('href="/preview.html"', html)
+        preview = (ROOT / "src/pi_bus_time_display/static/preview.html").read_text()
+        self.assertIn('value="recent"', preview)
+        self.assertIn('value="daily"', preview)
+        self.assertIn('value="releases"', preview)
+        self.assertNotIn('id="capture-display"', html)
         self.assertIn("'/favicon-roon.svg':'/favicon.svg'", javascript)
         self.assertIn('>Check and install</button>', html)
 

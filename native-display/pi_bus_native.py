@@ -1327,9 +1327,15 @@ class Display(Gtk.Application):
         return False
 
     def apply_display_view_request(self, request):
+        self.preview_navigation_id = request.get("id")
+        if self.preview_navigation_id:
+            GLib.timeout_add(150, self.finish_preview_navigation, request, time.monotonic() + 40)
         view = str(request.get("view", ""))
         action = request.get("browse_action")
         if action in {"open", "back", "current", "section"}:
+            if popup := getattr(self, "browser_action_popover", None):
+                self.browser_action_selected["value"] = True
+                popup.popdown()
             self.set_mode("roon"); self.set_roon_view("browse")
             self.browser_action_anchor = None
             child = self.browser_list.get_first_child()
@@ -1344,7 +1350,22 @@ class Display(Gtk.Application):
             self.show_roon_now()
             self.set_mode("roon")
         elif view in {"recent", "daily", "releases", "browse", "surprise"}:
+            self.discovery_signature = None
             self.open_discover(view)
+        elif view in {"bus", "home"}:
+            self.set_mode(view)
+        return False
+
+    def finish_preview_navigation(self, request, deadline):
+        if request.get("id") != getattr(self, "preview_navigation_id", None): return False
+        view = self.roon_views.get_visible_child_name() if request.get("view") not in {"bus", "home"} else request["view"]
+        browser = view in {"browse", "search"}
+        loading = (getattr(self, "browser_loading", False) or getattr(self, "browser_rendering", False)) if browser else view == "discover" and (not self.discovery_signature or (getattr(self, "discovery_data", {}) or {}).get("status") == "loading")
+        if loading and time.monotonic() < deadline: return True
+        data = (self.browser_state or {}) if browser else (getattr(self, "discovery_data", {}) or {}) if view == "discover" else {}
+        error = "The display did not finish opening this view." if loading else str(data.get("message") or "Could not open this view") if data.get("error") or data.get("status") in {"error", "unavailable"} else ""
+        result = {"id": request["id"], "error": error, "title": data.get("title") or request.get("view", "Display"), "can_back": data.get("can_back", False), "items": data.get("items", []) if browser else []}
+        threading.Thread(target=post_json, args=(BUS + "/api/device/preview", result), kwargs={"timeout": 5}, daemon=True).start()
         return False
 
     def apply(self, target, status, roon, config, system, device, image_key, image):
@@ -2405,6 +2426,7 @@ class Display(Gtk.Application):
             self.browser_action_popover = popover
             choices = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
             selected = {"value": False}
+            self.browser_action_selected = selected
             def choose(_button, key):
                 selected["value"] = True; popover.popdown(); self.request_browser("open", item_key=key)
             for item in data.get("items", []):

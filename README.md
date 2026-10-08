@@ -1,6 +1,6 @@
 # Pi Home
 
-Alpine testing release: **1.1.3-beta.5**, for larger 10-inch portrait arrival times, section buttons with backend preview dropdowns, and screenshot export independent of the live GPU renderer. Select Beta explicitly to test; Stable remains 1.1.2.
+Alpine testing release: **1.1.3-beta.6**, with a dedicated Screen Preview page, acknowledged display navigation, searchable browse results and automatic asynchronous screenshots. Open System → Diagnostics → Screen Preview. Select Beta explicitly to test; Stable remains 1.1.2.
 
 The current Alpine stable release is **1.1.2**: an in-place correction for 10-inch Touch Display 2 touch rotation. Update through System → Software on the Stable channel, then reboot manually to apply input calibration. Physical touch acceptance is still required. The 1.1.1 full image remains available for fresh installs. Raspberry Pi OS releases remain separate.
 

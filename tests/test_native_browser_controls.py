@@ -452,6 +452,18 @@ class NativeBrowserControlsTests(unittest.TestCase):
         owner.show_roon_now.assert_called_once_with()
         owner.set_mode.assert_called_once_with("roon")
 
+    def test_preview_waits_until_browser_render_finishes(self):
+        posted=Mock()
+        thread=SimpleNamespace(Thread=lambda **kwargs:SimpleNamespace(start=lambda:posted(kwargs['args'][1])))
+        owner=SimpleNamespace(preview_navigation_id='ticket',roon_views=SimpleNamespace(get_visible_child_name=lambda:'browse'),browser_loading=True,browser_rendering=False,browser_state={'title':'Album','items':[{'title':'Track','item_key':'track'}]})
+        method=native_method('finish_preview_navigation',{'time':SimpleNamespace(monotonic=lambda:1),'threading':thread,'post_json':Mock(),'BUS':'http://localhost'})
+        self.assertTrue(method(owner,{'id':'ticket','view':'browse'},10))
+        posted.assert_not_called()
+        owner.browser_loading=False
+        self.assertFalse(method(owner,{'id':'ticket','view':'browse'},10))
+        self.assertEqual(posted.call_args.args[0]['title'],'Album')
+        self.assertEqual(posted.call_args.args[0]['items'][0]['item_key'],'track')
+
     def test_reboot_confirmation_uses_a_full_overlay_with_a_centred_card(self):
         source=SOURCE.read_text(encoding="utf-8")
         confirm=source[source.index('    def confirm_reboot'):source.index('    def _request_update',source.index('    def confirm_reboot'))]

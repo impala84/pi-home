@@ -52,6 +52,8 @@ class State:
         self.lock = threading.Lock()
         self.display_capture = None
         self.display_view_request = None
+        self.preview_result = None
+        self.preview_capture = None
         self.data: dict = {"status": "starting", "services": []}
         self.last_success: datetime | None = None
         self.last_roon_playing = 0.0
@@ -107,7 +109,31 @@ class State:
             request.update(browse_action=browse_action, item_key=item_key, section=section)
         with self.lock:
             self.display_view_request = request
+            self.preview_result = None
         return dict(request)
+
+    def complete_preview(self, data: dict) -> None:
+        with self.lock:
+            if not self.display_view_request or data.get("id") != self.display_view_request["id"]:
+                raise ValueError("Stale preview acknowledgement")
+            self.preview_result = {"id": data["id"], "error": str(data.get("error") or "")[:500],
+                "title": str(data.get("title") or "")[:500], "can_back": bool(data.get("can_back")),
+                "items": [{key: item.get(key) for key in ("title", "subtitle", "item_key", "action", "hint")} for item in data.get("items", [])[:500] if isinstance(item, dict)]}
+
+    def start_preview_capture(self) -> str:
+        with self.lock:
+            if self.preview_capture and self.preview_capture["status"] == "loading":
+                raise RuntimeError("A screenshot is already being captured")
+            ticket = {"id": secrets.token_urlsafe(12), "status": "loading", "image": None, "error": ""}
+            self.preview_capture = ticket
+        def work():
+            try:
+                ticket["image"] = self.capture_display()
+                ticket["status"] = "ready"
+            except Exception as error:
+                ticket["error"] = str(error); ticket["status"] = "error"
+        threading.Thread(target=work, daemon=True).start()
+        return ticket["id"]
 
     def capture_display(self, timeout: float = 35) -> bytes:
         request = {"id": secrets.token_urlsafe(24), "event": threading.Event(), "image": None, "error": None}
@@ -943,6 +969,21 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
                     return
                 self.send_json(200, json.dumps(diagnostics_snapshot(state.config)).encode())
                 return
+            if self.path == "/api/admin/preview":
+                if not self.authorised(): return
+                with state.lock:
+                    capture = state.preview_capture
+                    body = {"navigation": state.preview_result, "capture": {key: capture[key] for key in ("id", "status", "error")} if capture else None}
+                self.send_json(200, json.dumps(body).encode()); return
+            if self.path.startswith("/api/admin/preview-image?"):
+                if not self.authorised(): return
+                ticket_id = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query).get("id", [""])[0]
+                with state.lock:
+                    capture = state.preview_capture
+                    image = capture["image"] if capture and capture["id"] == ticket_id and capture["status"] == "ready" else None
+                if image is None:
+                    self.send_json(404, b'{"error":"Screenshot is not ready"}'); return
+                self.send_response(200); self.send_header("Content-Type", "image/png"); self.send_header("Content-Length", str(len(image))); self.send_header("Cache-Control", "no-store"); self.end_headers(); self.wfile.write(image); return
             if self.path == "/api/status":
                 body = json.dumps(state.snapshot()).encode()
                 self.send_json(200, body)
@@ -960,8 +1001,8 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
                 self.send_json(200, json.dumps(controls).encode())
                 return
             path = self.path.split("?", 1)[0]
-            if path in {"/", "/index.html", "/home.html", "/admin.html"}:
-                if path == "/admin.html" and not self.authorised(): return
+            if path in {"/", "/index.html", "/home.html", "/admin.html", "/preview.html"}:
+                if path in {"/admin.html", "/preview.html"} and not self.authorised(): return
                 theme = "roon" if state.config.display_theme == "roon" else "fresh-mint"
                 body = (static / ("index.html" if path == "/" else path[1:])).read_text(encoding="utf-8")
                 body = body.replace("<body", f'<body data-theme="{theme}"', 1)
@@ -972,6 +1013,21 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
             super().do_GET()
 
         def do_POST(self):
+            if self.path == "/api/admin/preview-capture":
+                if not self.authorised(): return
+                try: self.send_json(202, json.dumps({"id": state.start_preview_capture()}).encode())
+                except RuntimeError as error: self.send_json(409, json.dumps({"error": str(error)}).encode())
+                return
+            if self.path == "/api/device/preview":
+                if self.client_address[0] not in {"127.0.0.1", "::1"} or any(self.headers.get(name) for name in ("X-Forwarded-For", "Forwarded", "X-Real-IP")):
+                    self.send_json(403, b'{"error":"Touchscreen only"}'); return
+                try:
+                    length = int(self.headers.get("Content-Length", "0"))
+                    if not 0 < length <= 1_048_576: raise ValueError("Invalid acknowledgement size")
+                    state.complete_preview(json.loads(self.rfile.read(length)))
+                    self.send_json(200, b'{"ok":true}')
+                except (ValueError, TypeError) as error: self.send_json(400, json.dumps({"error": str(error)}).encode())
+                return
             if self.path == "/api/admin/display-capture":
                 if not self.authorised():
                     return
@@ -1224,8 +1280,9 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
                     mode = str(data.get("mode", ""))
                     set_display_mode(state, mode_path, mode)
                     view = str(data.get("view", "")).strip()
+                    preview_request = None
                     if view:
-                        if view not in {"now", "recent", "daily", "releases", "browse", "surprise"}:
+                        if view not in {"now", "recent", "daily", "releases", "browse", "surprise", "bus", "home"}:
                             raise ValueError("Unknown display view")
                         browse_action = str(data.get("browse_action", ""))
                         item_key = str(data.get("item_key", ""))
@@ -1234,10 +1291,10 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
                             raise ValueError("Unknown preview navigation")
                         if browse_action == "section" and section not in {"albums", "artists", "genres", "playlists"}:
                             raise ValueError("Unknown preview section")
-                        state.request_display_view(view, browse_action, item_key, section)
+                        preview_request = state.request_display_view(view, browse_action, item_key, section)
                     if events:
                         events.emit("display.mode.changed", mode=mode)
-                    self.send_json(200, json.dumps({"ok": True, "display_mode": mode, "display_view": view or None}).encode())
+                    self.send_json(200, json.dumps({"ok": True, "display_mode": mode, "display_view": view or None, "request_id": preview_request["id"] if preview_request else None}).encode())
                     return
                 current = state.config
                 def values(name, fallback):
