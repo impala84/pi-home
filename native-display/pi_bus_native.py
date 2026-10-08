@@ -1017,7 +1017,10 @@ class Display(Gtk.Application):
         self.music_full_clock = self.label("--:--", "clock", 1)
         sleep.set_tooltip_text("Sleep"); self.discover_toolbar.append(sleep)
         self.discover_toolbar.set_visible(False); page.append(self.discover_toolbar)
-        self.roon_views = Gtk.Stack(transition_type=Gtk.StackTransitionType.NONE, transition_duration=0); self.roon_views.set_vexpand(True)
+        self.roon_views = Gtk.Stack(transition_type=Gtk.StackTransitionType.NONE, transition_duration=0)
+        # Hidden pages (especially the on-screen search keyboard) must not set
+        # the minimum size of compact landscape views after navigation.
+        self.roon_views.set_hhomogeneous(False); self.roon_views.set_vhomogeneous(False); self.roon_views.set_vexpand(True)
         self.roon_views.set_hhomogeneous(False); self.roon_views.set_vhomogeneous(False)
         self.discovery_list = ElasticVerticalTrack(spacing=18)
         self.discovery_scroll = Gtk.ScrolledWindow(); self.discovery_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC); self.discovery_scroll.set_kinetic_scrolling(True); self.discovery_scroll.set_overlay_scrolling(True); self.discovery_scroll.set_propagate_natural_height(False); self.discovery_scroll.set_min_content_height(1); self.discovery_scroll.set_size_request(-1, 1); self.discovery_scroll.set_vexpand(True); self.discovery_scroll.set_hexpand(True); self.discovery_scroll.set_child(self.discovery_list)
