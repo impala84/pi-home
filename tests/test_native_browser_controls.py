@@ -214,11 +214,18 @@ class NativeBrowserControlsTests(unittest.TestCase):
         row = LayoutWidget()
         method(owner, row, {"service":"42","arrivals":[{"minutes":0},{"minutes":11},{"minutes":25}]},2)
         self.assertEqual([widget.properties['text'] for widget in labels],
-            ["ROUTE","42","Due","arriving now","THEN","11 min","25 min"])
+            ["ROUTE","42","Due","arriving now","THEN","11","min","25","min"])
         self.assertEqual(len(row.children[-1].children),2)
         labels.clear()
-        method(owner, LayoutWidget(), {"service":"40","arrivals":[]},4)
-        self.assertEqual([widget.properties['text'] for widget in labels][-3:],["THEN","—","—"])
+        one_later = LayoutWidget()
+        method(owner, one_later, {"service":"40","arrivals":[{"minutes":8},{"minutes":28}]},2)
+        self.assertEqual([widget.properties['text'] for widget in labels][-3:],["THEN","28","min"])
+        self.assertEqual(len(one_later.children[-1].children),1)
+        labels.clear()
+        one_bus = LayoutWidget()
+        method(owner, one_bus, {"service":"40","arrivals":[{"minutes":8}]},2)
+        self.assertEqual([widget.properties['text'] for widget in labels],["ROUTE","40","8","minutes"])
+        self.assertFalse(any(widget.properties.get('text') == "—" for widget in labels))
 
     def test_late_loaded_source_buttons_follow_current_orientation(self):
         for portrait in (True, False):

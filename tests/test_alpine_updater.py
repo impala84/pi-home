@@ -1,5 +1,6 @@
 import importlib.util
 import io
+import json
 from pathlib import Path
 import tarfile
 import tempfile
@@ -54,9 +55,19 @@ class AlpineUpdaterTests(unittest.TestCase):
             marker.write_text("a" * 40)
             response = urlopen.return_value.__enter__.return_value
             response.status = 200
+            response.read.return_value = json.dumps({"revision": "a" * 40}).encode()
             with patch.object(updater, "DISPLAY_REVISION", marker):
                 self.assertTrue(updater.healthy("a" * 40))
                 self.assertFalse(updater.healthy("b" * 40))
+
+    def test_health_rejects_a_stale_roon_controller(self):
+        with tempfile.TemporaryDirectory() as folder, patch("urllib.request.urlopen") as urlopen, patch.object(updater, "run"), patch.object(updater.time, "sleep"):
+            marker = Path(folder) / "display-source-commit"; marker.write_text("a" * 40)
+            response = urlopen.return_value.__enter__.return_value
+            response.status = 200
+            response.read.return_value = json.dumps({"revision": "b" * 40}).encode()
+            with patch.object(updater, "DISPLAY_REVISION", marker):
+                self.assertFalse(updater.healthy("a" * 40))
 
     def test_restart_stops_display_once_and_disables_dependency_cascades(self):
         with patch.object(updater, "run") as run:

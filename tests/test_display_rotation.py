@@ -53,10 +53,11 @@ class DisplayRotationTests(unittest.TestCase):
         self.assertIn('id="netdata-command"', html)
         self.assertIn('https://get.netdata.cloud/kickstart.sh', html)
         self.assertNotIn('id="netdata-token"', html)
-        self.assertIn("action:'netdata_official_install'", javascript)
+        self.assertIn("action:'netdata_claim_command'", javascript)
         self.assertIn("command.value=''", javascript)
-        self.assertIn('Install and connect Agent', html)
-        self.assertIn('installs curl when needed', html)
+        self.assertIn('Connect Agent', html)
+        self.assertIn('does not reinstall or upgrade the Agent', html)
+        self.assertIn('applies them to the Agent that is already installed', html)
 
     def test_missing_netdata_exposes_a_local_install_action(self):
         javascript = (ROOT / "src/pi_bus_time_display/static/admin.js").read_text()

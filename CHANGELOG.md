@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.3-beta.16 Alpine — 8 October 2026
+
+- Verifies that the separately served Roon controller is running the exact staged revision before an update can report success.
+- Prevents the touchscreen browser from reusing an earlier artwork page, script or stylesheet after an application update.
+- Makes Netdata Cloud reconnection use the installed Agent instead of unnecessarily running the full Agent installer again.
+- Enlarges portrait route and later-arrival numerals, quietens supporting time labels, and omits empty arrival placeholders.
+
 ## 1.1.3-beta.15 Alpine — 8 October 2026
 
 - Adds a standalone Netdata installer to Tools when the Agent is absent, with live progress and failure text; Cloud connection remains an optional second step.

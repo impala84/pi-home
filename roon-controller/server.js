@@ -30,6 +30,8 @@ function discoveryTarget() {
 
 const port = Number(process.env.PORT || 8766);
 const staticDir = path.join(__dirname, 'static');
+let buildRevision = '';
+try { buildRevision = fs.readFileSync(path.join(__dirname, '..', '.source-commit'), 'utf8').trim(); } catch (_) { /* Development checkout. */ }
 let core = null;
 let transport = null;
 let imageService = null;
@@ -311,7 +313,7 @@ function serveStatic(request, response) {
   if (!name) return false;
   const types = {'.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml'};
   const data = fs.readFileSync(path.join(staticDir, name));
-  response.writeHead(200, {'Content-Type': types[path.extname(name)], 'Content-Length': data.length, 'Cache-Control': 'no-cache'});
+  response.writeHead(200, {'Content-Type': types[path.extname(name)], 'Content-Length': data.length, 'Cache-Control': 'no-store, must-revalidate'});
   response.end(data);
   return true;
 }
@@ -319,6 +321,7 @@ function serveStatic(request, response) {
 http.createServer(async (request, response) => {
   try {
     const url = new URL(request.url, 'http://localhost');
+    if (request.method === 'GET' && url.pathname === '/api/build') return json(response, 200, {revision: buildRevision});
     if (request.method === 'GET' && url.pathname === '/api/artist') {
       const name = String(url.searchParams.get('name') || '').trim().slice(0, 200);
       if (!name) return json(response, 400, {error:'Artist name required'});

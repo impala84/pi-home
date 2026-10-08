@@ -406,13 +406,14 @@ CSS += b"""
 .portrait.compact-portrait .stop, .portrait.compact-portrait .stop-code { font-size: 22px; }
 .portrait .service { padding: 18px 12px; }
 .portrait .bus-route-badge { border-radius: 60px; padding: 6px 24px; background: rgba(255,255,255,.045); }
-.portrait .bus-route-word { color: #e1e7e5; font-weight: 500; }
+.portrait .bus-route-word { color: #66716e; font-weight: 500; }
 .portrait .bus-next { font-weight: 700; color: #f4f4f4; }
-.portrait .bus-next-unit { color: #e1e7e5; font-weight: 400; }
+.portrait .bus-next-unit { color: #66716e; font-weight: 400; }
 .portrait .bus-rule { min-height: 1px; background: rgba(220,230,230,.35); }
-.portrait .bus-then { color: #708383; font-weight: 500; }
+.portrait .bus-then { color: #596562; font-weight: 500; }
 .portrait .bus-route-badge .service-no { font-weight: 600; }
 .portrait .bus-following { color: #f4f4f4; font-weight: 600; }
+.portrait .bus-following-unit { color: #66716e; font-weight: 500; }
 .portrait .service.compact, .portrait .service.dense { padding: 12px; }
 .portrait .roon-subnav button.active { border-bottom-color: #5bcbd6; }
 .portrait.theme-roon .roon-subnav button.active { border-bottom-color: #817aeb; }
@@ -1679,9 +1680,9 @@ class Display(Gtk.Application):
         height = getattr(self, "viewport_height", self.window.get_height())
         width = getattr(self, "viewport_width", self.window.get_width())
         budget = max(180, (height - 240 - (count - 1) * 24) / count)
-        route_size = max(24, min(100, round(budget * .13)))
+        route_size = max(26, min(110, round(budget * .145)))
         primary_size = max(46, min(248, round(budget * .34)))
-        secondary_size = max(18, min(64, round(budget * .085)))
+        secondary_size = max(20, min(74, round(budget * .098)))
         caption_size = max(12, min(36, round(budget * .045)))
         row.set_orientation(Gtk.Orientation.VERTICAL); row.set_vexpand(False)
         row.set_spacing(max(4, min(16, round(budget * .02))))
@@ -1708,17 +1709,22 @@ class Display(Gtk.Application):
         content.append(sized(text, "bus-next", primary_size))
         content.append(sized("arriving now" if minutes == 0 else "minutes" if minutes is not None else "no prediction", "bus-next-unit", caption_size))
         primary.append(content); row.append(primary)
-        rule = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL); rule.add_css_class("bus-rule")
-        rule.set_margin_start(round(width * .055)); rule.set_margin_end(round(width * .055)); row.append(rule)
-        row.append(sized("THEN", "bus-then", max(11, round(caption_size * .65))))
-        following = Gtk.Box(spacing=12); following.set_homogeneous(True)
-        following.set_margin_bottom(max(8, round(budget * .025)))
-        for index in (1, 2):
-            value = arrivals[index].get("minutes") if len(arrivals) > index else None
-            text = "Due" if value == 0 else "—" if value is None else str(value) + " min"
-            size = min(secondary_size, round((width - 110) / (2 * max(3, len(text)) * .65)))
-            following.append(sized(text, "bus-following", max(12, size)))
-        row.append(following)
+        later = arrivals[1:]
+        if later:
+            rule = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL); rule.add_css_class("bus-rule")
+            rule.set_margin_start(round(width * .055)); rule.set_margin_end(round(width * .055)); row.append(rule)
+            row.append(sized("THEN", "bus-then", max(11, round(caption_size * .65))))
+            following = Gtk.Box(spacing=12); following.set_homogeneous(True)
+            following.set_margin_bottom(max(8, round(budget * .025)))
+            for arrival in later:
+                value = arrival.get("minutes")
+                item = Gtk.Box(spacing=max(4, round(caption_size * .18))); item.set_halign(Gtk.Align.CENTER)
+                text = "Due" if value == 0 else str(value)
+                size = min(secondary_size, round((width - 110) / (max(1, len(later)) * max(2, len(text)) * .75)))
+                item.append(sized(text, "bus-following", max(12, size)))
+                if value != 0: item.append(sized("min", "bus-following-unit", max(11, round(caption_size * .72))))
+                following.append(item)
+            row.append(following)
 
     def render_roon(self, data):
         self.state = data; self.render_queue((data or {}).get("queue") or {}); self.render_details((data or {}).get("details") or {}); zone = (data or {}).get("zone")

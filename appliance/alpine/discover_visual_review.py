@@ -544,8 +544,8 @@ while arrival_child:
 assert arrival_count == (2 if screen_height > screen_width else 3), arrival_count
 # Portrait cards have one primary arrival and two secondary arrivals.
 if screen_height > screen_width:
-    assert first_arrivals.get_first_child().get_text() == "14 min"
-    assert first_arrivals.get_last_child().get_text() == "28 min"
+    assert first_arrivals.get_first_child().get_first_child().get_text() == "14"
+    assert first_arrivals.get_last_child().get_first_child().get_text() == "28"
 if screen_height > screen_width:
     assert display.services.get_first_child().get_orientation() == Gtk.Orientation.VERTICAL
     assert not display.services.get_first_child().get_vexpand()
@@ -582,7 +582,7 @@ if screen_height > screen_width:
 settings = display.build_settings()
 window.set_child(settings)
 display.configure_settings_layout(screen_width, screen_height)
-display.device_status.set_text("v1.1.3-beta.15 Alpine")
+display.device_status.set_text("v1.1.3-beta.16 Alpine")
 display.touch_diagnostics.set_text("Memory 6.1%  ·  Load 0.65  ·  62.8°C  ·  Controller ready  ·  Bridge offline")
 capture("settings")
 assert window.get_width() == screen_width and window.get_height() == screen_height, (window.get_width(), window.get_height())

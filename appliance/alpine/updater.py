@@ -169,6 +169,10 @@ def healthy(expected_sha=None):
             for url in ("http://127.0.0.1:8765/api/status", "http://127.0.0.1:8766/api/state"):
                 with urllib.request.urlopen(url, timeout=2) as response:
                     if response.status != 200: raise OSError("Not ready")
+            if expected_sha:
+                with urllib.request.urlopen("http://127.0.0.1:8766/api/build", timeout=2) as response:
+                    if response.status != 200 or json.load(response).get("revision") != expected_sha:
+                        raise OSError("Roon controller is not running the staged revision")
             run(["rc-service", "pi-home-display", "status"], timeout=10)
             if expected_sha:
                 if not DISPLAY_REVISION.exists() or DISPLAY_REVISION.read_text().strip() != expected_sha:
