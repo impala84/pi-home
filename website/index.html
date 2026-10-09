@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#050505">
+    <meta name="description" content="RoonDeck is an Alpine-powered Raspberry Pi touchscreen appliance for Roon, Home Assistant, Netdata and display management.">
+    <title>RoonDeck — Music, home and system on one screen</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="/styles.css">
+    <script src="/script.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="site-header">
+      <a class="wordmark" href="#top" aria-label="RoonDeck home"><span>Roon</span>Deck</a>
+      <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-nav">
+        <span></span><span></span><span></span><span class="sr-only">Open menu</span>
+      </button>
+      <nav id="site-nav" class="site-nav" aria-label="Primary navigation">
+        <a href="#roon">Roon</a>
+        <a href="#home">Home</a>
+        <a href="#system">System</a>
+        <a href="#hardware">Hardware</a>
+        <a href="#build">Build</a>
+      </nav>
+      <a class="button button-small header-cta" href="#build">Get RoonDeck</a>
+    </header>
+
+    <main id="main">
+      <section id="top" class="hero section-shell">
+        <div class="hero-copy reveal">
+          <p class="eyebrow">A touchscreen appliance for Roon</p>
+          <h1>Your music, home and system—<span>on one purpose-built screen.</span></h1>
+          <p class="hero-lede">Beautiful, tactile control for your Roon library—plus Home Assistant, Netdata and complete display management.</p>
+          <div class="hero-actions">
+            <a class="button" href="#roon">See Roon in action</a>
+            <a class="text-link" href="https://github.com/impala84/pi-home">View source <span aria-hidden="true">↗</span></a>
+          </div>
+          <ul class="proof-strip" aria-label="Key compatibility">
+            <li>Alpine-first</li>
+            <li>Pi 3, 4 &amp; 5</li>
+            <li>Portrait &amp; landscape</li>
+          </ul>
+        </div>
+
+        <div class="device-stage reveal" aria-label="RoonDeck running across different touchscreen formats">
+          <article class="device device-home">
+            <div class="device-camera"></div>
+            <div class="device-screen screen-crop-landscape">
+              <img src="/assets/home-controls.png" alt="RoonDeck Home Assistant controls in landscape" width="1280" height="720">
+            </div>
+          </article>
+          <article class="device device-primary">
+            <div class="device-camera"></div>
+            <div class="device-screen screen-crop-landscape">
+              <img src="/assets/roon-now-playing.png" alt="RoonDeck Now Playing screen in landscape" width="1280" height="720">
+            </div>
+          </article>
+          <article class="device device-portrait">
+            <div class="device-camera"></div>
+            <div class="device-screen">
+              <img src="/assets/album-artist.png" alt="RoonDeck album and artist information in portrait" width="1200" height="1920">
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section id="roon" class="feature-grid section-shell">
+        <article class="feature-card feature-primary reveal">
+          <div class="icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M9 18V5l10-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="16" cy="16" r="3"/></svg>
+          </div>
+          <div>
+            <p class="card-kicker">The lead feature</p>
+            <h2>Roon, made tactile.</h2>
+            <p>Browse, search and play your library. Explore artists, albums, Daily mixes, recommendations and your queue without reaching for another device.</p>
+            <a class="text-link" href="#experience">Explore the music experience</a>
+          </div>
+        </article>
+        <article class="feature-card reveal" id="home">
+          <div class="icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10M9 20v-6h6v6"/></svg>
+          </div>
+          <h3>Home Assistant</h3>
+          <p>Keep a carefully allow-listed set of everyday controls close at hand.</p>
+        </article>
+        <article class="feature-card reveal" id="system">
+          <div class="icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M3 12h4l2-7 4 14 2-7h6"/></svg>
+          </div>
+          <h3>Netdata</h3>
+          <p>Install, run and connect the official agent, with appliance health at a glance.</p>
+        </article>
+        <article class="feature-card reveal">
+          <div class="icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+          </div>
+          <h3>Display</h3>
+          <p>Brightness, rotation, profiles and themes—all tuned for touch.</p>
+        </article>
+      </section>
+
+      <section id="experience" class="showcase section-shell">
+        <div class="showcase-copy reveal">
+          <p class="eyebrow">A focused Roon experience</p>
+          <h2>The library deserves its own screen.</h2>
+          <p>RoonDeck turns a Raspberry Pi and touchscreen into a permanent, room-ready music interface. It starts quickly, stays out of the way and keeps the controls that matter within reach.</p>
+          <ul class="check-list">
+            <li>Now Playing, transport and queue</li>
+            <li>Albums, artists, genres and playlists</li>
+            <li>Search, discovery and recommendations</li>
+            <li>Rich album and artist information</li>
+          </ul>
+        </div>
+        <div class="showcase-device reveal">
+          <div class="browser-frame">
+            <div class="browser-top"><span></span><span></span><span></span></div>
+            <div class="browser-screen screen-crop-landscape">
+              <img src="/assets/roon-now-playing.png" alt="RoonDeck Now Playing interface" width="1280" height="720">
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="hardware" class="hardware section-shell">
+        <div class="section-heading reveal">
+          <p class="eyebrow">Made for the Pi you already have</p>
+          <h2>From the smallest screen to the biggest panel.</h2>
+          <p>RoonDeck has been tested across Raspberry Pi 3, 4 and 5, with responsive layouts for compact and high-resolution touchscreens in portrait or landscape.</p>
+        </div>
+        <div class="pi-row reveal" aria-label="Tested Raspberry Pi generations">
+          <div><strong>Pi 3</strong><span>Low-power foundation</span></div>
+          <div><strong>Pi 4</strong><span>Balanced everyday build</span></div>
+          <div><strong>Pi 5</strong><span>Fastest full experience</span></div>
+        </div>
+        <div class="orientation-grid">
+          <article class="orientation-card reveal">
+            <div class="mini-device mini-landscape"><img src="/assets/home-controls.png" alt="RoonDeck home controls in landscape" width="1280" height="720"></div>
+            <div><span class="card-kicker">Landscape</span><h3>Wide, calm and glanceable.</h3><p>From the original 800×480 display to larger Touch Display 2 panels.</p></div>
+          </article>
+          <article class="orientation-card reveal">
+            <div class="mini-device mini-portrait"><img src="/assets/album-artist.png" alt="RoonDeck album information in portrait" width="1200" height="1920"></div>
+            <div><span class="card-kicker">Portrait</span><h3>More room for the story.</h3><p>Responsive arrangements preserve hierarchy, touch targets and readable details.</p></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="alpine section-shell">
+        <div class="alpine-mark" aria-hidden="true"><span></span><span></span></div>
+        <div class="alpine-copy reveal">
+          <p class="eyebrow">Alpine-first</p>
+          <h2>A complete appliance, not another desktop.</h2>
+          <p>The recommended build uses a compact Alpine Linux base, a native GTK4 interface and Cage/Wayland. There is no browser kiosk to maintain and no general-purpose desktop sitting underneath it.</p>
+        </div>
+        <dl class="alpine-facts reveal">
+          <div><dt>Interface</dt><dd>Native GTK4</dd></div>
+          <div><dt>Session</dt><dd>Cage / Wayland</dd></div>
+          <div><dt>Updates</dt><dd>Built into the appliance</dd></div>
+          <div><dt>Optional</dt><dd>Roon Bridge &amp; Netdata</dd></div>
+        </dl>
+      </section>
+
+      <section id="build" class="build section-shell reveal">
+        <p class="eyebrow">Build your RoonDeck</p>
+        <h2>Start with Alpine. Make it yours.</h2>
+        <p>The project is evolving toward a clean public build. Follow the source, read the appliance notes and see the latest development release.</p>
+        <div class="build-actions">
+          <a class="button" href="https://github.com/impala84/pi-home/releases">View releases</a>
+          <a class="button button-secondary" href="https://github.com/impala84/pi-home/blob/alpine-beta/docs/ALPINE.md">Read the Alpine guide</a>
+        </div>
+      </section>
+
+      <section class="thanks section-shell">
+        <div class="section-heading reveal">
+          <p class="eyebrow">Built on generous work</p>
+          <h2>Thanks to the projects that made this possible.</h2>
+        </div>
+        <div class="thanks-grid reveal">
+          <p>RoonDeck uses Roon’s official extension API for its core control experience. Discovery research also benefited from <a href="https://github.com/arthursoares/roon-api-reverse-engineering">Arthur Soares’ MIT-licensed reverse-engineering project</a>.</p>
+          <p>It also stands on Alpine Linux, GTK, Cage, Home Assistant, Netdata and the broader Raspberry Pi community.</p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer section-shell">
+      <a class="wordmark" href="#top"><span>Roon</span>Deck</a>
+      <p>Designed for music lovers, makers and home enthusiasts.</p>
+      <nav aria-label="Footer navigation">
+        <a href="https://github.com/impala84/pi-home">GitHub</a>
+        <a href="#build">Build</a>
+        <a href="#hardware">Hardware</a>
+      </nav>
+      <small>Unofficial community project. RoonDeck is independent and is not affiliated with Roon Labs, Raspberry Pi, Home Assistant or Netdata. Product names are trademarks of their respective owners.</small>
+    </footer>
+  </body>
+</html>
