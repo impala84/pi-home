@@ -14,6 +14,13 @@ PNG = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4
 
 
 class DisplayCaptureTests(unittest.TestCase):
+    def test_native_capture_has_parent_paintable_and_cairo_fallbacks(self):
+        source = (Path(__file__).parents[1] / 'native-display' / 'pi_bus_native.py').read_text()
+        capture = source.split('    def capture_display(self, capture_id):', 1)[1].split('    def apply_display_view_request', 1)[0]
+        self.assertIn('for strategy in ("parent", "paintable")', capture)
+        self.assertIn('Gtk.WidgetPaintable.new(target).snapshot', capture)
+        self.assertIn('Gsk.CairoRenderer.new()', capture)
+
     def test_preview_status_requires_authentication(self):
         with tempfile.TemporaryDirectory() as directory:
             root=Path(directory); state=State(Config(),root)

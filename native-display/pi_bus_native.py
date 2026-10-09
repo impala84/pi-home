@@ -1405,44 +1405,76 @@ class Display(Gtk.Application):
             target = self.window.get_child()
             if target is None:
                 raise ValueError("Display has no visible page")
-            snapshot = Gtk.Snapshot()
-            # Snapshot through the parent instead of exporting a paintable's
-            # cached frame, which can be stale after display navigation.
-            self.window.snapshot_child(target, snapshot)
-            # Popovers use a separate native surface and are not necessarily
-            # included in the page paintable. Composite the visible menu too.
-            for popup in (getattr(self, "browser_action_popover", None), getattr(self, "browser_sort_popover", None)):
-                if popup is not None and popup.get_mapped():
-                    valid, bounds = popup.compute_bounds(target)
-                    if valid:
-                        snapshot.save()
-                        point = Graphene.Point(); point.init(bounds.get_x(), bounds.get_y())
-                        snapshot.translate(point)
-                        Gtk.WidgetPaintable.new(popup).snapshot(snapshot, float(popup.get_width()), float(popup.get_height()))
-                        snapshot.restore()
-            node = snapshot.to_node()
-            if node is None:
-                raise ValueError("Display produced no render node")
-            # Use the live renderer: the page may contain GPU-backed textures
-            # that a separate Cairo renderer cannot faithfully export.
-            renderer = self.window.get_renderer()
-            if renderer is None:
-                raise RuntimeError("Display renderer is unavailable")
-            texture = renderer.render_texture(node, None)
-            pixels = Gdk.pixbuf_get_from_texture(texture)
-            if pixels is None:
-                raise ValueError("Screenshot pixels are unavailable")
-            raw = pixels.get_pixels()
-            channels, stride = pixels.get_n_channels(), pixels.get_rowstride()
-            # Reject wholly black/transparent captures, not merely invalid PNGs.
-            visible = any(raw[y * stride + x * channels + c] > 8
-                          and (channels != 4 or raw[y * stride + x * channels + 3] > 8)
-                          for y in range(0, pixels.get_height(), 8)
-                          for x in range(0, pixels.get_width(), 8)
-                          for c in range(3))
-            if not visible:
-                raise ValueError("Display capture contains no visible content")
-            image = bytes(texture.save_to_png_bytes().get_data())
+            def visible_png(texture):
+                pixels = Gdk.pixbuf_get_from_texture(texture)
+                if pixels is None:
+                    raise ValueError("Screenshot pixels are unavailable")
+                raw = pixels.get_pixels()
+                channels, stride = pixels.get_n_channels(), pixels.get_rowstride()
+                visible = any(raw[y * stride + x * channels + c] > 8
+                              and (channels != 4 or raw[y * stride + x * channels + 3] > 8)
+                              for y in range(0, pixels.get_height(), 8)
+                              for x in range(0, pixels.get_width(), 8)
+                              for c in range(3))
+                if not visible:
+                    raise ValueError("Display capture contains no visible content")
+                return bytes(texture.save_to_png_bytes().get_data())
+
+            def render_snapshot(snapshot):
+                node = snapshot.to_node()
+                if node is None:
+                    raise ValueError("Display produced no render node")
+                errors = []
+                live = self.window.get_renderer()
+                if live is not None:
+                    try:
+                        return visible_png(live.render_texture(node, None))
+                    except (GLib.Error, RuntimeError, TypeError, ValueError) as error:
+                        errors.append(f"live renderer: {error}")
+                # Some KMS/Wayland drivers display the live node correctly but
+                # cannot read it back through the active renderer.  The Cairo
+                # renderer is slower, but it is a reliable capture-only path.
+                cairo = Gsk.CairoRenderer.new()
+                try:
+                    if not cairo.realize_for_display(self.window.get_display()):
+                        raise RuntimeError("Cairo renderer could not be initialized")
+                    return visible_png(cairo.render_texture(node, None))
+                except (GLib.Error, RuntimeError, TypeError, ValueError) as error:
+                    errors.append(f"Cairo renderer: {error}")
+                finally:
+                    if cairo.is_realized(): cairo.unrealize()
+                raise ValueError("; ".join(errors))
+
+            def add_popovers(snapshot):
+                for popup in (getattr(self, "browser_action_popover", None), getattr(self, "browser_sort_popover", None)):
+                    if popup is not None and popup.get_mapped():
+                        valid, bounds = popup.compute_bounds(target)
+                        if valid:
+                            snapshot.save()
+                            point = Graphene.Point(); point.init(bounds.get_x(), bounds.get_y())
+                            snapshot.translate(point)
+                            Gtk.WidgetPaintable.new(popup).snapshot(snapshot, float(popup.get_width()), float(popup.get_height()))
+                            snapshot.restore()
+
+            attempts = []
+            # Prefer the current frame in the parent widget tree.  If a GTK or
+            # driver combination refuses that readback, fall back to a fresh
+            # WidgetPaintable snapshot of the same visible page.
+            for strategy in ("parent", "paintable"):
+                try:
+                    snapshot = Gtk.Snapshot()
+                    if strategy == "parent":
+                        self.window.snapshot_child(target, snapshot)
+                    else:
+                        Gtk.WidgetPaintable.new(target).snapshot(
+                            snapshot, float(target.get_width() or width), float(target.get_height() or height))
+                    add_popovers(snapshot)
+                    image = render_snapshot(snapshot)
+                    break
+                except (GLib.Error, RuntimeError, TypeError, ValueError) as error:
+                    attempts.append(f"{strategy}: {error}")
+            else:
+                raise ValueError(" | ".join(attempts))
             if len(image) > 8_388_608 or not image.startswith(b"\x89PNG\r\n\x1a\n"):
                 raise ValueError("Invalid screenshot")
             data["image"] = base64.b64encode(image).decode("ascii")

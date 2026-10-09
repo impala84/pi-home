@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.3-beta.20 Alpine — 10 October 2026
+
+- Makes Screen Preview resilient across GTK/KMS renderer combinations by falling back from the live parent snapshot to a fresh widget snapshot and a capture-only Cairo renderer.
+- Keeps the previous preview unchanged when every validated rendering path genuinely fails, rather than replacing it with an empty or black frame.
+
 ## 1.1.3-beta.19 Alpine — 9 October 2026
 
 - Reworks the native Album & Artist fact sheet into a clean full-screen two-column layout with larger headings, circular SVG close control, richer artist facts and direct Browse Artist / Artist Albums actions.
