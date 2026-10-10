@@ -3,12 +3,12 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#090815"><meta name="description" content="Hardware and installation guide for RoonDeck on Raspberry Pi.">
-  <title>Install RoonDeck</title><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="/styles.css"><script src="/script.js" defer></script>
+  <title>Install RoonDeck</title><link rel="icon" href="/assets/brand/favicon-dark.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="/assets/brand/favicon-dark.svg"><link rel="manifest" href="/site.webmanifest"><link rel="stylesheet" href="/styles.css"><script src="/script.js" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
   <header class="site-header">
-    <a class="wordmark" href="/" aria-label="RoonDeck home"><span class="roon-mark" aria-hidden="true"></span><span class="deck-mark">Deck</span></a>
+    <a class="wordmark" href="/" aria-label="RoonDeck home"><img src="/assets/brand/roondeck-wordmark.svg" alt="RoonDeck" width="574" height="168"></a>
     <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-nav"><span></span><span></span><span></span><span class="sr-only">Open menu</span></button>
     <nav id="site-nav" class="site-nav guide-nav" aria-label="Primary navigation"><a href="/#music">Music</a><a href="/#home">Beyond Music</a><a href="/#hardware">Hardware</a></nav>
     <a class="button button-small header-cta" href="#install">Install</a>
@@ -31,7 +31,7 @@
         <article><h3>Storage</h3><p>A reliable microSD card, 8GB minimum. Use 16GB or more if you plan to install optional monitoring software.</p></article>
         <article><h3>Power</h3><p>Use the official power supply for your Pi model. Undersized supplies can cause instability during installation and updates.</p></article>
         <article><h3>Network</h3><p>Ethernet is easiest for first setup. Wi-Fi can also be configured from the touchscreen onboarding flow.</p></article>
-        <article><h3>Optional audio</h3><p>Install Roon Bridge during onboarding if the Pi should also appear as a Roon audio endpoint. A compatible DAC is optional.</p></article>
+        <article><h3>Optional RAAT audio</h3><p>Install Roon Bridge during onboarding to turn the Pi into a RAAT endpoint that appears under Roon Settings → Audio. Add a compatible DAC if you want analogue or digital audio output.</p></article>
         <article><h3>Useful extras</h3><p>A case or display stand, a spare computer for writing the card, and temporary Ethernet access make setup easier.</p></article>
       </div>
     </section>
@@ -50,9 +50,9 @@
 
     <section class="guide-section section-shell">
       <div class="section-heading"><p class="eyebrow">After installation</p><h2>Useful first checks.</h2></div>
-      <div class="after-grid"><article><h3>No controller in Roon?</h3><p>Confirm the Pi and Roon Server are on the same local network, then check Roon Settings → Extensions again.</p></article><article><h3>Display or touch rotated?</h3><p>Select the exact display model and orientation in RoonDeck Settings, apply the display change and reboot.</p></article><article><h3>Want the Pi as an endpoint?</h3><p>Enable Roon Bridge in RoonDeck Settings, then enable its output separately in Roon Settings → Audio.</p></article><article><h3>Need help?</h3><p>Capture the display from web Settings and include it when opening a GitHub issue.</p><a href="https://github.com/impala84/pi-home/issues">Open an issue →</a></article></div>
+      <div class="after-grid"><article><h3>No controller in Roon?</h3><p>Confirm the Pi and Roon Server are on the same local network, then check Roon Settings → Extensions again.</p></article><article><h3>Display or touch rotated?</h3><p>Select the exact display model and orientation in RoonDeck Settings, apply the display change and reboot.</p></article><article><h3>Want a RAAT endpoint?</h3><p>Enable Roon Bridge in RoonDeck Settings, then enable the Pi’s output separately in Roon Settings → Audio.</p></article><article><h3>Need help?</h3><p>Capture the display from web Settings and include it when opening a GitHub issue.</p><a href="https://github.com/impala84/pi-home/issues">Open an issue →</a></article></div>
     </section>
   </main>
-  <footer class="site-footer section-shell"><div><a class="wordmark" href="/" aria-label="RoonDeck home"><span class="roon-mark" aria-hidden="true"></span><span class="deck-mark">Deck</span></a><p>An independent, open-source touchscreen for Roon.</p></div><nav aria-label="Footer navigation"><a href="/">Home</a><a href="https://github.com/impala84/pi-home/releases">Releases</a><a href="https://github.com/impala84/pi-home/issues">Support</a></nav><small>Unofficial community project. Not affiliated with Roon Labs or Raspberry Pi. Product names are trademarks of their respective owners.</small></footer>
+  <footer class="site-footer section-shell"><div><a class="wordmark" href="/" aria-label="RoonDeck home"><img src="/assets/brand/roondeck-wordmark.svg" alt="RoonDeck" width="574" height="168"></a><p>An independent touchscreen for Roon.</p></div><nav aria-label="Footer navigation"><a href="/">Home</a><a href="https://github.com/impala84/pi-home/releases">Releases</a><a href="https://github.com/impala84/pi-home/issues">Support</a></nav><small>RoonDeck is an independent project and is not affiliated with or endorsed by Roon Labs. Raspberry Pi is a trademark of Raspberry Pi Ltd.</small></footer>
 </body>
 </html>

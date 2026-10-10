@@ -1,0 +1,12 @@
+{
+  "name": "RoonDeck",
+  "short_name": "RoonDeck",
+  "description": "An independent touchscreen for Roon",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#050505",
+  "theme_color": "#151328",
+  "icons": [
+    {"src": "/assets/brand/favicon-dark.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable"}
+  ]
+}
