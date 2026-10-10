@@ -205,7 +205,8 @@ class DisplayRotationTests(unittest.TestCase):
 
     def test_touchscreen_settings_title_and_checkbox_spacing(self):
         display = (ROOT / "native-display" / "pi_bus_native.py").read_text(encoding="utf-8")
-        self.assertIn('self.label("Pi Home", "settings-title")', display)
+        self.assertIn('self.label("Roon", "settings-title")', display)
+        self.assertIn('self.label("Deck", "settings-title")', display)
         self.assertIn('self.label("Settings", "settings-title")', display)
         self.assertIn('actions.set_homogeneous(True)', display)
         self.assertIn('self.settings_row_sizes = Gtk.SizeGroup', display)

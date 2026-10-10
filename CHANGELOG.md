@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.3-beta.22 Alpine — 10 October 2026
+
+- Rebrands the touchscreen Settings header from Pi Home to RoonDeck.
+
 ## 1.1.3-beta.21 Alpine — 10 October 2026
 
 - Render Screen Preview captures into an independent Cairo image surface before attempting GPU/KMS readback, avoiding Raspberry Pi fullscreen capture stalls, and expose the precise renderer failure when capture still fails.
