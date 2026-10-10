@@ -26,7 +26,7 @@ def mapping_rule(output, rotation="normal", profile=None):
     # whose kernel input name is "<I2C address> ili_v3", not Goodix.
     names = ["*Goodix Capacitive TouchScreen"]
     if profile == "touch2-10": names.append("* ili_v3")
-    return '# Pi Home: libinput owns touch rotation; kernel and Cage mapping stay unrotated.\n' + ''.join(
+    return '# RoonDeck: libinput owns touch rotation; kernel and Cage mapping stay unrotated.\n' + ''.join(
         'ACTION!="remove", SUBSYSTEM=="input", KERNEL=="event*", '
         f'ENV{{ID_INPUT_TOUCHSCREEN}}=="1", ATTRS{{name}}=="{name}", '
         f'ENV{{WL_OUTPUT}}="", ENV{{LIBINPUT_CALIBRATION_MATRIX}}="{MATRICES[rotation]}"\n'
@@ -45,14 +45,14 @@ def recover_touch(root, run=subprocess.run, sleep=time.sleep):
     if not any(b"goodix,gt911" in node.read_bytes() for node in nodes): return False
     for attempt in range(2):
         sleep(1)
-        print(f"Pi Home Goodix boot-probe recovery attempt {attempt + 1}", flush=True)
+        print(f"RoonDeck Goodix boot-probe recovery attempt {attempt + 1}", flush=True)
         for args in (["modprobe", "-r", "goodix_ts"], ["modprobe", "goodix_ts"]):
             result = run(args, check=False, timeout=10)
             if result.returncode: break
         else:
             run(["udevadm", "settle", "--timeout=10"], check=False, timeout=15)
             if touch_present(root): return True
-    print("Pi Home Goodix recovery failed; inspect kernel log", flush=True)
+    print("RoonDeck Goodix recovery failed; inspect kernel log", flush=True)
     return False
 
 
@@ -77,11 +77,11 @@ def main():
         try: recovered = recover_touch(root)
         except (OSError, subprocess.SubprocessError) as error:
             recovered = False
-            print(f"Pi Home Goodix recovery unavailable: {error}", flush=True)
-        print(f"Pi Home touch calibration: profile={profile}, rotation={rotation}, matrix={MATRICES[rotation]}, goodix_detected={recovered}", flush=True)
+            print(f"RoonDeck Goodix recovery unavailable: {error}", flush=True)
+        print(f"RoonDeck touch calibration: profile={profile}, rotation={rotation}, matrix={MATRICES[rotation]}, goodix_detected={recovered}", flush=True)
         for name in (root / "sys/class/input").glob("event*/device/name"):
-            print(f"Pi Home input: {name.parent.parent.name}: {name.read_text().strip()}", flush=True)
-    else: print("Pi Home touch mapping: no unambiguous DSI output", flush=True)
+            print(f"RoonDeck input: {name.parent.parent.name}: {name.read_text().strip()}", flush=True)
+    else: print("RoonDeck touch mapping: no unambiguous DSI output", flush=True)
 
 
 if __name__ == "__main__": main()

@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.3-beta.23 Alpine — 10 October 2026
+
+- Rolls out the supplied RoonDeck vector identity across the touchscreen, first-run setup, web settings, browser pages, launch metadata, favicons and public website.
+- Adds the approved independent-project descriptor and legal disclaimer, while preserving existing internal service and configuration paths for upgrade compatibility.
+- Documents optional Roon Bridge support as a RAAT endpoint and renames the Roon extension to RoonDeck without changing its pairing identifier.
+- Compacts landscape Settings by using `THEME` and `BACKGROUND` as the only appearance headings, eliminating the duplicated labels that could overflow the viewport.
+
 ## 1.1.3-beta.22 Alpine — 10 October 2026
 
 - Rebrands the touchscreen Settings header from Pi Home to RoonDeck.

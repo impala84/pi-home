@@ -7,7 +7,7 @@ def prepare(base=Path("/run/pi-home/cursors")):
     theme = base / "pi-home-touch"
     cursors = theme / "cursors"
     cursors.mkdir(parents=True, exist_ok=True)
-    (theme / "index.theme").write_text("[Icon Theme]\nName=Pi Home Touch\n")
+    (theme / "index.theme").write_text("[Icon Theme]\nName=RoonDeck Touch\n")
     # Xcursor file header, one image TOC, one 1×1 fully transparent ARGB image.
     data = struct.pack("<4I", 0x72756358, 16, 0x10000, 1)
     data += struct.pack("<3I", 0xfffd0002, 24, 28)

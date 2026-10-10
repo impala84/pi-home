@@ -409,7 +409,7 @@ class Setup:
             static_agent = self.root / "opt/netdata/bin/netdata"
             if packaged_agent.is_file() and not static_agent.is_file():
                 # Netdata's kickstart installer deliberately refuses to replace
-                # distribution-packaged installs. Older Pi Home images shipped
+                # distribution-packaged installs. Older RoonDeck images shipped
                 # Alpine's package, so remove it only after the new installer
                 # has downloaded successfully. apk retains /etc configuration.
                 atomic(status, "Replacing the older Alpine Netdata package…\n")
@@ -763,7 +763,7 @@ class Setup:
             zone = str(data.get("zone", ""))
             if not data.get("skip"):
                 if zone not in [z.get("name") for z in self.roon().get("zones", [])]:
-                    raise ValueError("Authorise Pi Home in Roon, refresh, then choose an available zone.")
+                    raise ValueError("Authorise RoonDeck in Roon, refresh, then choose an available zone.")
             else: zone = ""
             self.setting("roon_zone_name", zone); state["roon"] = True; state["zone"] = zone
         elif action in {"orientation", "display"}:

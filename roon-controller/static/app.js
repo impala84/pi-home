@@ -135,7 +135,7 @@ function render(next) {
   if (externalView) return;
   if (!zone) {
     $('title').textContent = next.connected ? 'Choose a Roon zone' : 'Waiting for Roon';
-    $('artist').textContent = next.connected ? 'Start playback in a zone' : 'Enable Pi Home Roon Controller in Roon → Settings → Extensions';
+    $('artist').textContent = next.connected ? 'Start playback in a zone' : 'Enable RoonDeck in Roon → Settings → Extensions';
     $('art').removeAttribute('src');
     $('previous').disabled = $('play').disabled = $('next').disabled = true;
     $('volume-panel').hidden = true;

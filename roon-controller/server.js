@@ -246,9 +246,9 @@ function cachedImage(key, size, callback) {
 
 const roon = new RoonApi({
   extension_id: 'com.impala84.pi-bus-time-display',
-  display_name: 'Pi Home Roon Controller',
+  display_name: 'RoonDeck',
   display_version: require('./package.json').version,
-  publisher: 'Pi Home',
+  publisher: 'RoonDeck',
   email: 'noreply@example.invalid',
   website: 'https://github.com/impala84/pi-home',
   core_paired: pairedCore => {

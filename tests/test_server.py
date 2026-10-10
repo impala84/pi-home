@@ -135,7 +135,7 @@ class DisplayModeTests(unittest.TestCase):
             self.assertNotIn("Roon controller", labels)
             self.assertNotIn("Roon Bridge", labels)
             self.assertNotIn("Netdata", labels)
-            self.assertIn("Pi Home backend", labels)
+            self.assertIn("RoonDeck backend", labels)
             configured = diagnostics_snapshot(Config(roon_zone_name="NAD M33"))["processes"]
             self.assertIn("Roon controller", [p["label"] for p in configured])
 

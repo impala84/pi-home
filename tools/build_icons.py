@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Canonical Pi Home monoline family. Generated assets are checked in for appliances."""
+"""Canonical RoonDeck monoline family. Generated assets are checked in for appliances."""
 import json
 from pathlib import Path
 

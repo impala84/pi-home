@@ -244,7 +244,7 @@ def update():
         (target / ".source-commit").write_text(sha + "\n")
         status("Update · Creating Python environment…")
         run(["python3", "-m", "venv", "--system-site-packages", str(target / ".venv")])
-        status("Update · Installing Pi Home Python package…")
+        status("Update · Installing RoonDeck Python package…")
         run([str(target / ".venv/bin/pip"), "install", "--no-build-isolation", "--no-deps", str(target)])
         status("Update · Downloading Roon dependencies…")
         run(["npm", "--prefix", str(target / "roon-controller"), "ci", "--omit=dev", "--no-audit", "--no-fund"])
@@ -265,7 +265,7 @@ def update():
         activate(target)
         shutil.copyfile(target / "appliance/alpine/display-launch", "/usr/local/bin/pi-home-display-launch")
         Path("/usr/local/bin/pi-home-display-launch").chmod(0o755)
-        status("Update · Restarting and checking Pi Home…")
+        status("Update · Restarting and checking RoonDeck…")
         restart()
         if not healthy(sha): raise RuntimeError("New application did not become healthy or the touchscreen kept running old files")
     except Exception as failure:

@@ -1,3 +1,3 @@
-"""Pi Home appliance."""
+"""RoonDeck appliance."""
 
-__version__ = "1.1.3-beta.22"
+__version__ = "1.1.3-beta.23"

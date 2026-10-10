@@ -17,7 +17,7 @@ sed -i '1i Include /etc/ssh/sshd_config.d/*.conf' /etc/ssh/sshd_config
 # Host keys are generated uniquely on the device by the OpenRC sshd service.
 rc-update add sshd default
 mkdir -p /etc/pi-home /var/lib/pi-home/roon
-# Internal compatibility paths for existing runtime helpers; new paths use Pi Home.
+# Internal compatibility paths are retained across the RoonDeck rebrand.
 ln -s /opt/pi-home /opt/pi-bus-time-display
 ln -s /etc/pi-home /etc/pi-bus-time-display
 ln -s /var/lib/pi-home /var/lib/pi-bus-time-display
@@ -47,7 +47,9 @@ chown morningbus:morningbus /var/log/pi-home
 chmod 750 /var/log/pi-home
 printf '%s\n' 'rc_logger="YES"' 'rc_log_path="/var/log/rc.log"' >> /etc/rc.conf
 printf '%s\n' 'command_args="-g video"' > /etc/conf.d/seatd
-printf '%s\n' 'pi-home-alpine' > /etc/hostname
+printf '%s\n' 'roondeck' > /etc/hostname
+mkdir -p /usr/share/icons/hicolor/scalable/apps
+cp native-display/assets/brand/favicon-dark.svg /usr/share/icons/hicolor/scalable/apps/roondeck.svg
 printf '%s\n' 'auto lo' 'iface lo inet loopback' > /etc/network/interfaces
 mkdir -p /etc/NetworkManager/conf.d
 printf '%s\n' '[main]' 'plugins=keyfile' '[connection]' 'wifi.powersave=2' '[device]' 'wifi.backend=wpa_supplicant' > /etc/NetworkManager/conf.d/pi-home.conf

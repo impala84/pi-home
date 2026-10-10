@@ -1,11 +1,14 @@
-"""Touch-first Alpine onboarding, before the main native display starts."""
+"""Touch-first RoonDeck Alpine onboarding."""
 import json
 import socket
 import threading
+from pathlib import Path
 import gi
 gi.require_version("Gtk", "4.0")
 from gi.repository import Gtk, Gdk, GLib
 from setup_service import SOCKET
+
+BRAND_ASSETS = Path(__file__).resolve().parent / "assets" / "brand"
 
 
 def request(data):
@@ -28,15 +31,15 @@ class Wizard(Gtk.Application):
         button = Gtk.Button(label=title); button.connect("clicked", lambda *_: callback()); return button
 
     def activate(self, *_):
-        self.window = Gtk.ApplicationWindow(application=self); self.window.set_title("Set up Pi Home"); self.window.fullscreen()
+        self.window = Gtk.ApplicationWindow(application=self); self.window.set_title("Set up RoonDeck"); self.window.fullscreen()
         self.window.set_cursor_from_name("none")
-        css = Gtk.CssProvider(); css.load_from_data(b"window { background:#1c1b24; color:#f5f5f5; } button { min-height:40px; padding:4px 10px; background:#302d42; color:#fff; border-radius:8px; } button:active {background:#aaa2ff;color:#111;} entry { min-height:40px; font-size:20px; background:#282631;color:#fff; } .title {font-size:25px;font-weight:700;color:#aaa2ff;} .brand {font-size:15px;font-weight:800;color:#817aeb;letter-spacing:3px;} .primary {background:#817aeb;color:#111;} .key {min-height:34px;padding:2px;} label {font-size:17px;} .mint .brand, .mint .title {color:#6ed9ae;} .mint .primary, .mint button:active {background:#6ed9ae;}")
+        css = Gtk.CssProvider(); css.load_from_data(b"window { background:#1c1b24; color:#f5f5f5; } button { min-height:40px; padding:4px 10px; background:#302d42; color:#fff; border-radius:8px; } button:active {background:#aaa2ff;color:#111;} entry { min-height:40px; font-size:20px; background:#282631;color:#fff; } .title {font-size:25px;font-weight:700;color:#aaa2ff;} .brand {min-width:150px;min-height:44px;} .primary {background:#817aeb;color:#111;} .key {min-height:34px;padding:2px;} label {font-size:17px;} .mint .title {color:#6ed9ae;} .mint .primary, .mint button:active {background:#6ed9ae;}")
         Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), css, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
         self.outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         for edge in ("start", "end", "top", "bottom"): getattr(self.outer, "set_margin_" + edge)(14)
         header = Gtk.Box(spacing=14)
-        brand = self.label("PI HOME"); brand.add_css_class("brand"); header.append(brand)
-        self.title = self.label("Welcome to Pi Home"); self.title.add_css_class("title"); header.append(self.title); self.outer.append(header)
+        brand = Gtk.Picture.new_for_filename(str(BRAND_ASSETS / "roondeck-wordmark.svg")); brand.add_css_class("brand"); brand.set_can_shrink(True); brand.set_content_fit(Gtk.ContentFit.CONTAIN); header.append(brand)
+        self.title = self.label("Welcome to RoonDeck"); self.title.add_css_class("title"); header.append(self.title); self.outer.append(header)
         scroll = Gtk.ScrolledWindow(); scroll.set_vexpand(True); scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         self.content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10); scroll.set_child(self.content); self.outer.append(scroll)
         self.status = self.label(""); self.outer.append(self.status)
@@ -158,7 +161,7 @@ class Wizard(Gtk.Application):
             self.content.append(self.button("Connect Wi-Fi", lambda: self.advance({"action": "wifi", "ssid": ssid.get_text(), "password": password.get_text()})))
             self.footer.append(self.button("Continue with current connection", lambda: self.advance({"action": "network"})))
         elif self.stage == 3:
-            self.content.append(self.label("In Roon: Settings → Extensions → enable Pi Home Roon Controller. Then Refresh and choose the output you want to control. This Pi is a controller, not an audio endpoint."))
+            self.content.append(self.label("In Roon: Settings → Extensions → enable RoonDeck. Then Refresh and choose the output you want to control. Roon Bridge can optionally turn this Pi into a separate RAAT audio endpoint."))
             zones = [zone["name"] for zone in self.snapshot.get("roon", {}).get("zones", [])]
             chooser = Gtk.DropDown.new_from_strings(zones or ["Waiting for Roon authorisation…"]); self.content.append(chooser)
             select = self.button("Use this zone", lambda: self.advance({"action": "roon", "zone": zones[chooser.get_selected()]})); select.set_sensitive(bool(zones)); self.footer.append(select)
@@ -174,9 +177,9 @@ class Wizard(Gtk.Application):
             region.connect("notify::selected", lambda *_: timezone.set_text(regions[region.get_selected()]) if region.get_selected() else None)
             self.footer.append(self.button("Save and continue", lambda: self.advance({"action": "display", "profile": self.progress["profile"], "rotation": self.progress["rotation"], "theme": ("roon", "fresh-mint")[theme.get_selected()], "timezone": timezone.get_text()})))
         elif self.stage == 5:
-            self.content.append(self.label("Pi Home already includes storage expansion, time sync, downloads and diagnostics. Choose any additional services for this Pi."))
+            self.content.append(self.label("RoonDeck already includes storage expansion, time sync, downloads and diagnostics. Choose any additional services for this Pi."))
             choices = self.progress.get("software_choices", {})
-            bridge = Gtk.CheckButton(label="Install Roon Bridge · use this Pi as an audio endpoint"); bridge.set_active(choices.get("roon_bridge", False)); self.content.append(bridge)
+            bridge = Gtk.CheckButton(label="Install Roon Bridge · use this Pi as a RAAT audio endpoint"); bridge.set_active(choices.get("roon_bridge", False)); self.content.append(bridge)
             netdata = Gtk.CheckButton(label="Install Netdata · official stable Agent with automatic updates"); netdata.set_active(choices.get("netdata", False)); self.content.append(netdata)
             lightweight = Gtk.CheckButton(label="Lightweight Netdata · 3-second samples, no ML anomaly detection"); lightweight.set_active(choices.get("netdata_lightweight", True)); self.content.append(lightweight)
             self.content.append(self.label("Downloads the latest official stable Agent, not Alpine’s older package. Lightweight mode disables ML and six optional collectors, keeps apps/go.d, alerts, dashboard and Cloud connectivity; memory savings vary."))
@@ -191,11 +194,11 @@ class Wizard(Gtk.Application):
             else:
                 self.content.set_sensitive(True); self.footer.set_sensitive(True)
         elif self.stage == 6:
-            self.content.append(self.label(f"Web settings: http://{self.progress.get('hostname')}.local:8765/admin\nChoose the device account used for both Pi Home settings and SSH recovery."))
+            self.content.append(self.label(f"Web settings: http://{self.progress.get('hostname')}.local:8765/admin\nChoose the device account used for both RoonDeck settings and SSH recovery."))
             username = self.field("Device username", self.progress.get("username", "admin"))
             password = self.secret_field("Choose password")
             confirmation = self.secret_field("Enter password again")
-            self.content.append(self.label("Use 8–128 characters. Pi Home may warn about a simple password, but the choice is yours; keep it private because it controls the appliance."))
+            self.content.append(self.label("Use 8–128 characters. RoonDeck may warn about a simple password, but the choice is yours; keep it private because it controls the appliance."))
             ssh = Gtk.CheckButton(label="Enable SSH (recommended for recovery)"); ssh.set_active(True); self.content.append(ssh)
             self.footer.append(self.button("Finish and restart", lambda: self.finish(username.get_text(), password.get_text(), True, confirmation.get_text(), ssh.get_active())))
             self.content.append(self.button("Finish without restart", lambda: self.finish(username.get_text(), password.get_text(), False, confirmation.get_text(), ssh.get_active())))

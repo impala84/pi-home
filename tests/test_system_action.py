@@ -23,7 +23,7 @@ class SystemActionQueueTests(unittest.TestCase):
         helper = load_helper()
         with patch.object(helper, "run") as run, patch.object(helper, "report") as report:
             helper.execute({"action": "reboot"})
-        report.assert_any_call("Reboot requested. Pi Home is restarting…")
+        report.assert_any_call("Reboot requested. RoonDeck is restarting…")
         run.assert_called_once_with(["systemctl", "reboot"])
 
     def test_failed_update_gets_a_dedicated_terminal_status(self):

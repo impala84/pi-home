@@ -87,7 +87,7 @@ def select_release(releases: list, channel: str, installed: str, distribution: s
 def published_releases() -> list:
     releases = []
     for page in range(1, 6):
-        request = urllib.request.Request(f"https://api.github.com/repos/{REPOSITORY}/releases?per_page=100&page={page}", headers={"Accept": "application/vnd.github+json", "User-Agent": "Pi-Home-Updater"})
+        request = urllib.request.Request(f"https://api.github.com/repos/{REPOSITORY}/releases?per_page=100&page={page}", headers={"Accept": "application/vnd.github+json", "User-Agent": "RoonDeck-Updater"})
         with urllib.request.urlopen(request, timeout=8) as response:
             batch = json.load(response)
         if not isinstance(batch, list):

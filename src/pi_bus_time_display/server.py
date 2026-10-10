@@ -570,7 +570,7 @@ def diagnostics_snapshot(config: Config | None = None) -> dict:
         if not config.roon_zone_name.strip():
             visible.discard("controller")
         if not config.bus_enabled:
-            groups["api"]["label"] = "Pi Home backend"
+            groups["api"]["label"] = "RoonDeck backend"
         # Optional tools are shown when running, or enabled at boot so failures
         # remain diagnosable. A deliberately stopped endpoint is not an idle row.
         bridge_enabled = Path("/etc/runlevels/default/roonbridge").exists() if alpine else command_output(["systemctl", "is-enabled", "roonbridge.service"]) == "enabled" or command_output(["systemctl", "is-enabled", "RoonBridge.service"]) == "enabled"
@@ -1043,7 +1043,7 @@ def make_handler(state: State, config_path: Path, env_path: Path, mode_path: Pat
                     self.send_header("Content-Type", "image/png")
                     self.send_header("Cache-Control", "no-store")
                     self.send_header("Content-Length", str(len(image)))
-                    self.send_header("Content-Disposition", 'inline; filename="pi-home-display.png"')
+                    self.send_header("Content-Disposition", 'inline; filename="roondeck-display.png"')
                     self.end_headers()
                     self.wfile.write(image)
                 except RuntimeError as exc:

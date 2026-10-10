@@ -51,7 +51,7 @@ def roon_service() -> str:
 
 def display_power(powered: bool, brightness_percent: int = 100) -> None:
     brightness_percent = max(10, min(100, int(brightness_percent)))
-    # Recover a display pipeline disabled by an older Pi Home release, but
+    # Recover a display pipeline disabled by an older RoonDeck release, but
     # never disable it again: touchscreen wake events require it to stay live.
     vcgencmd = Path("/usr/bin/vcgencmd")
     if powered and vcgencmd.exists():
@@ -147,9 +147,9 @@ def execute(data: dict) -> None:
         except Exception as error:
             report_update(f"Failed: {error}")
             raise
-        report("Update installed. Pi Home services restarted.")
+        report("Update installed. RoonDeck services restarted.")
     elif action == "reboot":
-        report("Reboot requested. Pi Home is restarting…")
+        report("Reboot requested. RoonDeck is restarting…")
         run(["systemctl", "reboot"])
     elif action in {"display_on", "display_off"}:
         display_power(action == "display_on", int(data.get("brightness", 100)))

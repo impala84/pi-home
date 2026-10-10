@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Native GTK4 touchscreen for Pi Home."""
+"""Native GTK4 touchscreen for RoonDeck."""
 from __future__ import annotations
 
 import json
@@ -39,6 +39,7 @@ from white_balance import create_display_window
 BUS = "http://127.0.0.1:8765"
 ROON = "http://127.0.0.1:8766"
 TZ = ZoneInfo("Asia/Singapore")
+BRAND_ASSETS = Path(__file__).resolve().parent / "assets" / "brand"
 
 # Shared appliance page grid; rendered into GTK CSS for older GTK versions too.
 PANEL_STROKE = 2
@@ -223,7 +224,7 @@ button { border: 0; box-shadow: none; background-image: none; outline: none; }
 .high-resolution .page { padding: 21px 30px 15px; }.high-resolution .stop, .high-resolution .stop-code { font-size: 38px; }.high-resolution .clock { font-size: 47px; }.high-resolution .eyebrow { font-size: 17px; }.high-resolution .service { border-radius: 20px; padding: 8px 24px; }.high-resolution .service-no, .high-resolution .arrival { font-size: 123px; }.high-resolution .service.compact .service-no, .high-resolution .service.compact .arrival { font-size: 89px; }.high-resolution .service.dense .service-no, .high-resolution .service.dense .arrival { font-size: 68px; }.high-resolution .arrival-sub { font-size: 15px; }.high-resolution .muted { font-size: 16px; }.high-resolution .artwork { min-width: 420px; min-height: 420px; }.high-resolution .roon-title { font-size: 52px; }.high-resolution .roon-artist { font-size: 27px; }.high-resolution .nav button { min-height: 60px; font-size: 21px; }
 .high-resolution .roon-subnav button { min-height: 44px; font-size: 15px; }.high-resolution .transport button { min-width: 75px; min-height: 75px; border-radius: 38px; }.high-resolution .transport .play { min-width: 96px; min-height: 96px; border-radius: 48px; }.high-resolution .queue-row { min-height: 99px; }.high-resolution .queue-art, .high-resolution .browser-action-icon { min-width: 84px; min-height: 84px; }.high-resolution .queue-title { font-size: 24px; }.high-resolution .queue-meta, .high-resolution .queue-duration { font-size: 18px; }.high-resolution .detail-header { min-height: 108px; padding: 18px 30px; }.high-resolution .detail-header-title { font-size: 34px; }.high-resolution .detail-close { min-width: 72px; min-height: 72px; }.high-resolution .detail-panel { padding: 38px 34px 64px; }.high-resolution .detail-entity { padding: 0 18px; }.high-resolution .detail-section-label { font-size: 18px; }.high-resolution .detail-title { font-size: 45px; }.high-resolution .detail-artist { font-size: 28px; }.high-resolution .detail-writeup { font-size: 21px; }.high-resolution .detail-source { font-size: 15px; }.high-resolution .detail-fact { font-size: 19px; }.high-resolution .detail-action { min-height: 74px; font-size: 21px; }.high-resolution .detail-track-title { font-size: 20px; }
 .touch-landscape .page { padding: 18px 28px 14px; }.touch-landscape .service-no, .touch-landscape .arrival { font-size: 138px; }.touch-landscape .service-no { min-width: 205px; }.touch-landscape .arrival-sub { font-size: 17px; }.touch-landscape .stop, .touch-landscape .stop-code { font-size: 42px; }.touch-landscape .clock { font-size: 50px; }.touch-landscape .nav button { min-height: 58px; font-size: 22px; }.touch-landscape .roon-subnav button { min-height: 54px; padding: 8px 18px 5px; font-size: 18px; }.touch-landscape .artwork { min-width: 324px; min-height: 324px; }.touch-landscape .roon-title { font-size: 46px; }.touch-landscape .roon-artist { font-size: 25px; }.touch-landscape .transport button { min-width: 70px; min-height: 70px; border-radius: 35px; }.touch-landscape .transport .play { min-width: 88px; min-height: 88px; border-radius: 44px; }.touch-landscape .settings-title { font-size: 43px; }.touch-landscape .settings-card { padding: 24px 28px; }.touch-landscape .settings-card .muted, .touch-landscape .settings-diagnostic { font-size: 17px; }.touch-landscape .settings-select { min-height: 70px; font-size: 19px; }.touch-landscape .setting-line { min-height: 78px; padding: 0 18px; }.touch-landscape .setting-line label, .touch-landscape .setting-line checkbutton { font-size: 19px; }.touch-landscape .setting-line check { min-width: 30px; min-height: 30px; }.touch-landscape .settings-action { min-height: 74px; font-size: 20px; }.touch-landscape .settings-controls { padding: 12px 0; }.touch-landscape .utility { min-width: 118px; min-height: 52px; font-size: 16px; }
-.boot-splash { background: #000; }.boot-logo { color: #6ef0be; font-size: 62px; font-weight: 760; letter-spacing: 9px; }
+.boot-splash { background: #000; }.boot-wordmark { min-width: 320px; min-height: 94px; }.settings-wordmark { min-width: 180px; min-height: 53px; }
 .touch-landscape .header-title { transform: translateY(-5px); }
 .touch-landscape .stop, .touch-landscape .stop-code { font-size: 34px; }
 .touch-landscape .stop-row { margin-bottom: 14px; }
@@ -979,7 +980,7 @@ class Display(Gtk.Application):
 
     def build_boot_splash(self):
         page = Gtk.Box(); page.add_css_class("boot-splash"); page.set_hexpand(True); page.set_vexpand(True)
-        logo = self.label("PI HOME", "boot-logo", .5); logo.set_halign(Gtk.Align.CENTER); logo.set_valign(Gtk.Align.CENTER); logo.set_hexpand(True); logo.set_vexpand(True); page.append(logo)
+        logo = Gtk.Picture.new_for_filename(str(BRAND_ASSETS / "roondeck-wordmark.svg")); logo.add_css_class("boot-wordmark"); logo.set_can_shrink(True); logo.set_content_fit(Gtk.ContentFit.CONTAIN); logo.set_halign(Gtk.Align.CENTER); logo.set_valign(Gtk.Align.CENTER); logo.set_hexpand(True); logo.set_vexpand(True); page.append(logo)
         return page
 
     def build_bus(self):
@@ -1044,7 +1045,7 @@ class Display(Gtk.Application):
         self.artwork_viewport = Gtk.ScrolledWindow(); self.artwork_viewport.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.NEVER); self.artwork_viewport.set_propagate_natural_width(False); self.artwork_viewport.set_propagate_natural_height(False)
         centre = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=7); centre.set_valign(Gtk.Align.CENTER); centre.set_hexpand(True); self.now_playing_centre = centre
         self.title = self.label("Waiting for Roon…", "roon-title", .5); self.title.set_hexpand(True); self.title.set_halign(Gtk.Align.FILL); self.title.set_wrap(True); self.title.set_lines(2); self.title.set_justify(Gtk.Justification.CENTER)
-        self.artist = self.label("Enable Pi Home Roon Controller in Roon", "roon-artist", .5); self.artist.set_hexpand(True); self.artist.set_halign(Gtk.Align.FILL); self.artist.set_wrap(True); self.artist.set_justify(Gtk.Justification.CENTER); centre.append(self.title); centre.append(self.artist)
+        self.artist = self.label("Enable RoonDeck in Roon", "roon-artist", .5); self.artist.set_hexpand(True); self.artist.set_halign(Gtk.Align.FILL); self.artist.set_wrap(True); self.artist.set_justify(Gtk.Justification.CENTER); centre.append(self.title); centre.append(self.artist)
         self.progress = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0, 1, 1); self.progress.add_css_class("progress"); self.progress.set_draw_value(False); self.progress.set_sensitive(False); self.progress.connect("value-changed", self.change_seek); centre.append(self.progress)
         times = Gtk.Box(); self.elapsed = self.label("0:00", "time"); self.remaining = self.label("−0:00", "time", 1); self.remaining.set_hexpand(True); times.append(self.elapsed); times.append(self.remaining); centre.append(times); self.roon_times = times
         self.controls = Gtk.Box(spacing=14); self.controls.set_halign(Gtk.Align.CENTER); self.controls.add_css_class("transport")
@@ -1186,21 +1187,23 @@ class Display(Gtk.Application):
         top = Gtk.Box(spacing=20); top.add_css_class("settings-header"); self.settings_header = top
         heading = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8); heading.set_hexpand(True)
         title_row = Gtk.Box(spacing=10); title_row.set_valign(Gtk.Align.CENTER)
-        title_row.append(self.label("Roon", "settings-title")); title_row.get_last_child().add_css_class("settings-roon"); title_row.get_last_child().set_valign(Gtk.Align.BASELINE); title_row.append(self.label("Deck", "settings-title")); title_row.get_last_child().add_css_class("settings-brand"); title_row.get_last_child().set_valign(Gtk.Align.BASELINE); title_row.append(self.label("Settings", "settings-title")); title_row.get_last_child().set_valign(Gtk.Align.BASELINE)
+        wordmark = Gtk.Picture.new_for_filename(str(BRAND_ASSETS / "roondeck-wordmark.svg")); wordmark.add_css_class("settings-wordmark"); wordmark.set_can_shrink(True); wordmark.set_content_fit(Gtk.ContentFit.CONTAIN); wordmark.set_valign(Gtk.Align.CENTER); title_row.append(wordmark)
+        title_row.append(self.label("Settings", "settings-title")); title_row.get_last_child().set_valign(Gtk.Align.CENTER)
         self.device_status = self.label("", "settings-version"); self.device_status.set_valign(Gtk.Align.BASELINE); self.device_status.set_max_width_chars(32); self.device_status.set_ellipsize(Pango.EllipsizeMode.END); title_row.append(self.device_status); heading.append(title_row)
         self.touch_diagnostics = self.label("Loading diagnostics…", "settings-diagnostic"); self.touch_diagnostics.set_wrap(True); heading.append(self.touch_diagnostics); top.append(heading)
         utilities = Gtk.Box(spacing=22); utilities.add_css_class("settings-utilities"); utilities.set_valign(Gtk.Align.START); utilities.append(self.button("BACK", self.close_settings)); utilities.append(self.button("SLEEP", self.sleep)); top.append(utilities); page.append(top)
         separator = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL); separator.add_css_class("settings-divider"); page.append(separator)
         card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14); card.add_css_class("settings-card"); card.set_vexpand(True)
         self.settings_row_sizes = Gtk.SizeGroup(mode=Gtk.SizeGroupMode.VERTICAL)
-        appearance = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12); appearance.add_css_class("settings-appearance"); appearance.append(self.label("APPEARANCE", "eyebrow"))
-        self.touch_theme_row = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8); self.touch_theme_row.append(self.label("Theme", "settings-option-title")); self.touch_theme_buttons = {}
+        appearance = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12); appearance.add_css_class("settings-appearance"); appearance.append(self.label("THEME", "eyebrow"))
+        self.touch_theme_row = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8); self.touch_theme_buttons = {}
         theme_choices = Gtk.Box(spacing=16); theme_choices.set_homogeneous(True); self.touch_theme_row.append(theme_choices)
         for value, title in (("fresh-mint", "Mint"), ("roon", "Roon")):
             button = self.button(title, lambda _button, theme=value: self.change_theme(theme), "theme-choice")
             button.set_hexpand(True); button.add_css_class("settings-theme-choice"); self.touch_theme_buttons[value] = button; theme_choices.append(button)
         appearance.append(self.touch_theme_row)
-        self.touch_background_row = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8); self.touch_background_row.append(self.label("Background", "settings-option-title")); self.touch_background_buttons = {}
+        appearance.append(self.label("BACKGROUND", "eyebrow"))
+        self.touch_background_row = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8); self.touch_background_buttons = {}
         background_choices = Gtk.Box(spacing=16); background_choices.set_homogeneous(True); self.touch_background_row.append(background_choices)
         for value, title in (("current", "Gradient"), ("black", "Black")):
             choice = self.button(title, lambda _button, selected=value: self.change_background(selected), "theme-choice"); choice.add_css_class("settings-theme-choice"); choice.set_hexpand(True); self.touch_background_buttons[value] = choice; background_choices.append(choice)
@@ -1280,7 +1283,7 @@ class Display(Gtk.Application):
                     except OSError: continue
                 if not handles:
                     time.sleep(5); continue
-                print("Pi Home low-level wake listening on " + ", ".join(name for _, name in handles), flush=True)
+                print("RoonDeck low-level wake listening on " + ", ".join(name for _, name in handles), flush=True)
                 while True:
                     readable, _, _ = select.select([handle for handle, _ in handles], [], [], 30)
                     for handle in readable:
@@ -1334,7 +1337,7 @@ class Display(Gtk.Application):
 
     def log_renderer(self):
         renderer = self.window.get_renderer()
-        print(f"Pi Home GTK {Gtk.get_major_version()}.{Gtk.get_minor_version()}.{Gtk.get_micro_version()} renderer={type(renderer).__name__}", flush=True)
+        print(f"RoonDeck GTK {Gtk.get_major_version()}.{Gtk.get_minor_version()}.{Gtk.get_micro_version()} renderer={type(renderer).__name__}", flush=True)
         return False
 
     def start_poll(self):
@@ -1389,13 +1392,13 @@ class Display(Gtk.Application):
         if artist_detail_image: GLib.idle_add(self.apply_detail_artwork, "artist", artist_detail_key, artist_detail_image)
         elapsed = time.monotonic() - started; self.refresh_count += 1
         if self.refresh_count <= 5 and elapsed > .25:
-            print(f"Pi Home core refresh completed in {elapsed:.3f}s", flush=True)
+            print(f"RoonDeck core refresh completed in {elapsed:.3f}s", flush=True)
 
     def capture_display(self, capture_id):
         data = {"id": capture_id}
         try:
             # Snapshot the actual live GTK tree.  This captures precisely what
-            # Pi Home rendered (including fetched artwork) and remains reliable
+            # RoonDeck rendered (including fetched artwork) and remains reliable
             # when Cage/wlroots uses direct scan-out, where grim can otherwise
             # return an all-black but syntactically valid PNG.
             width, height = self.window.get_width(), self.window.get_height()
@@ -1503,11 +1506,11 @@ class Display(Gtk.Application):
                 raise ValueError("Invalid screenshot")
             data["image"] = base64.b64encode(image).decode("ascii")
         except Exception as error:
-            print(f"Pi Home display capture failed: {error}", flush=True)
+            print(f"RoonDeck display capture failed: {error}", flush=True)
             detail = str(error).strip()[:240]
             data["error"] = f"Display capture failed: {detail}. The previous preview is unchanged."
         if post_json(BUS + "/api/device/display-capture", data, timeout=15) is None:
-            print("Pi Home display capture delivery failed", flush=True)
+            print("RoonDeck display capture delivery failed", flush=True)
         return False
 
     def apply_display_view_request(self, request):
@@ -1637,7 +1640,7 @@ class Display(Gtk.Application):
         if self.manual_sleep_pending:
             if target == "/sleep.html":
                 self.manual_sleep_pending = False
-                print("Pi Home manual sleep confirmed by controller", flush=True)
+                print("RoonDeck manual sleep confirmed by controller", flush=True)
             elif time.monotonic() - self.manual_sleep_started_at < 6:
                 # The local panel changes immediately, but the mode request is
                 # asynchronous. Do not let a poll of the previous mode turn
@@ -1645,7 +1648,7 @@ class Display(Gtk.Application):
                 target = "/sleep.html"
             else:
                 self.manual_sleep_pending = False
-                print("Pi Home manual sleep confirmation timed out", flush=True)
+                print("RoonDeck manual sleep confirmation timed out", flush=True)
         scheduled_wake = bool(
             target is not None
             and target != "/sleep.html"
@@ -1657,7 +1660,7 @@ class Display(Gtk.Application):
             # this reset, the wake boundary and inactivity sleep happen in the
             # same refresh and the panel appears never to wake.
             self.last_interaction = time.monotonic()
-            print("Pi Home resuming at the scheduled wake boundary", flush=True)
+            print("RoonDeck resuming at the scheduled wake boundary", flush=True)
         inactivity_seconds = max(0, int(effective_config.get("daytime_inactivity_seconds", 0) or 0))
         playing = ((roon or {}).get("zone") or {}).get("state") == "playing"
         if playing and target != "/sleep.html":
@@ -1673,7 +1676,7 @@ class Display(Gtk.Application):
         if inactivity_due and not self.inactivity_sleeping:
             self.inactivity_sleeping = True
             self.prepare_sleep_wake()
-            print(f"Pi Home sleeping after {inactivity_seconds}s without a touch", flush=True)
+            print(f"RoonDeck sleeping after {inactivity_seconds}s without a touch", flush=True)
         if self.settings_open and target != "/sleep.html" and not self.inactivity_sleeping:
             return False
         if target is None and not self.inactivity_sleeping:
@@ -1714,7 +1717,7 @@ class Display(Gtk.Application):
             child = self.stack.get_child_by_name(name)
             child.measure(Gtk.Orientation.HORIZONTAL, 800)
             child.measure(Gtk.Orientation.VERTICAL, 480)
-        print(f"Pi Home views pre-measured in {(time.monotonic() - started) * 1000:.1f}ms", flush=True)
+        print(f"RoonDeck views pre-measured in {(time.monotonic() - started) * 1000:.1f}ms", flush=True)
         return False
 
     def render_touch_controls(self, device, system):
@@ -1895,7 +1898,7 @@ class Display(Gtk.Application):
             if data is None:
                 self.title.set_text("Controller unavailable"); self.artist.set_text("Check the controller service in web settings")
             elif not data.get("connected"):
-                self.title.set_text("Authorise in Roon"); self.artist.set_text("Settings → Extensions → Pi Home Roon Controller")
+                self.title.set_text("Authorise in Roon"); self.artist.set_text("Settings → Extensions → RoonDeck")
             else:
                 self.title.set_text("Nothing playing"); self.artist.set_text("No Roon zones are available")
             self.prev.set_sensitive(False); self.play.set_sensitive(False); self.next.set_sensitive(False); self.seek_updating = True; self.progress.set_value(0); self.progress.set_sensitive(False); self.seek_updating = False; self.volume.set_sensitive(False); self.note_missing_artwork(); return
@@ -2453,7 +2456,7 @@ class Display(Gtk.Application):
             # A rendering exception must not permanently lock navigation.
             self.browser_loading = False; self.browser_rendering = False
             self.browser_scroll_restore = None
-            print("Pi Home Browse render failed: " + type(error).__name__, flush=True)
+            print("RoonDeck Browse render failed: " + type(error).__name__, flush=True)
             while child := self.browser_list.get_first_child(): self.browser_list.remove(child)
             self.browser_list.append(self.label("This view could not be displayed. Choose a music tab to try again.", "browser-message"))
             return False
@@ -3204,7 +3207,7 @@ class Display(Gtk.Application):
             threading.Thread(target=post_json, args=(ROON + "/api/queue/play", {"queue_item_id": queue_item_id}), daemon=True).start()
 
     def set_mode(self, mode):
-        started = time.monotonic(); self.settings_open = False; self.last_mode = mode; self.stack.set_visible_child_name(mode); print(f"Pi Home switched to {mode} in {(time.monotonic() - started) * 1000:.1f}ms", flush=True); threading.Thread(target=post_json, args=(BUS + "/api/admin/display-mode", {"mode": mode}), daemon=True).start()
+        started = time.monotonic(); self.settings_open = False; self.last_mode = mode; self.stack.set_visible_child_name(mode); print(f"RoonDeck switched to {mode} in {(time.monotonic() - started) * 1000:.1f}ms", flush=True); threading.Thread(target=post_json, args=(BUS + "/api/admin/display-mode", {"mode": mode}), daemon=True).start()
 
     def note_missing_artwork(self):
         self.image_misses += 1
@@ -3227,7 +3230,7 @@ class Display(Gtk.Application):
         self.last_interaction = time.monotonic()
         if self.inactivity_sleeping:
             source = getattr(event_type, "value_nick", str(event_type))
-            self.inactivity_sleeping = False; print(f"Pi Home waking after touchscreen {source}", flush=True); self.set_screen_power(True, force=True); self.stack.set_visible_child_name(self.last_mode or "bus")
+            self.inactivity_sleeping = False; print(f"RoonDeck waking after touchscreen {source}", flush=True); self.set_screen_power(True, force=True); self.stack.set_visible_child_name(self.last_mode or "bus")
         elif self.stack.get_visible_child_name() == "sleep" and time.monotonic() - self.sleep_entered_at >= .45:
             self.wake(getattr(event_type, "value_nick", str(event_type)))
         return False
@@ -3243,7 +3246,7 @@ class Display(Gtk.Application):
         self.manual_sleep_pending = True; self.manual_sleep_started_at = time.monotonic()
         self.prepare_sleep_wake(); self.stack.set_visible_child_name("sleep")
         self.set_screen_power(bool(self.settings_data.get("sleep_show_clock", False)))
-        print("Pi Home manual sleep requested", flush=True)
+        print("RoonDeck manual sleep requested", flush=True)
         threading.Thread(target=self.request_manual_sleep, daemon=True).start()
 
     def request_manual_sleep(self):
@@ -3257,7 +3260,7 @@ class Display(Gtk.Application):
     def manual_sleep_failed(self):
         if self.manual_sleep_pending:
             self.manual_sleep_pending = False
-            print("Pi Home manual sleep request failed after three attempts", flush=True)
+            print("RoonDeck manual sleep request failed after three attempts", flush=True)
             self.set_screen_power(True, force=True)
             self.stack.set_visible_child_name(self.last_mode or "bus")
         return False
@@ -3265,7 +3268,7 @@ class Display(Gtk.Application):
     def wake(self, *_):
         now = time.monotonic()
         source = _[0] if _ else "input"
-        self.manual_sleep_pending = False; self.sleep_entered_at = 0.0; self.last_interaction = now; self.inactivity_sleeping = False; print(f"Pi Home waking after fresh touchscreen {source}", flush=True); self.set_screen_power(True, force=True); self.stack.set_visible_child_name(self.last_mode or "bus")
+        self.manual_sleep_pending = False; self.sleep_entered_at = 0.0; self.last_interaction = now; self.inactivity_sleeping = False; print(f"RoonDeck waking after fresh touchscreen {source}", flush=True); self.set_screen_power(True, force=True); self.stack.set_visible_child_name(self.last_mode or "bus")
         threading.Thread(target=post_json, args=(BUS + "/api/device/wake", {"view": self.last_mode or "bus"}), daemon=True).start()
     def control(self, action):
         if action == "playpause" and (((self.state or {}).get("amplifier") or {}).get("active_input")): action = "resume"
@@ -3453,12 +3456,12 @@ class Display(Gtk.Application):
         backdrop = Gtk.Box(); backdrop.set_hexpand(True); backdrop.set_vexpand(True); shade.set_child(backdrop)
         card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16); card.add_css_class("confirm-card"); card.set_halign(Gtk.Align.CENTER); card.set_valign(Gtk.Align.CENTER)
         card.set_margin_bottom(round(self.window.get_height() * .08))
-        card.append(self.label("Restart Pi Home?", "confirm-title", .5)); card.append(self.label("The touchscreen will be unavailable for about a minute.", "confirm-copy", .5))
+        card.append(self.label("Restart RoonDeck?", "confirm-title", .5)); card.append(self.label("The touchscreen will be unavailable for about a minute.", "confirm-copy", .5))
         actions = Gtk.Box(spacing=12); actions.set_halign(Gtk.Align.CENTER)
         def close(*_):
             self.root_overlay.remove_overlay(shade); self.reboot_confirmation = None
         def restart(button):
-            button.set_sensitive(False); self.device_status.set_text("Restarting Pi Home…")
+            button.set_sensitive(False); self.device_status.set_text("Restarting RoonDeck…")
             threading.Thread(target=post_json, args=(BUS + "/api/device/reboot", {}), daemon=True).start()
         actions.append(self.button("CANCEL", close, "confirm-cancel")); actions.append(self.button("RESTART", restart, "confirm-reboot")); card.append(actions); shade.add_overlay(card)
         self.reboot_confirmation = shade; self.root_overlay.add_overlay(shade); shade.set_cursor_from_name("none")
@@ -3483,7 +3486,7 @@ class Display(Gtk.Application):
 
     def _request_display_settings(self, profile, orientation, mounting):
         result = post_json(BUS + "/api/admin/system-action", {"action": "set_display", "profile": profile, "orientation": orientation, "mounting": mounting}, timeout=15)
-        GLib.idle_add(self.device_status.set_text, "Display saved · restarting Pi Home…" if result else "Could not apply display settings")
+        GLib.idle_add(self.device_status.set_text, "Display saved · restarting RoonDeck…" if result else "Could not apply display settings")
         if not result: GLib.idle_add(self.apply_display_button.set_sensitive, True)
 
 

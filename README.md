@@ -1,14 +1,14 @@
-# Pi Home
+# RoonDeck
 
-Alpine testing release: **1.1.3-beta.22**, with RoonDeck branding in the touchscreen Settings header. It retains the off-screen software-rendering path for Screen Preview, cleaner artist-and-album fact sheet, corrected compact play-menu positioning, more reliable summaries, grouped Appearance settings and deeper Screen Preview controls from beta.19. Select Beta explicitly to test; Stable remains 1.1.2.
+Alpine testing release: **1.1.3-beta.23**, with the supplied RoonDeck identity across the appliance and website, a more compact Settings appearance section, and explicit optional Roon Bridge/RAAT endpoint guidance. It retains the off-screen software-rendering path for Screen Preview, cleaner artist-and-album fact sheet, corrected compact play-menu positioning, more reliable summaries and deeper Screen Preview controls from beta.19. Select Beta explicitly to test; Stable remains 1.1.2.
 
 The current Alpine stable release is **1.1.2**: an in-place correction for 10-inch Touch Display 2 touch rotation. Update through System → Software on the Stable channel, then reboot manually to apply input calibration. Physical touch acceptance is still required. The 1.1.1 full image remains available for fresh installs. Raspberry Pi OS releases remain separate.
 
 Beta updates are normally source-only releases; full images are built for stable releases and explicit fresh-install requests. Automated backend, controller, update-safety and native layout checks run, followed by complete image validation with **build_image** enabled. The Alpine updater requires a successful verification run for the exact release commit.
 
-Pi Home is an independent Raspberry Pi touchscreen interface for Roon, with optional Singapore bus arrivals and Home Assistant controls. It runs a native GTK4 display in Cage/Wayland, alongside a phone/desktop web interface. Chromium is not required.
+RoonDeck is an independent Raspberry Pi touchscreen interface for Roon, with optional Singapore bus arrivals, Home Assistant controls and Roon Bridge. It runs a native GTK4 display in Cage/Wayland, alongside a phone/desktop web interface. Chromium is not required.
 
-The Raspberry Pi OS stable baseline remains **v1.0.0**. **Pi Home 1.1.0 Alpine** is the first separately published Alpine release (`v1.1.0-alpine`), with first-run setup, optional Roon Bridge/Netdata installation, shared display settings and responsive GTK layouts. Existing Alpine devices retain their verified updater, while Raspberry Pi OS devices stay on their own distribution. Native discovery uses bounded artwork cards and configurable two/three-column portrait grids; Diagnostics captures the live GTK touchscreen, including artwork. Automated release checks do not replace testing on the physical display.
+The Raspberry Pi OS stable baseline remains **v1.0.0**. **RoonDeck 1.1.0 Alpine** is the first separately published Alpine release (`v1.1.0-alpine`), with first-run setup, optional Roon Bridge/Netdata installation, shared display settings and responsive GTK layouts. Existing Alpine devices retain their verified updater, while Raspberry Pi OS devices stay on their own distribution. Native discovery uses bounded artwork cards and configurable two/three-column portrait grids; Diagnostics captures the live GTK touchscreen, including artwork. Automated release checks do not replace testing on the physical display.
 
 ## Features
 
@@ -28,7 +28,7 @@ beta.14 and older appliances can cross to the renamed channel safely.
 - Published-release updates with Stable/Beta selection, preserving appliance configuration and credentials.
 - In v1.1 Beta: artwork-led Recent, personalised mixes and Daily Picks, New Releases for You, with existing Browse/Surprise Me under Discover. Its five tabs are Recent, Browse, Daily Mixes, New Releases and Surprise Me (Mixes/New on phones). Mix detail offers experimental Play This Mix and Queue This Mix controls above its visible bounded track preview.
 
-Pi Home is not affiliated with Roon Labs. Roon Server and a Roon subscription are separate requirements. Roon Bridge is optional: it makes the Pi an audio endpoint, but is not needed to control an existing Roon zone.
+RoonDeck is an independent project and is not affiliated with or endorsed by Roon Labs. Roon Server and a Roon subscription are separate requirements. Roon Bridge is optional: it turns the Pi into a RAAT audio endpoint, but is not needed to control an existing Roon zone.
 
 ## Hardware and runtime
 
@@ -68,7 +68,7 @@ Do not run these production commands on a development Mac.
    ```
 
 3. Configure `/etc/pi-home/config.toml` and `/etc/pi-home/secrets.env`. The installer prints a generated web-admin password once. Do not commit these files. New configuration is music-first; enable optional modules explicitly. Existing installations retain their saved settings.
-4. If the Pi should also be an audio endpoint, run `sudo ./scripts/install-roon-bridge.sh`. This downloads Roon's official architecture-specific installer; Roon Bridge is separately distributed and not bundled in Pi Home.
+4. If the Pi should also be a RAAT audio endpoint, run `sudo ./scripts/install-roon-bridge.sh`. This downloads Roon's official architecture-specific installer; Roon Bridge is separately distributed and not bundled in RoonDeck.
 5. Enable appliance mode from the same normal user:
 
    ```sh
@@ -76,7 +76,7 @@ Do not run these production commands on a development Mac.
    sudo reboot
    ```
 
-6. In Roon, open **Settings → Extensions**, enable **Pi Home Roon Controller**, then select the desired zone in Pi Home. If you installed Roon Bridge, separately enable the Pi's output under Roon **Settings → Audio**.
+6. In Roon, open **Settings → Extensions**, enable **RoonDeck**, then select the desired zone in RoonDeck. If you installed Roon Bridge, separately enable the Pi's RAAT output under Roon **Settings → Audio**.
 7. Open `http://<pi-address>:8765/admin` on a trusted local network. Sign in with `admin` and the installer-generated password. Configure display profile/orientation under **Display → Screen hardware**. Touch Display 2 overlay changes require one reboot; select the exact panel rather than using an assumed rotation.
 
 For a frozen v1.0 rebuild, use the `v1.0.0` tag, not an untagged `main` checkout. Back up the configuration/state listed below; Git alone cannot recreate private credentials, Roon authorisation or local display choices.
@@ -94,7 +94,7 @@ For a frozen v1.0 rebuild, use the `v1.0.0` tag, not an untagged `main` checkout
 
 Use encrypted/off-device backups for `/etc/pi-home/` and `/var/lib/pi-home/`. These contain secrets and personal state. Do not put them in the public repository.
 
-New installations use Pi Home directory names. Re-running the installer on an older installation adds compatible Pi Home paths without moving settings or Roon pairing. Older internal service names remain supported; these are compatibility identifiers, not the product name.
+Internal `pi-home` directory and service names remain in place for updater, configuration and Roon-pairing compatibility. They are implementation identifiers, not the product name.
 
 ## Configuration
 
@@ -194,6 +194,6 @@ bash -n scripts/install-pi.sh scripts/install-roon-bridge.sh scripts/pi-bus-upda
 
 ## Licence and next phase
 
-Pi Home's own code is [MIT](LICENSE). The official Roon Node libraries are Apache-2.0; their MIT/BSD-style transitive dependencies retain separate notices in installed packages. System packages have their own licences. Roon Bridge is proprietary and installed separately. See [architecture and audit notes](docs/ARCHITECTURE.md); this repository is not yet a distributable OS image.
+RoonDeck's own code is [MIT](LICENSE). The official Roon Node libraries are Apache-2.0; their MIT/BSD-style transitive dependencies retain separate notices in installed packages. System packages have their own licences. Roon Bridge is proprietary and installed separately. See [architecture and audit notes](docs/ARCHITECTURE.md); this repository is not yet a distributable OS image.
 
 [CHANGELOG.md](CHANGELOG.md) records releases. [ROADMAP.md](ROADMAP.md) defines the gated v1.1 Discover work and later public-appliance goals. No unsupported Roon protocol is part of the v1.0 baseline.

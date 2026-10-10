@@ -8,8 +8,8 @@ connection command. No claim token is embedded in an image.
 
 Every image includes storage expansion, curl, trusted certificates, diagnostics
 and network time. Netdata uses its official stable static Agent under
-`/opt/netdata`, with its official daily updater and cron enabled. Pi Home updates
-replace only Pi Home's application release and preserve Netdata and Roon Bridge.
+`/opt/netdata`, with its official daily updater and cron enabled. RoonDeck updates
+replace only RoonDeck's application release and preserve Netdata and Roon Bridge.
 Reflashing erases the existing filesystem: choose software again on the new card
 and reconnect the new node to Cloud.
 
@@ -23,7 +23,7 @@ overrides are restored when lightweight mode is turned off. Other collectors
 remain enabled. Memory savings depend on the collected metrics and workload.
 Change this later under **System → Services → Netdata**; turning it off selects
 one-second sampling and automatic ML. Existing Agents are not modified merely
-by updating Pi Home. The initial configuration is backed up alongside
+by updating RoonDeck. The initial configuration is backed up alongside
 `netdata.conf` as `netdata.conf.pi-home-backup`; unrelated configuration is
 preserved. Diagnostics shows combined Netdata/collector RSS and CPU when running.
 
@@ -65,7 +65,7 @@ New images include grim for screenshot capture. Optional Netdata installation
 uses the official stable Agent. System → Services shows its version, running state,
 local dashboard and Cloud connection state. For Cloud setup, open System →
 Services → Netdata, choose Connect to Netdata Cloud, then paste the complete
-Linux installation command supplied by Netdata Cloud's Add nodes flow. Pi Home
+Linux installation command supplied by Netdata Cloud's Add nodes flow. RoonDeck
 validates the official address and claim settings, installs curl if required,
 downloads Netdata's current official installer and passes those settings to it;
 the pasted shell itself is never executed, logged or retained. Existing images
@@ -152,7 +152,7 @@ Revision `c71d326`: [ARM64 image, GTK pages/icons and SSH policy checks](https:/
 passed. Baseline checks passed 148 Python and 91 Node tests. Setup now starts
 portrait DSI panels in landscape, offers password visibility/confirmation and
 an enabled-by-default SSH option, uses a regional timezone chooser, and shows
-a small theme-aware Pi Home wordmark. The main splash reads the saved theme
+a small theme-aware RoonDeck wordmark. The main splash reads the saved theme
 before the first frame. Standard GTK icons and SVG support are included.
 Duplicate touch rotation was removed; actual finger input still needs retesting.
 No changes were installed on the running Pi, and the earlier image remains
@@ -179,7 +179,7 @@ The factory now sanitises the exported root before packaging it: remove Docker
 and Podman markers, replace Docker-injected hostname/hosts/DNS configuration,
 then check OpenRC reports a non-container system and regenerates dependencies.
 Boot output is no longer quiet; OpenRC writes `/var/log/rc.log` and supervised
-Pi Home processes write private logs under `/var/log/pi-home/`. Filesystem check
+RoonDeck processes write private logs under `/var/log/pi-home/`. Filesystem check
 utilities are included. These checks supplement container tests, not physical
 Pi boot validation. Do not keep using the earlier `ce7da54` installer image.
 
@@ -219,7 +219,7 @@ removes its boot entry. SSH and web settings share the initial credentials.
 System → Access can update the device/SSH credentials, while the separate web
 controls can subsequently diverge. Do not forward SSH to the internet.
 SSH host keys are generated on-device, not distributed with the image.
-Ethernet DHCP and mDNS are included. Pi Home configuration and Roon pairing
+Ethernet DHCP and mDNS are included. RoonDeck configuration and Roon pairing
 persist on the root filesystem. Bus Times is off; the initial theme is Roon.
 The native first-boot wizard now covers device naming, Ethernet/Wi-Fi,
 Roon authorisation/zone selection (or explicit setup-later), display profile,
@@ -282,14 +282,14 @@ Download the successful build artifact; check its SHA-256, then select its
 image in Raspberry Pi Imager and flash a **spare** card (flashing erases that
 selected card). Start with Pi 5, wired Ethernet and HDMI if necessary to
 separate boot bring-up from DSI compatibility. The intended boot path starts
-Pi Home automatically; actual boot, DRM/seat ownership and touch are unproven.
+RoonDeck automatically; actual boot, DRM/seat ownership and touch are unproven.
 Follow the native wizard. It explains Roon Settings → Extensions, lists available
 zones and lets you choose the device/SSH username and initial shared web password.
 Use at least eight characters. Simple passwords produce advice but remain the
 owner's choice. The password is stored privately, not printed in logs or embedded
 in the build artifact. The Finish screen shows the named
 device's `.local:8765/admin` address. Use the assigned IP if mDNS is unavailable.
-NetworkManager handles Ethernet DHCP and saved Wi-Fi connections. Pi Home
+NetworkManager handles Ethernet DHCP and saved Wi-Fi connections. RoonDeck
 disables Wi-Fi power saving globally and on newly created Wi-Fi profiles to
 avoid latency spikes in Roon's persistent LAN connections. Wi-Fi/DSI,
 touch keyboard behaviour and Roon LAN pairing still require physical acceptance.

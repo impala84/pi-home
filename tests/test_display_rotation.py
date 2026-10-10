@@ -141,7 +141,8 @@ class DisplayRotationTests(unittest.TestCase):
         self.assertIn(".touch-landscape .settings-title", display)
         self.assertIn(".touch-landscape .roon-subnav button", display)
         self.assertIn('self.stack.add_named(self.build_boot_splash(), "boot")', display)
-        self.assertIn('.boot-logo { color: #6ef0be', display)
+        self.assertIn('roondeck-wordmark.svg', display)
+        self.assertIn('.boot-wordmark { min-width:', display)
 
     def test_portrait_reflows_shared_gtk_components_from_the_viewport(self):
         display = (ROOT / "native-display" / "pi_bus_native.py").read_text(encoding="utf-8")
@@ -205,9 +206,12 @@ class DisplayRotationTests(unittest.TestCase):
 
     def test_touchscreen_settings_title_and_checkbox_spacing(self):
         display = (ROOT / "native-display" / "pi_bus_native.py").read_text(encoding="utf-8")
-        self.assertIn('self.label("Roon", "settings-title")', display)
-        self.assertIn('self.label("Deck", "settings-title")', display)
+        self.assertIn('wordmark = Gtk.Picture.new_for_filename', display)
+        self.assertIn('wordmark.add_css_class("settings-wordmark")', display)
         self.assertIn('self.label("Settings", "settings-title")', display)
+        self.assertIn('appearance.append(self.label("THEME", "eyebrow"))', display)
+        self.assertIn('appearance.append(self.label("BACKGROUND", "eyebrow"))', display)
+        self.assertNotIn('self.label("Appearance", "eyebrow")', display)
         self.assertIn('actions.set_homogeneous(True)', display)
         self.assertIn('self.settings_row_sizes = Gtk.SizeGroup', display)
         self.assertIn(".setting-line checkbutton label { margin-left: 12px;", display)

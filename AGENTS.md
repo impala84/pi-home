@@ -1,8 +1,8 @@
-# Pi Home working expectations
+# RoonDeck working expectations
 
 ## Publishing completed changes
 
-The user expects requested Pi Home changes to be delivered through the updater, not left as local edits.
+The user expects requested RoonDeck changes to be delivered through the updater, not left as local edits.
 
 - After implementing and proportionately verifying requested changes, commit the relevant changes, push to `origin/main`, and publish a GitHub release with the next appropriate semantic version and concise release notes.
 - Update the application version, changelog, documented current release, and affected web asset cache versions as appropriate.
