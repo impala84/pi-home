@@ -13,7 +13,7 @@
   <body>
     <a class="skip-link" href="#main">Skip to content</a>
     <header class="site-header">
-      <a class="wordmark" href="#top" aria-label="RoonDeck home"><span>Roon</span>Deck</a>
+      <a class="wordmark" href="#top" aria-label="RoonDeck home"><span class="roon-mark" aria-hidden="true"></span><span class="deck-mark">Deck</span></a>
       <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-nav">
         <span></span><span></span><span></span><span class="sr-only">Open menu</span>
       </button>
@@ -27,44 +27,24 @@
     </header>
 
     <main id="main">
-      <section id="top" class="hero section-shell">
-        <div class="hero-copy reveal">
-          <p class="eyebrow">A dedicated touchscreen for Roon</p>
-          <h1>Give your music <span>a home.</span></h1>
-          <p class="hero-lede">Turn a Raspberry Pi into a dedicated music display. Explore your library, control playback and discover what to listen to next, without reaching for your phone.</p>
-        </div>
-
-        <div class="listening-room reveal" aria-label="A seven-inch landscape RoonDeck and ten-inch portrait RoonDeck beside stereo speakers">
-          <div class="room-glow"></div>
-          <div class="speaker speaker-left" aria-hidden="true"><span class="speaker-driver speaker-driver-small"></span><span class="speaker-driver speaker-driver-large"></span></div>
-          <article class="product-device product-landscape">
-            <div class="device-camera"></div>
-            <div class="product-screen product-screen-landscape">
-              <img src="/assets/roon-now-playing.png" alt="RoonDeck Now Playing on a seven-inch landscape touchscreen" width="1280" height="720">
+      <section id="top" class="hero">
+        <img class="hero-image" src="/assets/roondeck-hero.png" alt="A seven-inch landscape and ten-inch portrait RoonDeck touchscreen in a purple-lit listening room" width="1774" height="887">
+        <div class="hero-shade" aria-hidden="true"></div>
+        <div class="hero-content section-shell">
+          <div class="hero-copy reveal">
+            <p class="eyebrow">A dedicated touchscreen for Roon</p>
+            <h1>Give your music <span>a home.</span></h1>
+            <p class="hero-lede">Turn a Raspberry Pi into a dedicated music display. Explore your library, control playback and discover what to listen to next, without reaching for your phone.</p>
+            <div class="hero-actions">
+              <a class="button" href="#roon">Explore RoonDeck</a>
+              <a class="button button-secondary" href="#get-roondeck">Get started</a>
             </div>
-            <p>7-inch landscape</p>
-          </article>
-          <article class="product-device product-portrait">
-            <div class="device-camera"></div>
-            <div class="product-screen product-screen-portrait">
-              <img src="/assets/album-artist.png" alt="RoonDeck album and artist information on a ten-inch portrait touchscreen" width="1200" height="1920">
-            </div>
-            <p>10-inch portrait</p>
-          </article>
-          <div class="speaker speaker-right" aria-hidden="true"><span class="speaker-driver speaker-driver-small"></span><span class="speaker-driver speaker-driver-large"></span></div>
-          <div class="room-shelf" aria-hidden="true"></div>
-        </div>
-
-        <div class="hero-controls reveal">
-          <div class="hero-actions">
-            <a class="button" href="#roon">Explore RoonDeck</a>
-            <a class="button button-secondary" href="#get-roondeck">Get started</a>
+            <ul class="proof-strip" aria-label="Key compatibility">
+              <li>Raspberry Pi 3, 4 &amp; 5</li>
+              <li>Portrait &amp; landscape</li>
+              <li>Lightweight by design</li>
+            </ul>
           </div>
-          <ul class="proof-strip" aria-label="Key compatibility">
-            <li>Raspberry Pi 3, 4 &amp; 5</li>
-            <li>Portrait &amp; landscape</li>
-            <li>Lightweight by design</li>
-          </ul>
         </div>
       </section>
 
@@ -169,7 +149,7 @@
     </main>
 
     <footer class="site-footer section-shell">
-      <div><a class="wordmark" href="#top"><span>Roon</span>Deck</a><p>An independent, open-source touchscreen for Roon.</p></div>
+      <div><a class="wordmark" href="#top" aria-label="RoonDeck home"><span class="roon-mark" aria-hidden="true"></span><span class="deck-mark">Deck</span></a><p>An independent, open-source touchscreen for Roon.</p></div>
       <nav aria-label="Footer navigation">
         <a href="https://github.com/impala84/pi-home">GitHub</a>
         <a href="https://github.com/impala84/pi-home/blob/main/README.md#fresh-raspberry-pi-installation">Installation</a>
