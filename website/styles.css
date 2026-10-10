@@ -17,3 +17,45 @@
 .wordmark img{width:174px;height:auto}
 .site-footer .wordmark img{width:205px}
 @media(max-width:780px){.wordmark img{width:150px}}
+
+/* Single-page navigation and setup flow. */
+main section[id]{scroll-margin-top:112px}
+.site-header{gap:clamp(28px,3.2vw,52px);background:rgba(5,5,5,.88)}
+.site-nav{gap:clamp(24px,2.4vw,42px)}
+.site-nav a{font-size:.95rem;white-space:nowrap}
+.header-cta{white-space:nowrap}
+.button{gap:8px}
+.build-step h3{margin:1px 0 5px;font-size:1.15rem;line-height:1.2;letter-spacing:-.02em}
+.download-panel{margin-top:54px;padding:28px 30px;display:flex;align-items:center;justify-content:space-between;gap:30px;border:1px solid rgba(160,150,255,.65);border-radius:18px;background:linear-gradient(135deg,rgba(129,116,242,.18),rgba(17,18,25,.86))}
+.download-panel>div{display:grid;gap:3px}.download-panel strong{font-size:1.2rem}.download-panel span{color:var(--muted)}
+.get-started .install-steps li{grid-template-columns:minmax(260px,.72fr) minmax(300px,1fr)}
+.get-started .get-actions{justify-content:flex-start}
+.setup-details{margin-top:58px;border-top:1px solid var(--line)}
+.setup-details details{border-bottom:1px solid var(--line)}
+.setup-details summary{padding:25px 44px 25px 0;position:relative;cursor:pointer;color:var(--text);font-size:1.08rem;font-weight:680;list-style:none}
+.setup-details summary::-webkit-details-marker{display:none}
+.setup-details summary::after{content:"+";position:absolute;right:4px;color:var(--purple-bright);font-size:1.5rem;font-weight:400}
+.setup-details details[open] summary::after{content:"−"}
+.setup-details details>div{padding:0 0 30px;color:var(--muted)}
+.setup-details details>div>p{max-width:900px}
+.setup-details .after-grid{margin-top:8px}
+.footer-project{max-width:690px}.footer-project p+p{margin-top:18px;max-width:650px;font-size:.92rem}.site-footer small a{color:var(--purple-bright)}
+.hardware-choice ul{margin:0;padding-left:1.2em;color:var(--muted)}.hardware-choice li{padding:.18em 0}.hardware-choice li::marker{color:var(--purple-bright)}
+@media(max-width:1120px){
+  main section[id]{scroll-margin-top:94px}
+  .site-header{grid-template-columns:1fr auto auto;gap:14px}
+  .menu-toggle{grid-column:3}
+  .header-cta{grid-column:2;grid-row:1;display:inline-flex;min-height:46px;padding-inline:18px}
+}
+@media(max-width:780px){
+  .header-cta{font-size:.9rem}
+  .download-panel{align-items:stretch;flex-direction:column}
+  .download-panel .button{width:100%}
+  .get-started .install-steps li{grid-template-columns:1fr;gap:20px}
+}
+@media(max-width:480px){
+  .site-header{gap:9px}
+  .wordmark img{width:124px}
+  .header-cta{min-height:42px;padding-inline:12px;font-size:.82rem}
+  .menu-toggle{width:42px;height:42px;padding:10px}
+}

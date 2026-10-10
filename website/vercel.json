@@ -1,6 +1,23 @@
 {
   "cleanUrls": true,
   "trailingSlash": false,
+  "redirects": [
+    {
+      "source": "/install",
+      "destination": "/#get-started",
+      "permanent": false
+    },
+    {
+      "source": "/install/:path*",
+      "destination": "/#get-started",
+      "permanent": false
+    },
+    {
+      "source": "/download",
+      "destination": "https://github.com/impala84/pi-home/releases/download/v1.1.1-alpine/pi-home-1.1.1-alpine-rpi5-arm64.img.gz",
+      "permanent": false
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",
