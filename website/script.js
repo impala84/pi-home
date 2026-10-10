@@ -31,8 +31,10 @@ const navObserver = new IntersectionObserver((entries) => {
     .filter((entry) => entry.isIntersecting)
     .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
   if (!visible) return;
-  navLinks.forEach((link) => link.classList.toggle('active', link.hash === `#${visible.target.id}`));
+  navLinks.forEach((link) => {
+    const linkedSections = (link.dataset.sections || link.hash.slice(1)).split(/\s+/);
+    link.classList.toggle('active', linkedSections.includes(visible.target.id));
+  });
 }, { rootMargin: '-25% 0px -60% 0px', threshold: [0, 0.2, 0.6] });
 
 sections.forEach((section) => navObserver.observe(section));
-
