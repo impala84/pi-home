@@ -41,6 +41,14 @@ ROON = "http://127.0.0.1:8766"
 TZ = ZoneInfo("Asia/Singapore")
 BRAND_ASSETS = Path(__file__).resolve().parent / "assets" / "brand"
 
+
+def wordmark_paintable(target_height):
+    """Render the tightly bounded supplied wordmark at an explicit height."""
+    source = GdkPixbuf.Pixbuf.new_from_file(str(BRAND_ASSETS / "roondeck-wordmark.svg"))
+    target_width = round(target_height * source.get_width() / source.get_height())
+    scaled = source.scale_simple(target_width, target_height, GdkPixbuf.InterpType.BILINEAR)
+    return Gdk.Texture.new_for_pixbuf(scaled), target_width
+
 # Shared appliance page grid; rendered into GTK CSS for older GTK versions too.
 PANEL_STROKE = 2
 APPLIANCE_PAGE_TOP = 8
@@ -224,7 +232,7 @@ button { border: 0; box-shadow: none; background-image: none; outline: none; }
 .high-resolution .page { padding: 21px 30px 15px; }.high-resolution .stop, .high-resolution .stop-code { font-size: 38px; }.high-resolution .clock { font-size: 47px; }.high-resolution .eyebrow { font-size: 17px; }.high-resolution .service { border-radius: 20px; padding: 8px 24px; }.high-resolution .service-no, .high-resolution .arrival { font-size: 123px; }.high-resolution .service.compact .service-no, .high-resolution .service.compact .arrival { font-size: 89px; }.high-resolution .service.dense .service-no, .high-resolution .service.dense .arrival { font-size: 68px; }.high-resolution .arrival-sub { font-size: 15px; }.high-resolution .muted { font-size: 16px; }.high-resolution .artwork { min-width: 420px; min-height: 420px; }.high-resolution .roon-title { font-size: 52px; }.high-resolution .roon-artist { font-size: 27px; }.high-resolution .nav button { min-height: 60px; font-size: 21px; }
 .high-resolution .roon-subnav button { min-height: 44px; font-size: 15px; }.high-resolution .transport button { min-width: 75px; min-height: 75px; border-radius: 38px; }.high-resolution .transport .play { min-width: 96px; min-height: 96px; border-radius: 48px; }.high-resolution .queue-row { min-height: 99px; }.high-resolution .queue-art, .high-resolution .browser-action-icon { min-width: 84px; min-height: 84px; }.high-resolution .queue-title { font-size: 24px; }.high-resolution .queue-meta, .high-resolution .queue-duration { font-size: 18px; }.high-resolution .detail-header { min-height: 108px; padding: 18px 30px; }.high-resolution .detail-header-title { font-size: 34px; }.high-resolution .detail-close { min-width: 72px; min-height: 72px; }.high-resolution .detail-panel { padding: 38px 34px 64px; }.high-resolution .detail-entity { padding: 0 18px; }.high-resolution .detail-section-label { font-size: 18px; }.high-resolution .detail-title { font-size: 45px; }.high-resolution .detail-artist { font-size: 28px; }.high-resolution .detail-writeup { font-size: 21px; }.high-resolution .detail-source { font-size: 15px; }.high-resolution .detail-fact { font-size: 19px; }.high-resolution .detail-action { min-height: 74px; font-size: 21px; }.high-resolution .detail-track-title { font-size: 20px; }
 .touch-landscape .page { padding: 18px 28px 14px; }.touch-landscape .service-no, .touch-landscape .arrival { font-size: 138px; }.touch-landscape .service-no { min-width: 205px; }.touch-landscape .arrival-sub { font-size: 17px; }.touch-landscape .stop, .touch-landscape .stop-code { font-size: 42px; }.touch-landscape .clock { font-size: 50px; }.touch-landscape .nav button { min-height: 58px; font-size: 22px; }.touch-landscape .roon-subnav button { min-height: 54px; padding: 8px 18px 5px; font-size: 18px; }.touch-landscape .artwork { min-width: 324px; min-height: 324px; }.touch-landscape .roon-title { font-size: 46px; }.touch-landscape .roon-artist { font-size: 25px; }.touch-landscape .transport button { min-width: 70px; min-height: 70px; border-radius: 35px; }.touch-landscape .transport .play { min-width: 88px; min-height: 88px; border-radius: 44px; }.touch-landscape .settings-title { font-size: 43px; }.touch-landscape .settings-card { padding: 24px 28px; }.touch-landscape .settings-card .muted, .touch-landscape .settings-diagnostic { font-size: 17px; }.touch-landscape .settings-select { min-height: 70px; font-size: 19px; }.touch-landscape .setting-line { min-height: 78px; padding: 0 18px; }.touch-landscape .setting-line label, .touch-landscape .setting-line checkbutton { font-size: 19px; }.touch-landscape .setting-line check { min-width: 30px; min-height: 30px; }.touch-landscape .settings-action { min-height: 74px; font-size: 20px; }.touch-landscape .settings-controls { padding: 12px 0; }.touch-landscape .utility { min-width: 118px; min-height: 52px; font-size: 16px; }
-.boot-splash { background: #000; }.boot-wordmark { min-width: 320px; min-height: 94px; }.settings-wordmark { min-width: 180px; min-height: 53px; }
+.boot-splash { background: #000; }.boot-wordmark, .settings-wordmark { min-width: 0; min-height: 0; }
 .touch-landscape .header-title { transform: translateY(-5px); }
 .touch-landscape .stop, .touch-landscape .stop-code { font-size: 34px; }
 .touch-landscape .stop-row { margin-bottom: 14px; }
@@ -980,7 +988,8 @@ class Display(Gtk.Application):
 
     def build_boot_splash(self):
         page = Gtk.Box(); page.add_css_class("boot-splash"); page.set_hexpand(True); page.set_vexpand(True)
-        logo = Gtk.Picture.new_for_filename(str(BRAND_ASSETS / "roondeck-wordmark.svg")); logo.add_css_class("boot-wordmark"); logo.set_can_shrink(True); logo.set_content_fit(Gtk.ContentFit.CONTAIN); logo.set_halign(Gtk.Align.CENTER); logo.set_valign(Gtk.Align.CENTER); logo.set_hexpand(True); logo.set_vexpand(True); page.append(logo)
+        paintable, width = wordmark_paintable(52)
+        logo = Gtk.Picture.new_for_paintable(paintable); logo.add_css_class("boot-wordmark"); logo.set_size_request(width, 52); logo.set_can_shrink(True); logo.set_content_fit(Gtk.ContentFit.CONTAIN); logo.set_halign(Gtk.Align.CENTER); logo.set_valign(Gtk.Align.CENTER); page.append(logo)
         return page
 
     def build_bus(self):
@@ -1175,6 +1184,7 @@ class Display(Gtk.Application):
 
     def configure_settings_layout(self, width, height):
         portrait = height > width
+        self.resize_settings_wordmark(width, height)
         self.settings_controls.set_orientation(Gtk.Orientation.VERTICAL if portrait else Gtk.Orientation.HORIZONTAL)
         self.settings_daily.set_size_request(-1 if portrait else round((width - 56) * .343), -1)
         self.settings_daily.set_hexpand(portrait)
@@ -1182,12 +1192,26 @@ class Display(Gtk.Application):
         self.settings_header.set_orientation(Gtk.Orientation.VERTICAL if portrait else Gtk.Orientation.HORIZONTAL)
         self.settings_actions.set_orientation(Gtk.Orientation.VERTICAL if portrait else Gtk.Orientation.HORIZONTAL)
 
+    def resize_settings_wordmark(self, width, height):
+        """Match the wordmark to the adjacent Settings title at every profile."""
+        if max(width, height) >= 1600:
+            target_height = 44
+        elif width >= 1200 and width > height:
+            target_height = 43
+        elif height > width:
+            target_height = 24 if width < 600 else 30
+        else:
+            target_height = 32
+        paintable, target_width = wordmark_paintable(target_height)
+        self.settings_wordmark.set_paintable(paintable)
+        self.settings_wordmark.set_size_request(target_width, target_height)
+
     def build_settings(self):
         page = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8); page.add_css_class("page"); page.add_css_class("settings-page")
         top = Gtk.Box(spacing=20); top.add_css_class("settings-header"); self.settings_header = top
         heading = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8); heading.set_hexpand(True)
         title_row = Gtk.Box(spacing=10); title_row.set_valign(Gtk.Align.CENTER)
-        wordmark = Gtk.Picture.new_for_filename(str(BRAND_ASSETS / "roondeck-wordmark.svg")); wordmark.add_css_class("settings-wordmark"); wordmark.set_can_shrink(True); wordmark.set_content_fit(Gtk.ContentFit.CONTAIN); wordmark.set_valign(Gtk.Align.CENTER); title_row.append(wordmark)
+        wordmark = Gtk.Picture(); wordmark.add_css_class("settings-wordmark"); wordmark.set_can_shrink(True); wordmark.set_content_fit(Gtk.ContentFit.CONTAIN); wordmark.set_halign(Gtk.Align.START); wordmark.set_valign(Gtk.Align.CENTER); self.settings_wordmark = wordmark; self.resize_settings_wordmark(800, 480); title_row.append(wordmark)
         title_row.append(self.label("Settings", "settings-title")); title_row.get_last_child().set_valign(Gtk.Align.CENTER)
         self.device_status = self.label("", "settings-version"); self.device_status.set_valign(Gtk.Align.BASELINE); self.device_status.set_max_width_chars(32); self.device_status.set_ellipsize(Pango.EllipsizeMode.END); title_row.append(self.device_status); heading.append(title_row)
         self.touch_diagnostics = self.label("Loading diagnostics…", "settings-diagnostic"); self.touch_diagnostics.set_wrap(True); heading.append(self.touch_diagnostics); top.append(heading)

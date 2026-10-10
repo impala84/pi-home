@@ -142,7 +142,8 @@ class DisplayRotationTests(unittest.TestCase):
         self.assertIn(".touch-landscape .roon-subnav button", display)
         self.assertIn('self.stack.add_named(self.build_boot_splash(), "boot")', display)
         self.assertIn('roondeck-wordmark.svg', display)
-        self.assertIn('.boot-wordmark { min-width:', display)
+        self.assertIn('.boot-wordmark, .settings-wordmark { min-width: 0; min-height: 0; }', display)
+        self.assertIn('wordmark_paintable(52)', display)
 
     def test_portrait_reflows_shared_gtk_components_from_the_viewport(self):
         display = (ROOT / "native-display" / "pi_bus_native.py").read_text(encoding="utf-8")
@@ -206,7 +207,9 @@ class DisplayRotationTests(unittest.TestCase):
 
     def test_touchscreen_settings_title_and_checkbox_spacing(self):
         display = (ROOT / "native-display" / "pi_bus_native.py").read_text(encoding="utf-8")
-        self.assertIn('wordmark = Gtk.Picture.new_for_filename', display)
+        self.assertIn('def wordmark_paintable(target_height):', display)
+        self.assertIn('self.resize_settings_wordmark(width, height)', display)
+        self.assertIn('wordmark = Gtk.Picture()', display)
         self.assertIn('wordmark.add_css_class("settings-wordmark")', display)
         self.assertIn('self.label("Settings", "settings-title")', display)
         self.assertIn('appearance.append(self.label("THEME", "eyebrow"))', display)

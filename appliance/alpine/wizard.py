@@ -5,10 +5,19 @@ import threading
 from pathlib import Path
 import gi
 gi.require_version("Gtk", "4.0")
-from gi.repository import Gtk, Gdk, GLib
+from gi.repository import Gtk, Gdk, GdkPixbuf, GLib
 from setup_service import SOCKET
 
 BRAND_ASSETS = Path(__file__).resolve().parent / "assets" / "brand"
+
+
+def wordmark_picture(target_height=26):
+    source = GdkPixbuf.Pixbuf.new_from_file(str(BRAND_ASSETS / "roondeck-wordmark.svg"))
+    width = round(target_height * source.get_width() / source.get_height())
+    scaled = source.scale_simple(width, target_height, GdkPixbuf.InterpType.BILINEAR)
+    picture = Gtk.Picture.new_for_pixbuf(scaled); picture.set_size_request(width, target_height)
+    picture.set_can_shrink(True); picture.set_content_fit(Gtk.ContentFit.CONTAIN)
+    return picture
 
 
 def request(data):
@@ -33,12 +42,12 @@ class Wizard(Gtk.Application):
     def activate(self, *_):
         self.window = Gtk.ApplicationWindow(application=self); self.window.set_title("Set up RoonDeck"); self.window.fullscreen()
         self.window.set_cursor_from_name("none")
-        css = Gtk.CssProvider(); css.load_from_data(b"window { background:#1c1b24; color:#f5f5f5; } button { min-height:40px; padding:4px 10px; background:#302d42; color:#fff; border-radius:8px; } button:active {background:#aaa2ff;color:#111;} entry { min-height:40px; font-size:20px; background:#282631;color:#fff; } .title {font-size:25px;font-weight:700;color:#aaa2ff;} .brand {min-width:150px;min-height:44px;} .primary {background:#817aeb;color:#111;} .key {min-height:34px;padding:2px;} label {font-size:17px;} .mint .title {color:#6ed9ae;} .mint .primary, .mint button:active {background:#6ed9ae;}")
+        css = Gtk.CssProvider(); css.load_from_data(b"window { background:#1c1b24; color:#f5f5f5; } button { min-height:40px; padding:4px 10px; background:#302d42; color:#fff; border-radius:8px; } button:active {background:#aaa2ff;color:#111;} entry { min-height:40px; font-size:20px; background:#282631;color:#fff; } .title {font-size:25px;font-weight:700;color:#aaa2ff;} .brand {min-width:0;min-height:0;} .primary {background:#817aeb;color:#111;} .key {min-height:34px;padding:2px;} label {font-size:17px;} .mint .title {color:#6ed9ae;} .mint .primary, .mint button:active {background:#6ed9ae;}")
         Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), css, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
         self.outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         for edge in ("start", "end", "top", "bottom"): getattr(self.outer, "set_margin_" + edge)(14)
         header = Gtk.Box(spacing=14)
-        brand = Gtk.Picture.new_for_filename(str(BRAND_ASSETS / "roondeck-wordmark.svg")); brand.add_css_class("brand"); brand.set_can_shrink(True); brand.set_content_fit(Gtk.ContentFit.CONTAIN); header.append(brand)
+        brand = wordmark_picture(); brand.add_css_class("brand"); brand.set_halign(Gtk.Align.START); brand.set_valign(Gtk.Align.CENTER); header.append(brand)
         self.title = self.label("Welcome to RoonDeck"); self.title.add_css_class("title"); header.append(self.title); self.outer.append(header)
         scroll = Gtk.ScrolledWindow(); scroll.set_vexpand(True); scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         self.content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10); scroll.set_child(self.content); self.outer.append(scroll)

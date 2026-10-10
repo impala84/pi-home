@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.3-beta.24 Alpine — 11 October 2026
+
+- Applies the final supplied RoonDeck SVG identity consistently to the appliance, Settings, setup wizard, web GUI, website, favicons and launcher icon.
+- Constrains the native Settings wordmark to the original title area, aligned with and visually matched to the Settings heading across supported display layouts.
+- Refines the website information architecture: Roon Bridge/RAAT now sits with the Roon features; Home Assistant and Netdata use linked white brand marks; and the Roon feature summary becomes a full-width purple gradient band.
+- Simplifies the hardware introduction to “Everything you need to build a RoonDeck.” and improves the API notice and feature-band responsive layouts.
+- Replaces download glyphs with a consistent SVG icon and labels download actions with the current stable image version.
+
 ## 1.1.3-beta.23 Alpine — 10 October 2026
 
 - Rolls out the supplied RoonDeck vector identity across the touchscreen, first-run setup, web settings, browser pages, launch metadata, favicons and public website.

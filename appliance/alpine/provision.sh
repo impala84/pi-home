@@ -49,7 +49,7 @@ printf '%s\n' 'rc_logger="YES"' 'rc_log_path="/var/log/rc.log"' >> /etc/rc.conf
 printf '%s\n' 'command_args="-g video"' > /etc/conf.d/seatd
 printf '%s\n' 'roondeck' > /etc/hostname
 mkdir -p /usr/share/icons/hicolor/scalable/apps
-cp native-display/assets/brand/favicon-dark.svg /usr/share/icons/hicolor/scalable/apps/roondeck.svg
+cp native-display/assets/brand/app-icon-dark.svg /usr/share/icons/hicolor/scalable/apps/roondeck.svg
 printf '%s\n' 'auto lo' 'iface lo inet loopback' > /etc/network/interfaces
 mkdir -p /etc/NetworkManager/conf.d
 printf '%s\n' '[main]' 'plugins=keyfile' '[connection]' 'wifi.powersave=2' '[device]' 'wifi.backend=wpa_supplicant' > /etc/NetworkManager/conf.d/pi-home.conf

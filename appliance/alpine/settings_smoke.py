@@ -34,6 +34,9 @@ for width, height in (tuple(map(int,os.environ["PI_HOME_SETTINGS_VIEWPORT"].spli
         if width<600: window.add_css_class("compact-portrait")
     elif width>=1200: window.add_css_class("touch-landscape")
     display.configure_settings_layout(width,height)
+    expected_logo_height = 44 if max(width,height)>=1600 else 43 if width>=1200 and width>height else 24 if height>width and width<600 else 30 if height>width else 32
+    assert display.settings_wordmark.get_height_request() == expected_logo_height, (width,height,display.settings_wordmark.get_height_request())
+    assert display.settings_wordmark.get_width_request() < width * .35, (width,height,display.settings_wordmark.get_width_request())
     display.device_status.set_text("v1.1.0 Alpine")
     display.touch_diagnostics.set_text("Memory 5.4%  ·  Load 1.53  ·  63.3°C  ·  Controller ready  ·  Bridge offline")
     display.render_touch_controls({"services":[{"name":name,"enabled":True} for name in ("40","42","401")]}, {"roon_bridge":"stopped"})
@@ -53,9 +56,9 @@ for width, height in (tuple(map(int,os.environ["PI_HOME_SETTINGS_VIEWPORT"].spli
         assert abs(display.settings_daily.get_width()-420)<=2, display.settings_daily.get_width()
     assert window.get_width() == width and window.get_height() == height, (width,height,window.get_width(),window.get_height())
     output=os.environ.get("PI_HOME_SCREENSHOT_DIR")
-    if output and (width,height)==(1280,720):
+    if output:
         Path(output).mkdir(parents=True,exist_ok=True)
-        subprocess.run(["import","-silent","-window","root",str(Path(output)/"settings-1280x720.png")],check=True)
+        subprocess.run(["import","-silent","-window","root",str(Path(output)/f"settings-{width}x{height}.png")],check=True)
     display.render_touch_controls({"services":[]},{"roon_bridge":"not_installed"})
     assert display.touch_daily.get_first_child().get_next_sibling().get_first_child().get_text()=="Buses"
     display.render_touch_controls({"services":[]},{"roon_bridge":"running"})
