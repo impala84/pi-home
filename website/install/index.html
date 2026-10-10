@@ -10,25 +10,59 @@
   <header class="site-header">
     <a class="wordmark" href="/" aria-label="RoonDeck home"><img src="/assets/brand/roondeck-wordmark.svg" alt="RoonDeck" width="574" height="168"></a>
     <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-nav"><span></span><span></span><span></span><span class="sr-only">Open menu</span></button>
-    <nav id="site-nav" class="site-nav guide-nav" aria-label="Primary navigation"><a href="/#music">Music</a><a href="/#home">Beyond Music</a><a href="/#hardware">Hardware</a></nav>
-    <a class="button button-small header-cta" href="#install">Install</a>
+    <nav id="site-nav" class="site-nav guide-nav" aria-label="Primary navigation"><a href="/#music">Music</a><a href="/#home">Beyond Music</a><a href="/#hardware">Hardware</a><a href="/install/" aria-current="page">Get RoonDeck</a></nav>
+    <a class="button button-small header-cta" href="#install">Get RoonDeck</a>
   </header>
   <main id="main" class="guide-main">
     <section class="guide-hero section-shell">
       <p class="eyebrow">Get RoonDeck</p><h1>Build your dedicated<br><span>Roon touchscreen.</span></h1>
       <p>Choose your screen and Raspberry Pi, write the Alpine image to a microSD card, then finish setup on the display. No desktop environment or browser is required.</p>
-      <div class="guide-notice"><strong>Before you start</strong><span>You need a working Roon Server and an active Roon subscription. Flashing erases the target microSD card.</span></div>
+      <ol class="build-equation" aria-label="What you need to build RoonDeck">
+        <li class="build-step">
+          <span class="build-number" aria-hidden="true">1</span>
+          <a class="build-asset-link" href="https://www.raspberrypi.com/products/" target="_blank" rel="noopener noreferrer" aria-label="Explore Raspberry Pi computers">
+            <img src="/assets/build/raspberry-pi.svg" alt="Isometric Raspberry Pi circuit board">
+          </a>
+          <h2>Raspberry Pi</h2>
+          <p>Raspberry Pi 3, 4 or 5.<br>Pi 4 minimum recommended.</p>
+        </li>
+        <li class="build-step">
+          <span class="build-number" aria-hidden="true">2</span>
+          <a class="build-asset-link" href="https://www.raspberrypi.com/products/touch-display-2/" target="_blank" rel="noopener noreferrer" aria-label="Explore the official Raspberry Pi Touch Display 2">
+            <img src="/assets/build/touchscreen.svg" alt="Landscape Raspberry Pi touchscreen with its left kickstand visible">
+          </a>
+          <h2>Raspberry Pi Touchscreen</h2>
+          <p>Official Raspberry Pi touchscreen.<br>Version 2 minimum recommended, 7-inch or larger.</p>
+        </li>
+        <li class="build-step">
+          <span class="build-number" aria-hidden="true">3</span>
+          <a class="build-asset-link" href="https://www.raspberrypi.com/documentation/computers/getting-started.html#storage" target="_blank" rel="noopener noreferrer" aria-label="Read Raspberry Pi storage guidance">
+            <img src="/assets/build/microsd.svg" alt="Outlined microSD card labelled 32GB plus">
+          </a>
+          <h2>microSD Card</h2>
+          <p>32GB or larger<br>(recommended).</p>
+        </li>
+        <li class="build-step build-step-roon">
+          <span class="build-number" aria-hidden="true">4</span>
+          <a class="build-asset-link" href="https://roonlabs.com" target="_blank" rel="noopener noreferrer" aria-label="Visit Roon Labs">
+            <img src="/assets/build/roon-wordmark.svg" alt="Roon">
+          </a>
+          <h2>Working Roon Server</h2>
+          <p>A working Roon Server and active subscription.</p>
+          <a class="build-text-link" href="https://roonlabs.com" target="_blank" rel="noopener noreferrer">Visit roonlabs.com <span aria-hidden="true">↗</span></a>
+        </li>
+      </ol>
     </section>
 
     <section class="guide-section section-shell" id="hardware">
       <div class="section-heading"><p class="eyebrow">Required hardware</p><h2>Choose the setup that suits you.</h2></div>
       <div class="hardware-options">
-        <article class="hardware-choice"><span>Minimum</span><h3>Raspberry Pi 3 with 1GB RAM</h3><p>Official 7-inch Raspberry Pi touch display, 8GB microSD card, correct official power supply and Ethernet or Wi-Fi. Designed for the core RoonDeck experience on low-powered hardware.</p></article>
-        <article class="hardware-choice recommended"><span>Recommended</span><h3>Raspberry Pi 5 with 2GB+ RAM</h3><p>Official 10-inch Touch Display 2, 16GB+ high-quality microSD card, official Pi 5 power supply and Ethernet. This matches the current ready-to-flash public image.</p></article>
+        <article class="hardware-choice"><span>Minimum</span><h3>Raspberry Pi 3 with 1GB RAM</h3><p>Official 7-inch Raspberry Pi Touch Display V1, 16GB microSD card, correct official power supply and Ethernet or Wi-Fi. Designed for the core RoonDeck experience on low-powered hardware.</p></article>
+        <article class="hardware-choice recommended"><span>Recommended</span><h3>Raspberry Pi 5 with 2GB+ RAM</h3><p>Official 10-inch Touch Display 2, 32GB+ high-quality microSD card, official Pi 5 power supply and Ethernet. This matches the current ready-to-flash public image.</p></article>
       </div>
       <div class="hardware-list">
-        <article><h3>Display</h3><p>Official Raspberry Pi Touch Display 7-inch V1 or V2, or 10-inch Touch Display 2. Both portrait and landscape layouts are supported.</p></article>
-        <article><h3>Storage</h3><p>A reliable microSD card, 8GB minimum. Use 16GB or more if you plan to install optional monitoring software.</p></article>
+        <article><h3>Display</h3><p>Official Raspberry Pi Touch Display V1 is supported; Touch Display 2, 7-inch or larger, is recommended. Both portrait and landscape layouts are supported.</p></article>
+        <article><h3>Storage</h3><p>A reliable 16GB microSD card will work. Use 32GB or larger where available.</p></article>
         <article><h3>Power</h3><p>Use the official power supply for your Pi model. Undersized supplies can cause instability during installation and updates.</p></article>
         <article><h3>Network</h3><p>Ethernet is easiest for first setup. Wi-Fi can also be configured from the touchscreen onboarding flow.</p></article>
         <article><h3>Optional RAAT audio</h3><p>Install Roon Bridge during onboarding to turn the Pi into a RAAT endpoint that appears under Roon Settings → Audio. Add a compatible DAC if you want analogue or digital audio output.</p></article>
