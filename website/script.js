@@ -1,6 +1,17 @@
 const menuButton = document.querySelector('.menu-toggle');
 const siteNav = document.querySelector('.site-nav');
 
+const legacySections = {
+  '#features': '#about',
+  '#home': '#beyond-music',
+  '#hardware': '#what-you-need',
+  '#build': '#get-started',
+};
+
+if (legacySections[location.hash]) {
+  history.replaceState(null, '', legacySections[location.hash]);
+}
+
 menuButton?.addEventListener('click', () => {
   const open = menuButton.getAttribute('aria-expanded') === 'true';
   menuButton.setAttribute('aria-expanded', String(!open));
