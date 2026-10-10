@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#090815"><meta name="description" content="Hardware and installation guide for RoonDeck on Raspberry Pi.">
+  <title>Install RoonDeck</title><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="/styles.css"><script src="/script.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+    <a class="wordmark" href="/" aria-label="RoonDeck home"><span class="roon-mark" aria-hidden="true"></span><span class="deck-mark">Deck</span></a>
+    <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-nav"><span></span><span></span><span></span><span class="sr-only">Open menu</span></button>
+    <nav id="site-nav" class="site-nav guide-nav" aria-label="Primary navigation"><a href="/#music">Music</a><a href="/#home">Beyond Music</a><a href="/#hardware">Hardware</a></nav>
+    <a class="button button-small header-cta" href="#install">Install</a>
+  </header>
+  <main id="main" class="guide-main">
+    <section class="guide-hero section-shell">
+      <p class="eyebrow">Get RoonDeck</p><h1>Build your dedicated<br><span>Roon touchscreen.</span></h1>
+      <p>Choose your screen and Raspberry Pi, write the Alpine image to a microSD card, then finish setup on the display. No desktop environment or browser is required.</p>
+      <div class="guide-notice"><strong>Before you start</strong><span>You need a working Roon Server and an active Roon subscription. Flashing erases the target microSD card.</span></div>
+    </section>
+
+    <section class="guide-section section-shell" id="hardware">
+      <div class="section-heading"><p class="eyebrow">Required hardware</p><h2>Choose the setup that suits you.</h2></div>
+      <div class="hardware-options">
+        <article class="hardware-choice"><span>Minimum</span><h3>Raspberry Pi 3 with 1GB RAM</h3><p>Official 7-inch Raspberry Pi touch display, 8GB microSD card, correct official power supply and Ethernet or Wi-Fi. Designed for the core RoonDeck experience on low-powered hardware.</p></article>
+        <article class="hardware-choice recommended"><span>Recommended</span><h3>Raspberry Pi 5 with 2GB+ RAM</h3><p>Official 10-inch Touch Display 2, 16GB+ high-quality microSD card, official Pi 5 power supply and Ethernet. This matches the current ready-to-flash public image.</p></article>
+      </div>
+      <div class="hardware-list">
+        <article><h3>Display</h3><p>Official Raspberry Pi Touch Display 7-inch V1 or V2, or 10-inch Touch Display 2. Both portrait and landscape layouts are supported.</p></article>
+        <article><h3>Storage</h3><p>A reliable microSD card, 8GB minimum. Use 16GB or more if you plan to install optional monitoring software.</p></article>
+        <article><h3>Power</h3><p>Use the official power supply for your Pi model. Undersized supplies can cause instability during installation and updates.</p></article>
+        <article><h3>Network</h3><p>Ethernet is easiest for first setup. Wi-Fi can also be configured from the touchscreen onboarding flow.</p></article>
+        <article><h3>Optional audio</h3><p>Install Roon Bridge during onboarding if the Pi should also appear as a Roon audio endpoint. A compatible DAC is optional.</p></article>
+        <article><h3>Useful extras</h3><p>A case or display stand, a spare computer for writing the card, and temporary Ethernet access make setup easier.</p></article>
+      </div>
+    </section>
+
+    <section class="guide-section section-shell" id="install">
+      <div class="section-heading"><p class="eyebrow">Installation</p><h2>From download to music.</h2></div>
+      <ol class="install-steps">
+        <li><div><span>01</span><h3>Download the Alpine image</h3></div><p>The current ready-to-flash image is for Raspberry Pi 5. Download the compressed image and its checksum from the stable release.</p><a class="button" href="https://github.com/impala84/pi-home/releases/tag/v1.1.1-alpine">Download the Pi 5 image</a></li>
+        <li><div><span>02</span><h3>Write the image to microSD</h3></div><p>Open Raspberry Pi Imager, choose <strong>Use custom</strong>, select the downloaded <code>.img.gz</code> file, choose the correct card and write it. Raspberry Pi Imager can decompress it directly.</p></li>
+        <li><div><span>03</span><h3>Connect and start</h3></div><p>Fit the microSD card, connect the official touchscreen and network, then apply power. Leave the first boot running while RoonDeck expands storage and starts the setup assistant.</p></li>
+        <li><div><span>04</span><h3>Complete touchscreen setup</h3></div><p>Choose the display profile and orientation, connect Wi-Fi if needed, set the timezone, create the device account and decide whether to install Roon Bridge or Netdata.</p></li>
+        <li><div><span>05</span><h3>Authorise RoonDeck</h3></div><p>In Roon, open <strong>Settings → Extensions</strong> and enable the RoonDeck controller. Return to the touchscreen and select the Roon zone you want to control.</p></li>
+        <li><div><span>06</span><h3>Update to the latest Stable release</h3></div><p>Open RoonDeck Settings, choose <strong>System → Software</strong>, keep the Stable channel selected and install the available update. Reboot when the screen asks you to apply a display or touch correction.</p></li>
+      </ol>
+    </section>
+
+    <section class="guide-section section-shell">
+      <div class="section-heading"><p class="eyebrow">After installation</p><h2>Useful first checks.</h2></div>
+      <div class="after-grid"><article><h3>No controller in Roon?</h3><p>Confirm the Pi and Roon Server are on the same local network, then check Roon Settings → Extensions again.</p></article><article><h3>Display or touch rotated?</h3><p>Select the exact display model and orientation in RoonDeck Settings, apply the display change and reboot.</p></article><article><h3>Want the Pi as an endpoint?</h3><p>Enable Roon Bridge in RoonDeck Settings, then enable its output separately in Roon Settings → Audio.</p></article><article><h3>Need help?</h3><p>Capture the display from web Settings and include it when opening a GitHub issue.</p><a href="https://github.com/impala84/pi-home/issues">Open an issue →</a></article></div>
+    </section>
+  </main>
+  <footer class="site-footer section-shell"><div><a class="wordmark" href="/" aria-label="RoonDeck home"><span class="roon-mark" aria-hidden="true"></span><span class="deck-mark">Deck</span></a><p>An independent, open-source touchscreen for Roon.</p></div><nav aria-label="Footer navigation"><a href="/">Home</a><a href="https://github.com/impala84/pi-home/releases">Releases</a><a href="https://github.com/impala84/pi-home/issues">Support</a></nav><small>Unofficial community project. Not affiliated with Roon Labs or Raspberry Pi. Product names are trademarks of their respective owners.</small></footer>
+</body>
+</html>
