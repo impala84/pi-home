@@ -73,26 +73,39 @@ h1, h2, h3, p { margin-top: 0; }
 .button-small { min-height: 46px; padding-inline: 22px; }
 .button-secondary { background: transparent; color: var(--text); border-color: #4d495b; }
 
-.hero { padding-top: clamp(100px, 9vw, 160px); }
-.hero-copy { max-width: 980px; margin: 0 auto; text-align: center; }
+.hero {
+  min-height: calc(100svh - 96px);
+  padding-top: clamp(70px, 6vw, 105px);
+  padding-bottom: clamp(70px, 6vw, 105px);
+  display: grid;
+  grid-template-columns: minmax(390px, .78fr) minmax(620px, 1.22fr);
+  grid-template-areas: "copy visual" "controls visual";
+  grid-template-rows: auto 1fr;
+  gap: clamp(54px, 6vw, 110px);
+  row-gap: 0;
+  align-items: center;
+}
+.hero-copy { grid-area: copy; max-width: 720px; align-self: end; text-align: left; }
+.hero-controls { grid-area: controls; align-self: start; }
 .eyebrow { margin: 0 0 22px; color: var(--purple-bright); font-size: .78rem; font-weight: 760; letter-spacing: .18em; text-transform: uppercase; }
-h1 { margin-bottom: 30px; font-size: clamp(3.6rem, 6.2vw, 6.7rem); line-height: 1.01; letter-spacing: -.038em; }
+h1 { margin-bottom: 30px; font-size: clamp(3.6rem, 5.5vw, 6rem); line-height: 1.01; letter-spacing: -.038em; }
 h1 span { color: var(--purple); }
-.hero-lede { max-width: 820px; margin: 0 auto 38px; color: #c4c1c9; font-size: clamp(1.08rem, 1.6vw, 1.32rem); }
-.hero-actions { display: flex; align-items: center; justify-content: center; gap: 16px; }
-.proof-strip { margin: 36px auto 0; padding: 0; display: flex; justify-content: center; gap: 36px; list-style: none; color: #b9b6c0; font-size: .88rem; }
+.hero-lede { max-width: 680px; margin: 0 0 38px; color: #c4c1c9; font-size: clamp(1.08rem, 1.6vw, 1.32rem); }
+.hero-actions { display: flex; align-items: center; justify-content: flex-start; gap: 16px; }
+.proof-strip { margin: 36px 0 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 14px 28px; list-style: none; color: #b9b6c0; font-size: .88rem; }
 .proof-strip li { position: relative; padding-left: 18px; }
 .proof-strip li::before { content: ""; position: absolute; top: .72em; left: 0; width: 5px; height: 5px; border-radius: 50%; background: var(--purple); }
 
 .listening-room {
+  grid-area: visual;
   position: relative;
-  height: clamp(500px, 45vw, 710px);
-  margin-top: clamp(80px, 8vw, 130px);
+  height: clamp(500px, 48vw, 690px);
+  margin-top: 0;
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  gap: clamp(18px, 2.5vw, 48px);
-  padding: 0 clamp(22px, 4vw, 70px) 82px;
+  gap: clamp(10px, 1.4vw, 24px);
+  padding: 0 clamp(16px, 2.2vw, 34px) 82px;
   overflow: hidden;
   border: 1px solid #24252a;
   border-radius: 30px;
@@ -103,7 +116,7 @@ h1 span { color: var(--purple); }
 .speaker {
   position: relative;
   z-index: 2;
-  width: clamp(92px, 11vw, 160px);
+  width: 10%;
   aspect-ratio: .57;
   flex: 0 0 auto;
   border: 1px solid #4b4a50;
@@ -120,9 +133,9 @@ h1 span { color: var(--purple); }
 .device-camera { position: absolute; z-index: 2; top: 5px; left: 50%; width: 6px; height: 6px; transform: translateX(-50%); border-radius: 50%; background: #050505; }
 .product-screen { overflow: hidden; border-radius: 11px; background: #000; }
 .product-screen img { width: 100%; height: 100%; object-fit: cover; object-position: top center; }
-.product-landscape { width: min(44vw, 610px); margin-bottom: 12px; }
+.product-landscape { width: 48%; margin-bottom: 12px; }
 .product-screen-landscape { aspect-ratio: 16 / 9; }
-.product-portrait { width: min(20vw, 280px); }
+.product-portrait { width: 23%; }
 .product-screen-portrait { aspect-ratio: 5 / 8; }
 
 .experience, .beyond, .hardware, .acknowledgements { padding: clamp(130px, 12vw, 210px) 0; border-top: 1px solid var(--line); }
@@ -185,6 +198,14 @@ h1 span { color: var(--purple); }
   .site-nav.open { display: flex; }
   .site-nav a { padding: 15px 0; border-bottom: 1px solid var(--line); }
   .header-cta { display: none; }
+  .hero { min-height: auto; grid-template-columns: 1fr; grid-template-areas: "copy" "visual" "controls"; grid-template-rows: auto; gap: 36px; padding-top: 88px; }
+  .hero-copy { max-width: 900px; margin-inline: auto; text-align: center; }
+  .hero-lede { max-width: 780px; margin-inline: auto; }
+  .hero-actions, .proof-strip { justify-content: center; }
+  .listening-room { width: min(100%, 900px); margin: 0 auto; }
+  .speaker { width: 11%; }
+  .product-landscape { width: 48%; }
+  .product-portrait { width: 23%; }
   .experience { grid-template-columns: 1fr; }
   .experience-visual { min-height: 520px; }
   .beyond-layout { grid-template-columns: 1fr; }
