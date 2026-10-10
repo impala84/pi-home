@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 250" role="img" aria-labelledby="title desc">
+  <title id="title">Raspberry Pi circuit board</title>
+  <desc id="desc">An isometric line illustration of a Raspberry Pi with GPIO pins, ports and the Raspberry Pi symbol.</desc>
+  <g fill="none" stroke="#f7f5ff" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
+    <path d="M58 100 270 58l91 62-214 69z"/>
+    <path d="m147 189-7 18 21 13 207-70-7-30"/>
+    <path d="m61 100-7 18 86 89"/>
+    <path d="m268 62 18-29 61-8 19 29-18 27"/>
+    <path d="m286 33 21 25 59-4M307 58l-10 29 49-6 20-27"/>
+    <path d="m318 88 17-28 61 16 16 35-20 30"/>
+    <path d="m335 60 23 32 54 19M358 92l-11 31 45 18 20-30"/>
+    <path d="m350 125 17-28 51 26 1 37-26 23"/>
+    <path d="m367 97 26 34 26 29M393 131l-9 32 9 20"/>
+    <path d="m85 105 185-37" stroke="#8f7cf6"/>
+    <path d="M85 99v23m8-25v23m8-25v23m8-25v23m8-25v23m8-25v23m8-25v23m8-25v23m8-25v23m8-25v23m8-25v23m8-25v23m8-25v23m8-25v23m8-25v23m8-25v23m8-25v23m8-25v23m8-25v23m8-25v23m8-25v23m8-25v23m8-25v23m8-25v23m8-25v23"/>
+    <path d="m68 130 31-7 25 18-7 23-33 6-24-17zM75 133l24 17m25-9-25 9-15 20"/>
+    <path d="m148 169 42-13 24 16-5 22-43 13-24-16zM149 169l17 16 43-13"/>
+    <path d="m240 153 31-10 18 12-4 17-31 10-18-12z"/>
+    <path d="m299 143 22-7 16 11-4 16-22 7-15-10z"/>
+    <path d="m205 105 31-9 18 12-4 17-31 9-18-12zM111 174l9 7m-31-2 9 7m126-38 9 6"/>
+    <circle cx="76" cy="116" r="5"/><circle cx="340" cy="137" r="5"/><circle cx="158" cy="194" r="5"/>
+  </g>
+  <g fill="none" stroke="#8f7cf6" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.6">
+    <path d="M180 119c-9-7-8-17 1-20 1-8 10-12 17-7 6-7 17-4 18 5 9 2 12 12 5 19 8 6 5 17-4 20-2 9-13 11-19 4-7 7-18 3-19-6-9-3-10-12-4-18z"/>
+    <path d="M187 105c4 3 7 7 9 12m15-14c-4 4-7 8-9 14m-17 6c7-4 14-4 22 0m-19 7c6-3 12-3 17 0"/>
+    <path d="M192 91c-3-8 5-13 12-7 7-7 15-2 11 6"/>
+  </g>
+</svg>

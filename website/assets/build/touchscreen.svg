@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 250" role="img" aria-labelledby="title desc">
+  <title id="title">Raspberry Pi touchscreen with kickstand</title>
+  <desc id="desc">A landscape touchscreen in perspective with a folding kickstand visible behind its left side.</desc>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <g stroke="#f7f5ff" stroke-width="2.4">
+      <path d="m101 65 245-38 32 21 25 147-258 42-27-23-26-132z"/>
+      <path d="m101 65 23 20 254-37M124 85l24 139 255-42"/>
+      <path d="m113 97-19 10-53 111 18 4 67-27"/>
+      <path d="m94 107 18 9m-53 106 50-113"/>
+      <path d="m79 185-18 31"/>
+    </g>
+    <path d="m137 91 226-35 20 116-226 37z" stroke="#8f7cf6" stroke-width="2.2"/>
+    <g stroke="#b9b4c8" stroke-width="1.4" opacity=".78">
+      <path d="m167 106 25 27m-10-30-37 59m62-65-34 55"/>
+      <path d="m127 74 248-38"/>
+    </g>
+    <circle cx="136" cy="220" r="3" fill="#8f7cf6"/>
+  </g>
+</svg>
