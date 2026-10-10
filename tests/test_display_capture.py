@@ -20,6 +20,8 @@ class DisplayCaptureTests(unittest.TestCase):
         self.assertIn('for strategy in ("parent", "paintable")', capture)
         self.assertIn('Gtk.WidgetPaintable.new(target).snapshot', capture)
         self.assertIn('Gsk.CairoRenderer.new()', capture)
+        self.assertIn('cairo.ImageSurface(cairo.FORMAT_ARGB32, width, height)', capture)
+        self.assertIn('node.draw(context)', capture)
 
     def test_preview_status_requires_authentication(self):
         with tempfile.TemporaryDirectory() as directory:

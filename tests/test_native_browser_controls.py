@@ -4,6 +4,7 @@ from pathlib import Path
 from types import SimpleNamespace
 import unittest
 import base64
+import io
 import subprocess
 import uuid
 from unittest.mock import Mock
@@ -729,13 +730,15 @@ class NativeBrowserControlsTests(unittest.TestCase):
         paintable = SimpleNamespace(snapshot=Mock())
         gtk = SimpleNamespace(WidgetPaintable=SimpleNamespace(new=Mock(return_value=paintable)),Snapshot=Mock(return_value=snapshot))
         page = object()
-        renderer = SimpleNamespace(unrealize=Mock(),render_texture=Mock(return_value=texture))
+        renderer = SimpleNamespace(unrealize=Mock(),is_realized=lambda:False,realize_for_display=lambda _:True,render_texture=Mock(return_value=texture))
         gsk = SimpleNamespace(CairoRenderer=SimpleNamespace(new=lambda:renderer))
-        window = SimpleNamespace(get_child=lambda:page,get_width=lambda:800,get_height=lambda:480,get_renderer=lambda:renderer,snapshot_child=Mock())
+        window = SimpleNamespace(get_child=lambda:page,get_width=lambda:800,get_height=lambda:480,get_display=lambda:object(),get_renderer=lambda:renderer,snapshot_child=Mock())
         pixels = SimpleNamespace(get_pixels=lambda:bytes([255,255,255,255]),get_n_channels=lambda:4,get_rowstride=lambda:4,get_width=lambda:1,get_height=lambda:1)
         gdk = SimpleNamespace(pixbuf_get_from_texture=lambda _:pixels)
+        glib = SimpleNamespace(Error=RuntimeError)
         posted = Mock()
-        method = native_method('capture_display', {'Gtk':gtk,'Gsk':gsk,'Gdk':gdk,'base64':base64,'BUS':'http://127.0.0.1:8765','post_json':posted})
+        cairo = SimpleNamespace(Error=RuntimeError, FORMAT_ARGB32=0, ImageSurface=Mock(side_effect=RuntimeError('unavailable')))
+        method = native_method('capture_display', {'Gtk':gtk,'Gsk':gsk,'Gdk':gdk,'GLib':glib,'cairo':cairo,'io':io,'base64':base64,'BUS':'http://127.0.0.1:8765','post_json':posted})
         result = method(SimpleNamespace(window=window), 'ticket')
         window.snapshot_child.assert_called_once_with(page, snapshot)
         gtk.WidgetPaintable.new.assert_not_called()
@@ -746,7 +749,7 @@ class NativeBrowserControlsTests(unittest.TestCase):
         pixels.get_pixels = lambda:bytes([0,0,0,255])
         method(SimpleNamespace(window=window), 'black-ticket')
         self.assertNotIn('image', posted.call_args.args[1])
-        self.assertIn('empty', posted.call_args.args[1]['error'])
+        self.assertIn('Display capture failed:', posted.call_args.args[1]['error'])
         pixels.get_pixels = lambda:bytes([255,255,255,0])
         method(SimpleNamespace(window=window), 'transparent-ticket')
         self.assertNotIn('image', posted.call_args.args[1])
@@ -754,9 +757,11 @@ class NativeBrowserControlsTests(unittest.TestCase):
     def test_failed_widget_capture_returns_friendly_error(self):
         gtk = SimpleNamespace(WidgetPaintable=SimpleNamespace(new=Mock(side_effect=RuntimeError())))
         posted = Mock()
-        method = native_method('capture_display', {'Gtk':gtk,'base64':base64,'BUS':'http://127.0.0.1:8765','post_json':posted})
+        glib = SimpleNamespace(Error=RuntimeError)
+        cairo = SimpleNamespace(Error=RuntimeError)
+        method = native_method('capture_display', {'Gtk':gtk,'GLib':glib,'cairo':cairo,'base64':base64,'BUS':'http://127.0.0.1:8765','post_json':posted})
         method(SimpleNamespace(window=SimpleNamespace(get_child=lambda:object(),get_width=lambda:800,get_height=lambda:480)), 'ticket')
-        self.assertIn('could not be rendered', posted.call_args.args[1]['error'])
+        self.assertIn('Display capture failed:', posted.call_args.args[1]['error'])
         self.assertNotIn('image', posted.call_args.args[1])
 
     def test_capture_request_is_scheduled_on_the_gtk_main_loop(self):

@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import math
 import base64
+import io
 import subprocess
 import os
 import re
@@ -29,6 +30,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Graphene", "1.0")
 gi.require_version("Gsk", "4.0")
 gi.require_foreign("cairo")
+import cairo
 from gi.repository import Gdk, GdkPixbuf, Gio, GLib, Graphene, Gsk, Gtk, Pango
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from icon_family import FamilyIcon
@@ -1425,6 +1427,28 @@ class Display(Gtk.Application):
                 if node is None:
                     raise ValueError("Display produced no render node")
                 errors = []
+                # Render into independent memory first. Asking the active
+                # fullscreen KMS/Wayland renderer to read its own scan-out
+                # buffer can stall or return no pixels on Raspberry Pi.
+                try:
+                    bounds = node.get_bounds()
+                    surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, width, height)
+                    context = cairo.Context(surface)
+                    context.translate(-bounds.get_x(), -bounds.get_y())
+                    node.draw(context)
+                    surface.flush()
+                    raw = surface.get_data()
+                    if not any(raw[index] > 8 or raw[index + 1] > 8 or raw[index + 2] > 8
+                               for index in range(0, len(raw) - 3, 128)):
+                        raise ValueError("software render contains no visible content")
+                    output = io.BytesIO()
+                    surface.write_to_png(output)
+                    image = output.getvalue()
+                    if image.startswith(b"\x89PNG\r\n\x1a\n"):
+                        return image
+                    raise ValueError("software renderer returned an invalid image")
+                except (cairo.Error, AttributeError, RuntimeError, TypeError, ValueError) as error:
+                    errors.append(f"software renderer: {error}")
                 live = self.window.get_renderer()
                 if live is not None:
                     try:
@@ -1434,15 +1458,15 @@ class Display(Gtk.Application):
                 # Some KMS/Wayland drivers display the live node correctly but
                 # cannot read it back through the active renderer.  The Cairo
                 # renderer is slower, but it is a reliable capture-only path.
-                cairo = Gsk.CairoRenderer.new()
+                cairo_renderer = Gsk.CairoRenderer.new()
                 try:
-                    if not cairo.realize_for_display(self.window.get_display()):
+                    if not cairo_renderer.realize_for_display(self.window.get_display()):
                         raise RuntimeError("Cairo renderer could not be initialized")
-                    return visible_png(cairo.render_texture(node, None))
+                    return visible_png(cairo_renderer.render_texture(node, None))
                 except (GLib.Error, RuntimeError, TypeError, ValueError) as error:
                     errors.append(f"Cairo renderer: {error}")
                 finally:
-                    if cairo.is_realized(): cairo.unrealize()
+                    if cairo_renderer.is_realized(): cairo_renderer.unrealize()
                 raise ValueError("; ".join(errors))
 
             def add_popovers(snapshot):
@@ -1480,7 +1504,8 @@ class Display(Gtk.Application):
             data["image"] = base64.b64encode(image).decode("ascii")
         except Exception as error:
             print(f"Pi Home display capture failed: {error}", flush=True)
-            data["error"] = "The display capture was empty or could not be rendered. The previous preview is unchanged. Check that the Pi display is awake and try again."
+            detail = str(error).strip()[:240]
+            data["error"] = f"Display capture failed: {detail}. The previous preview is unchanged."
         if post_json(BUS + "/api/device/display-capture", data, timeout=15) is None:
             print("Pi Home display capture delivery failed", flush=True)
         return False
