@@ -42,6 +42,11 @@ for width, height in (tuple(map(int,os.environ["PI_HOME_SETTINGS_VIEWPORT"].spli
     display.touch_diagnostics.set_text("Memory 5.4%  ·  Load 1.53  ·  63.3°C  ·  Controller ready  ·  Bridge offline")
     display.render_touch_controls({"services":[{"name":name,"enabled":True} for name in ("40","42","401")]}, {"roon_bridge":"stopped"})
     window.present(); settle(); display.adapt_display(); settle()
+    title_baseline = display.settings_title_label.get_allocation().y + display.settings_title_label.get_baseline()
+    version_baseline = display.device_status.get_allocation().y + display.device_status.get_baseline()
+    assert title_baseline == version_baseline, (width,height,title_baseline,version_baseline)
+    wordmark_baseline = display.settings_wordmark_frame.get_allocation().y + display.settings_wordmark_frame.get_height() - display.settings_wordmark_frame.get_margin_bottom()
+    assert abs(wordmark_baseline-title_baseline) <= 1, (width,height,wordmark_baseline,title_baseline)
     rows = [display.touch_profile, display.touch_orientation, display.touch_mounting]
     heights = [row.get_height() for row in rows]
     assert min(heights) > 0 and max(heights)-min(heights) <= 1, (width,height,heights)

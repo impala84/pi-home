@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.3-beta.27 Alpine — 11 October 2026
+
+- Place the RoonDeck wordmark, Settings title and version on one explicit shared text baseline across portrait and landscape layouts.
+- Add a compact vertical gap between the identity row and diagnostics on 7-inch layouts, with slightly more room on larger displays.
+- Add native visual assertions for exact title/version baseline equality and wordmark baseline alignment at every tested settings viewport.
+
 ## 1.1.3-beta.26 Alpine — 11 October 2026
 
 - Retries interrupted verified-source downloads and reports the actual network or archive failure instead of a generic preparation message.

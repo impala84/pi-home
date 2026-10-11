@@ -1206,17 +1206,25 @@ class Display(Gtk.Application):
         self.settings_wordmark.set_paintable(paintable)
         self.settings_wordmark.set_size_request(target_width, target_height)
         self.settings_wordmark_frame.set_size_request(target_width, target_height)
+        # The supplied wordmark is drawn to its baseline at the bottom of the
+        # SVG. Lift that edge by the adjacent title font's descent so its
+        # visible baseline matches GTK labels rather than their bounding box.
+        baseline_lift = 10 if max(width, height) >= 1600 or (width >= 1200 and width > height) else 7 if height > width else 8
+        self.settings_wordmark_frame.set_margin_bottom(baseline_lift)
+        if hasattr(self, "touch_diagnostics"):
+            diagnostics_gap = 10 if max(width, height) >= 1600 else 4
+            self.touch_diagnostics.set_margin_top(diagnostics_gap)
 
     def build_settings(self):
         page = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8); page.add_css_class("page"); page.add_css_class("settings-page")
         top = Gtk.Box(spacing=20); top.add_css_class("settings-header"); self.settings_header = top
         heading = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8); heading.set_hexpand(True)
-        title_row = Gtk.Box(spacing=7); title_row.set_valign(Gtk.Align.CENTER)
+        title_row = Gtk.Box(spacing=10); title_row.set_valign(Gtk.Align.START); title_row.set_baseline_position(Gtk.BaselinePosition.CENTER); self.settings_title_row = title_row
         wordmark = Gtk.Picture(); wordmark.add_css_class("settings-wordmark"); wordmark.set_can_shrink(True); wordmark.set_content_fit(Gtk.ContentFit.CONTAIN); wordmark.set_hexpand(False); wordmark.set_halign(Gtk.Align.START); wordmark.set_valign(Gtk.Align.END); self.settings_wordmark = wordmark
         wordmark_frame = Gtk.Box(); wordmark_frame.set_hexpand(False); wordmark_frame.set_halign(Gtk.Align.START); wordmark_frame.set_valign(Gtk.Align.END); wordmark_frame.append(wordmark); self.settings_wordmark_frame = wordmark_frame; title_row.append(wordmark_frame); self.resize_settings_wordmark(800, 480)
-        settings_title = self.label("Settings", "settings-title"); settings_title.set_valign(Gtk.Align.CENTER); settings_title.set_margin_top(5); title_row.append(settings_title)
-        self.device_status = self.label("", "settings-version"); self.device_status.set_valign(Gtk.Align.CENTER); self.device_status.set_margin_top(5); self.device_status.set_max_width_chars(32); self.device_status.set_ellipsize(Pango.EllipsizeMode.END); title_row.append(self.device_status); heading.append(title_row)
-        self.touch_diagnostics = self.label("Loading diagnostics…", "settings-diagnostic"); self.touch_diagnostics.set_wrap(True); heading.append(self.touch_diagnostics); top.append(heading)
+        settings_title = self.label("Settings", "settings-title"); settings_title.set_valign(Gtk.Align.BASELINE); self.settings_title_label = settings_title; title_row.append(settings_title)
+        self.device_status = self.label("", "settings-version"); self.device_status.set_valign(Gtk.Align.BASELINE); self.device_status.set_max_width_chars(32); self.device_status.set_ellipsize(Pango.EllipsizeMode.END); title_row.append(self.device_status); heading.append(title_row)
+        self.touch_diagnostics = self.label("Loading diagnostics…", "settings-diagnostic"); self.touch_diagnostics.set_wrap(True); self.touch_diagnostics.set_margin_top(4); heading.append(self.touch_diagnostics); top.append(heading)
         utilities = Gtk.Box(spacing=22); utilities.add_css_class("settings-utilities"); utilities.set_valign(Gtk.Align.START); utilities.append(self.button("BACK", self.close_settings)); utilities.append(self.button("SLEEP", self.sleep)); top.append(utilities); page.append(top)
         separator = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL); separator.add_css_class("settings-divider"); page.append(separator)
         card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14); card.add_css_class("settings-card"); card.set_vexpand(True)
