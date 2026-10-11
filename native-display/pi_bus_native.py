@@ -215,7 +215,7 @@ button { border: 0; box-shadow: none; background-image: none; outline: none; }
 .arrival-sub { color: #7f8b87; font-size: 10px; font-weight: 650; }.muted { color: #78837f; font-size: 11px; font-weight: 400; }
 .nav { padding-top: 3px; }.nav button { min-height: 40px; border: 0; border-bottom: 5px solid transparent; border-radius: 0; background: transparent; color: #7f8b87; font-size: 14px; font-weight: 700; }
 .nav button.active { border-bottom-color: #6ed9ae; background: transparent; color: #dfe4e1; }.artwork { border-radius: 12px; }.roon-title { font-size: 35px; font-weight: 620; }.roon-artist { color: #b6c0bc; font-size: 18px; }
-.artwork-button { padding: 0; border-radius: 12px; background: transparent; }.detail-takeover { padding: 0; background: #000; }.detail-header { min-height: 84px; padding: 12px 28px; border-bottom: 1px solid #292929; background: #000; }.detail-header-title { color: #f4f0e6; font-size: 25px; font-weight: 700; }.detail-close { min-width: 56px; min-height: 56px; border: 1px solid #4a4a4a; border-radius: 50%; padding: 0; background: #171717; color: #f5f5f5; }.detail-sheet-scroll { background: #000; }.detail-panel { padding: 30px 34px 54px; }.detail-entity { padding: 0 12px; background: transparent; }.detail-section-label { margin-top: 10px; color: #817aeb; font-size: 15px; font-weight: 800; letter-spacing: 2px; }.detail-artwork { border-radius: 12px; background: #242424; }.detail-title { font-size: 35px; font-weight: 680; }.detail-artist { color: #b6c0bc; font-size: 22px; }.detail-subtitle { color: #84908c; font-size: 16px; }.detail-writeup { color: #d3d9d6; font-size: 18px; line-height: 1.5; }.detail-source { color: #78837f; font-size: 13px; font-weight: 650; }.detail-facts { padding: 10px 0 14px; }.detail-fact { color: #a8b3af; font-size: 16px; font-weight: 600; }.detail-rule { margin: 12px 0; background: #403b67; }.detail-action { min-height: 58px; margin-top: 10px; border-radius: 10px; background: #2d2943; color: #a59eff; font-size: 17px; font-weight: 750; }.detail-tracks { padding-top: 5px; }.detail-track { min-height: 38px; padding: 5px 6px; border-top: 1px solid #2f2b4b; }.detail-track-no { color: #817aeb; font-size: 13px; }.detail-track-title { color: #f4f0e6; font-size: 16px; }
+.artwork-button { padding: 0; border-radius: 12px; background: transparent; }.detail-takeover { padding: 0; background: #000; }.detail-header { min-height: 84px; padding: 12px 28px; border-bottom: 1px solid #292929; background: #000; }.detail-header-title { color: #f4f0e6; font-size: 25px; font-weight: 700; }.detail-close { min-width: 56px; min-height: 56px; border: 1px solid #4a4a4a; border-radius: 50%; padding: 0; background: #171717; color: #f5f5f5; }.detail-sheet-scroll { background: #000; }.detail-panel { padding: 30px 34px 54px; }.detail-entity { padding: 0 12px; background: transparent; }.detail-section-label { margin-top: 10px; color: #9868F9; font-size: 15px; font-weight: 800; letter-spacing: 2px; }.detail-artwork { border-radius: 12px; background: #242424; }.detail-title { font-size: 35px; font-weight: 680; }.detail-artist { color: #b6c0bc; font-size: 22px; }.detail-subtitle { color: #84908c; font-size: 16px; }.detail-writeup { color: #d3d9d6; font-size: 18px; line-height: 1.5; }.detail-source { color: #78837f; font-size: 13px; font-weight: 650; }.detail-facts { padding: 10px 0 14px; }.detail-fact { color: #a8b3af; font-size: 16px; font-weight: 600; }.detail-rule { margin: 12px 0; background: #403b67; }.detail-action { min-height: 58px; margin-top: 10px; border-radius: 10px; background: #2d2943; color: #9868F9; font-size: 17px; font-weight: 750; }.detail-tracks { padding-top: 5px; }.detail-track { min-height: 38px; padding: 5px 6px; border-top: 1px solid #2f2b4b; }.detail-track-no { color: #9868F9; font-size: 13px; }.detail-track-title { color: #f4f0e6; font-size: 16px; }
 .roon-subnav { margin-top: 0; }.roon-subnav button { min-height: 29px; padding: 4px 13px 2px; border-radius: 0; border-top: 3px solid transparent; background: transparent; color: #68736f; font-size: 10px; font-weight: 750; letter-spacing: 1px; }.roon-subnav button.active { border-top-color: #5bcbd6; color: #f4f0e6; }
 .source-view { padding: 8px; }.source-title { font-size: 25px; font-weight: 700; }.source-volume { font-size: 104px; font-weight: 620; font-variant-numeric: tabular-nums; }.source-step { min-width: 92px; min-height: 92px; border-radius: 46px; background: #18211f; color: #f4f0e6; font-size: 45px; }.source-mute { min-width: 92px; min-height: 38px; border-radius: 8px; background: #18211f; color: #dfe4e1; font-size: 11px; font-weight: 750; }
 .queue-scroll { background: transparent; }.queue-scroll scrollbar { opacity: 0; min-width: 0; min-height: 0; }.queue-list { padding: 5px 8px 8px; }.queue-row { min-height: 78px; padding: 7px 11px; border-radius: 8px; background: transparent; color: #f4f0e6; }.queue-row:hover, .queue-row:active, .queue-row.current { background: #121e1c; }.queue-row.previous { opacity: .5; }.queue-art { min-width: 66px; min-height: 66px; border-radius: 6px; background: #18211f; }.queue-art-stack { min-width: 66px; min-height: 66px; }.queue-play-badge { min-width: 34px; min-height: 34px; border-radius: 17px; background: rgba(8,13,12,.82); color: #6ed9ae; }.queue-title { color: #f4f0e6; font-size: 20px; font-weight: 650; }.queue-meta { color: #84908c; font-size: 15px; }.queue-duration { color: #aab4b0; font-size: 18px; font-variant-numeric: tabular-nums; }.queue-empty { color: #78837f; font-size: 15px; padding: 60px 0; }
@@ -264,12 +264,12 @@ CSS += b"""
 .browser-back, .touch-landscape .browser-back { min-width: 90px; min-height: 42px; margin: 12px 0 0; padding: 5px 12px; background: #242b28; border: 1px solid #4a514e; border-radius: 10px; color: #d5dcd8; }
 .theme-roon, .theme-roon .page { background: #151515; color: #f5f5f5; }
 .theme-roon .roon-page { background: linear-gradient(120deg, #242338, #181818 60%, #251c22); }
-.theme-roon .browser-filter.active, .theme-roon .touch-landscape .browser-filter.active { color: #817aeb; }
+.theme-roon .browser-filter.active, .theme-roon .touch-landscape .browser-filter.active { color: #9868F9; }
 .theme-roon .browser-filter, .theme-roon .browser-filter.active { background: transparent; border: 0; }
-.theme-roon .browser-cover-art, .theme-roon .browser-action-icon, .theme-roon .surprise-action { background: #282828; color: #817aeb; }
-.theme-roon .nav button.active, .theme-roon .roon-subnav button.active { border-color: #817aeb; }
-.theme-roon .transport .play, .theme-roon scale highlight { background: #7069df; color: #fff; }
-.theme-roon .eyebrow, .theme-roon .details-tag { color: #817aeb; }
+.theme-roon .browser-cover-art, .theme-roon .browser-action-icon, .theme-roon .surprise-action { background: #282828; color: #9868F9; }
+.theme-roon .nav button.active, .theme-roon .roon-subnav button.active { border-color: #9868F9; }
+.theme-roon .transport .play, .theme-roon scale highlight { background: #9868F9; color: #fff; }
+.theme-roon .eyebrow, .theme-roon .details-tag { color: #9868F9; }
 .theme-roon .browser-back { background: #292929; border-color: #555; color: #ddd; }
 .queue-scroll overshoot.left, .queue-scroll overshoot.right { background: transparent; box-shadow: none; }
 .bus-page, .touch-landscape .bus-page { padding-top: 8px; padding-left: 20px; padding-right: 20px; }
@@ -290,7 +290,7 @@ CSS += b"""
 .browser-cover-card:hover, .browser-cover-card:active, .browser-home-card:hover, .browser-row:hover, .browser-row:active { background: transparent; box-shadow: none; outline: none; transform: none; transition: none; }
 .browser-search-entry, .browser-search-entry:focus, .browser-search-entry:focus-within, .browser-search-entry text:focus { outline: none; box-shadow: none; border: 0; }
 .browser-key.browser-search-submit { background: #6ed9ae; color: #111; font-weight: 750; }
-.theme-roon .browser-key.browser-search-submit { background: #817aeb; color: #111; }
+.theme-roon .browser-key.browser-search-submit { background: #9868F9; color: #111; }
 .browser-section { font-size: 17px; padding-bottom: 12px; }
 .search-column { padding: 0 10px; }
 .theme-roon .browser-row:active, .theme-roon .browser-row:hover { background: transparent; }
@@ -310,7 +310,7 @@ CSS += b"""
 .theme-roon .browser-back { background: #303030; border: 0; color: #fff; }
 .theme-choice { min-height: 36px; padding: 4px 12px; background: #303030; color: #fff; border-radius: 6px; }
 .theme-choice.active { background: #6ed9ae; color: #101714; }
-.theme-roon .theme-choice.active { background: #817aeb; color: #fff; }
+.theme-roon .theme-choice.active { background: #9868F9; color: #fff; }
 .settings-select label { color: #fff; }
 .settings-select popover contents { background: #29292d; color: #f2f0f4; border: 1px solid #55525d; border-radius: 8px; }
 .settings-select popover listview { background: transparent; color: #f2f0f4; }
@@ -319,26 +319,26 @@ CSS += b"""
 .settings-select popover listview row:selected { background: #403c55; color: #f2f0f4; }
 .settings-select popover listview row:selected label { color: #f2f0f4; }
 .artist-play { padding: 12px 18px; border: 0; border-radius: 7px; background: #303030; color: #6ed9ae; font-size: 18px; font-weight: 650; }
-.theme-roon .artist-play { background: #292929; color: #817aeb; }
+.theme-roon .artist-play { background: #292929; color: #9868F9; }
 .artist-albums-heading { font-size: 16px; font-weight: 750; }
-.theme-roon .queue-play-badge { background: transparent; color: #817aeb; }
+.theme-roon .queue-play-badge { background: transparent; color: #9868F9; }
 .theme-roon .queue-row.current, .theme-roon .queue-row:hover, .theme-roon .queue-row:active { background: #292733; }
 .theme-roon .utility, .theme-roon .source-step, .theme-roon .source-mute, .theme-roon .transport button, .theme-roon .browser-key, .theme-roon .browser-search-entry { background: #292929; color: #ddd; }
-.theme-roon .transport .play, .theme-roon .settings-action { background: #7069df; color: #fff; }
+.theme-roon .transport .play, .theme-roon .settings-action { background: #9868F9; color: #fff; }
 .theme-roon .settings-card, .theme-roon .home-tile { background: #232228; border-color: #44414c; }
 .theme-roon .setting-line, .theme-roon .settings-select { background: #202025; color: #eee; }
 .theme-roon check { background: #242329; border-color: #77727e; }
-.theme-roon check:checked { background: #817aeb; color: #151515; border-color: #817aeb; }
+.theme-roon check:checked { background: #9868F9; color: #151515; border-color: #9868F9; }
 .theme-roon .progress trough, .theme-roon .volume trough, .theme-roon .home-level trough { background: #45424b; }
-.theme-roon .progress highlight, .theme-roon .volume highlight, .theme-roon .home-level highlight { background: #817aeb; }
-.theme-roon .home-tile.on { background: #302b44; border-color: #817aeb; }
-.theme-roon .home-tile.on button, .theme-roon .boot-logo, .theme-roon .surprise-action { color: #817aeb; }
+.theme-roon .progress highlight, .theme-roon .volume highlight, .theme-roon .home-level highlight { background: #9868F9; }
+.theme-roon .home-tile.on { background: #302b44; border-color: #9868F9; }
+.theme-roon .home-tile.on button, .theme-roon .boot-logo, .theme-roon .surprise-action { color: #9868F9; }
 .theme-roon .surprise-action, .theme-roon .queue-art { background: #292929; }
 .theme-roon .clock { color: #bbb; }
-.theme-roon .browser-tile-icon, .theme-roon .browser-home-icon, .theme-roon .browser-section { color: #817aeb; }
+.theme-roon .browser-tile-icon, .theme-roon .browser-home-icon, .theme-roon .browser-section { color: #9868F9; }
 .theme-roon .browser-home-card { background: #232228; }
 .theme-roon .roon-artist, .theme-roon .detail-artist, .theme-roon .surprise-artist, .theme-roon .surprise-caption, .theme-roon .queue-meta, .theme-roon .queue-duration, .theme-roon .muted, .theme-roon .home-state, .theme-roon .settings-diagnostic, .theme-roon .time, .theme-roon .browser-filter { color: #aaa; }
-.theme-roon .browser-filter.active { color: #817aeb; }
+.theme-roon .browser-filter.active { color: #9868F9; }
 .theme-roon .detail-takeover { background: rgba(21,21,21,.96); }
 .discovery-card, .discovery-card:hover, .discovery-card:active { padding: 4px; background: transparent; background-image: none; box-shadow: none; }
 .discovery-card .queue-title { font-size: 18px; }.discovery-card .queue-subtitle { font-size: 14px; color: #aaa; }
@@ -348,13 +348,13 @@ CSS += b"""
 .daily-track { padding: 0 0 4px 10px; }
 .daily-track .queue-title { margin-top: 5px; }
 .daily-heading { margin: 2px 7px 0 7px; }
-.recommendation-heading { margin: 12px 7px -8px 17px; color: #817aeb; font-size: 14px; font-weight: 780; letter-spacing: 1px; }
+.recommendation-heading { margin: 12px 7px -8px 17px; color: #9868F9; font-size: 14px; font-weight: 780; letter-spacing: 1px; }
 .confirm-shade { background: rgba(5,5,7,.82); }
 .confirm-card { min-width: 390px; padding: 28px; border-radius: 14px; background: #242329; border: 1px solid #4a4752; }
 .confirm-title { font-size: 28px; font-weight: 760; color: #fff; }
 .confirm-copy { font-size: 17px; color: #bbb; }
 .confirm-cancel, .confirm-reboot { min-height: 54px; padding: 8px 22px; border-radius: 8px; font-size: 17px; font-weight: 700; }
-.confirm-cancel { background: #343338; color: #fff; }.confirm-reboot { background: #817aeb; color: #fff; }
+.confirm-cancel { background: #343338; color: #fff; }.confirm-reboot { background: #9868F9; color: #fff; }
 .loading-notice { font-size: 14px; font-weight: normal; color: #aaa; background: transparent; padding: 4px 0; }
 .touch-landscape .roon-page { padding-right: 0; }
 .touch-landscape .roon-header, .touch-landscape .roon-page .nav, .touch-landscape .now-playing-content, .touch-landscape .queue-scroll, .touch-landscape .source-view { margin-right: 28px; }
@@ -431,7 +431,7 @@ CSS += b"""
 .portrait .bus-following-unit { color: #66716e; font-weight: 500; }
 .portrait .service.compact, .portrait .service.dense { padding: 12px; }
 .portrait .roon-subnav button.active { border-bottom-color: #5bcbd6; }
-.portrait.theme-roon .roon-subnav button.active { border-bottom-color: #817aeb; }
+.portrait.theme-roon .roon-subnav button.active { border-bottom-color: #9868F9; }
 .portrait .browser-sidebar { min-width: 0; }
 .portrait .service-no { min-width: 0; font-size: 108px; }
 .portrait .arrival { font-size: 96px; }
@@ -444,12 +444,12 @@ CSS += b"""
 .portrait.compact-portrait .roon-subnav button { font-size: 12px; min-height: 32px; letter-spacing: .4px; }
 .portrait.compact-portrait .browser-filter { font-size: 12px; min-height: 40px; padding: 4px 6px; }
 .portrait .discover-toolbar { padding: 4px 0 0; }
-.discover-utility { background: transparent; border: 0; padding: 0; min-width: 36px; min-height: 42px; color: #817aeb; }
+.discover-utility { background: transparent; border: 0; padding: 0; min-width: 36px; min-height: 42px; color: #9868F9; }
 .discover-sleep { color: #888; }
 .display-landscape .discover-toolbar { padding-top: 4px; }
 .display-landscape .discover-toolbar .roon-subnav button { border-top: 0; border-bottom: 3px solid transparent; }
 .display-landscape .discover-toolbar .roon-subnav button.active { border-bottom-color: #5bcbd6; }
-.display-landscape.theme-roon .discover-toolbar .roon-subnav button.active { border-bottom-color: #817aeb; }
+.display-landscape.theme-roon .discover-toolbar .roon-subnav button.active { border-bottom-color: #9868F9; }
 .display-landscape .bus-page, .display-landscape .home-page { padding-top: 8px; padding-left: 28px; padding-right: 28px; }
 .recommendation-album { color: #fff; font-size: 18px; }
 .display-landscape .recommendation-heading, .display-landscape .recommendation-album { margin-left: 10px; margin-right: 0; }
@@ -467,7 +467,7 @@ CSS += b"""
 .portrait.compact-portrait .browser-filter { font-size: 12px; }
 .loading-notice { font-size: 19px; color: #aaa; }
 .loading-dots { color: #6ed9ae; font-size: 34px; }
-.theme-roon .loading-dots { color: #817aeb; }
+.theme-roon .loading-dots { color: #9868F9; }
 .portrait.large-portrait .roon-page { padding-left: 38px; padding-right: 38px; padding-top: 24px; }
 .portrait.large-portrait .discover-toolbar .roon-subnav button { font-size: 24px; min-height: 52px; }
 .portrait .discover-toolbar .roon-subnav button { min-height: 30px; padding-bottom: 1px; }
@@ -507,7 +507,7 @@ CSS += b"""
 
 CSS += ("""
 .settings-icon { color: #6ed9ae; }
-.theme-roon .settings-icon { color: #817aeb; }
+.theme-roon .settings-icon { color: #9868F9; }
 .bus-page, .home-page { padding-top: %dpx; }
 .display-landscape .bus-page, .display-landscape .home-page { padding-left: %dpx; padding-right: %dpx; }
 .portrait .bus-page, .portrait .home-page { padding-left: %dpx; padding-right: %dpx; }
@@ -520,11 +520,11 @@ scrolledwindow overshoot, scrolledwindow undershoot { background: transparent; b
   to { box-shadow: 0 0 0 3px alpha(#6ed9ae, .8), 0 0 10px alpha(#6ed9ae, .35); }
 }
 @keyframes library-pulse-roon {
-  from { box-shadow: 0 0 0 1px alpha(#817aeb, .25), 0 0 3px alpha(#817aeb, .10); }
-  to { box-shadow: 0 0 0 3px alpha(#817aeb, .8), 0 0 10px alpha(#817aeb, .35); }
+  from { box-shadow: 0 0 0 1px alpha(#9868F9, .25), 0 0 3px alpha(#9868F9, .10); }
+  to { box-shadow: 0 0 0 3px alpha(#9868F9, .8), 0 0 10px alpha(#9868F9, .35); }
 }
 .transport button.library-action.library-busy:disabled { opacity: 1; color: #6ed9ae; animation: library-pulse 900ms ease-in-out infinite alternate; }
-.theme-roon .transport button.library-action.library-busy:disabled { color: #817aeb; animation-name: library-pulse-roon; }
+.theme-roon .transport button.library-action.library-busy:disabled { color: #9868F9; animation-name: library-pulse-roon; }
 .large-display .transport button { min-width: 120px; min-height: 120px; border-radius: 60px; }
 .large-display .transport .play { min-width: 150px; min-height: 150px; border-radius: 75px; }
 .large-display .utility, .large-display .browser-back { min-width: 150px; min-height: 72px; font-size: 21px; padding: 12px 24px; }
@@ -542,7 +542,7 @@ scrolledwindow overshoot, scrolledwindow undershoot { background: transparent; b
 .large-display .browser-back { min-width: 132px; min-height: 64px; padding: 10px 20px; }
 .portrait .browser-back { min-height: 38px; padding: 4px 16px; }
 .portrait.large-portrait .browser-back { min-height: 52px; }
-.browser-sort { min-height: 48px; padding: 8px 12px; border-radius: 8px; background: #282828; color: #817aeb; }
+.browser-sort { min-height: 48px; padding: 8px 12px; border-radius: 8px; background: #282828; color: #9868F9; }
 .browser-sort:hover { background: #303033; }
 .large-display .home-name { font-size: 34px; }
 .large-display .home-state { font-size: 24px; }
@@ -592,7 +592,7 @@ scrolledwindow overshoot, scrolledwindow undershoot { background: transparent; b
 CSS += b"""
 popover.track-menu > contents { background: #171717; color: #eceaef; border: 1px solid #45434e; border-radius: 12px; padding: 12px; box-shadow: 0 12px 48px rgba(0,0,0,.55); }
 popover.sort-menu > contents { margin-top: 8px; background: #000; border: 1px solid #45434e; padding: 8px; }
-.track-menu-action { min-height: 52px; padding: 10px 16px; border-radius: 8px; background: #292929; color: #817aeb; font-size: 18px; }
+.track-menu-action { min-height: 52px; padding: 10px 16px; border-radius: 8px; background: #292929; color: #9868F9; font-size: 18px; }
 .track-menu-action:hover { background: #34323a; }
 .track-menu-action:active, .track-menu-action:focus { background: #292929; box-shadow: none; }
 .large-display .track-menu-action { min-height: 64px; font-size: 24px; }
@@ -1205,15 +1205,17 @@ class Display(Gtk.Application):
         paintable, target_width = wordmark_paintable(target_height)
         self.settings_wordmark.set_paintable(paintable)
         self.settings_wordmark.set_size_request(target_width, target_height)
+        self.settings_wordmark_frame.set_size_request(target_width, target_height)
 
     def build_settings(self):
         page = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8); page.add_css_class("page"); page.add_css_class("settings-page")
         top = Gtk.Box(spacing=20); top.add_css_class("settings-header"); self.settings_header = top
         heading = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8); heading.set_hexpand(True)
-        title_row = Gtk.Box(spacing=10); title_row.set_valign(Gtk.Align.CENTER)
-        wordmark = Gtk.Picture(); wordmark.add_css_class("settings-wordmark"); wordmark.set_can_shrink(True); wordmark.set_content_fit(Gtk.ContentFit.CONTAIN); wordmark.set_halign(Gtk.Align.START); wordmark.set_valign(Gtk.Align.CENTER); self.settings_wordmark = wordmark; self.resize_settings_wordmark(800, 480); title_row.append(wordmark)
-        title_row.append(self.label("Settings", "settings-title")); title_row.get_last_child().set_valign(Gtk.Align.CENTER)
-        self.device_status = self.label("", "settings-version"); self.device_status.set_valign(Gtk.Align.BASELINE); self.device_status.set_max_width_chars(32); self.device_status.set_ellipsize(Pango.EllipsizeMode.END); title_row.append(self.device_status); heading.append(title_row)
+        title_row = Gtk.Box(spacing=7); title_row.set_valign(Gtk.Align.CENTER)
+        wordmark = Gtk.Picture(); wordmark.add_css_class("settings-wordmark"); wordmark.set_can_shrink(True); wordmark.set_content_fit(Gtk.ContentFit.CONTAIN); wordmark.set_hexpand(False); wordmark.set_halign(Gtk.Align.START); wordmark.set_valign(Gtk.Align.END); self.settings_wordmark = wordmark
+        wordmark_frame = Gtk.Box(); wordmark_frame.set_hexpand(False); wordmark_frame.set_halign(Gtk.Align.START); wordmark_frame.set_valign(Gtk.Align.END); wordmark_frame.append(wordmark); self.settings_wordmark_frame = wordmark_frame; title_row.append(wordmark_frame); self.resize_settings_wordmark(800, 480)
+        settings_title = self.label("Settings", "settings-title"); settings_title.set_valign(Gtk.Align.CENTER); settings_title.set_margin_top(5); title_row.append(settings_title)
+        self.device_status = self.label("", "settings-version"); self.device_status.set_valign(Gtk.Align.CENTER); self.device_status.set_margin_top(5); self.device_status.set_max_width_chars(32); self.device_status.set_ellipsize(Pango.EllipsizeMode.END); title_row.append(self.device_status); heading.append(title_row)
         self.touch_diagnostics = self.label("Loading diagnostics…", "settings-diagnostic"); self.touch_diagnostics.set_wrap(True); heading.append(self.touch_diagnostics); top.append(heading)
         utilities = Gtk.Box(spacing=22); utilities.add_css_class("settings-utilities"); utilities.set_valign(Gtk.Align.START); utilities.append(self.button("BACK", self.close_settings)); utilities.append(self.button("SLEEP", self.sleep)); top.append(utilities); page.append(top)
         separator = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL); separator.add_css_class("settings-divider"); page.append(separator)

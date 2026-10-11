@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.3-beta.25 Alpine — 11 October 2026
+
+- Consolidates RoonDeck’s Roon-theme accent colour around the approved brand violet (`#9868F9`) across the native touchscreen, web settings, Screen Preview, sign-in, Home controls, setup wizard, Roon controller and public website.
+- Keeps dark tonal surfaces for depth while removing competing violet accents from links, selected tabs, controls, icons and focus states.
+- Refreshes web asset versions so browsers do not retain the older purple palette.
+- Constrains the Settings wordmark to its true SVG width, tightens its gap to the title, and aligns the wordmark, title and version on one visual baseline.
+
 ## 1.1.3-beta.24 Alpine — 11 October 2026
 
 - Applies the final supplied RoonDeck SVG identity consistently to the appliance, Settings, setup wizard, web GUI, website, favicons and launcher icon.

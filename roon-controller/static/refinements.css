@@ -362,7 +362,7 @@ h1 {
   #now-view { padding-top: 104px; }
   .source-view { top: 118px; }
 }
-body[data-theme="roon"] { --bg: #151515; --panel: #242424; --ink: #f5f5f5; --muted: #aaa; --mint: #817aeb; --line: #444; background: linear-gradient(120deg, #242338, #181818 60%, #251c22); }
+body[data-theme="roon"] { --bg: #151515; --panel: #242424; --ink: #f5f5f5; --muted: #aaa; --mint: #9868F9; --line: #444; background: linear-gradient(120deg, #242338, #181818 60%, #251c22); }
 body[data-theme="roon"] .browser-card-art, body[data-theme="roon"] .browser-action-art { background: #282828; }
 body[data-theme="roon"] .music-subnav button.active { border-color: var(--mint); }
 body[data-theme="roon"] .browser-sidebar button.active { color: var(--mint); background: transparent; border: 0; }

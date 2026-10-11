@@ -28,7 +28,7 @@ class FamilyIcon(Gtk.Image):
         self.stroke_width = stroke_width
         self._colour = None
         self.set_pixel_size(size)
-        self._refresh('#817aeb')
+        self._refresh('#9868F9')
 
     def _refresh(self, colour):
         # Rasterise above the requested optical size, including large 10-inch
