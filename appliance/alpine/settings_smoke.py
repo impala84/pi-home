@@ -1,5 +1,6 @@
 """Real GTK Settings allocation checks and optional deterministic review capture."""
 import importlib.util
+import json
 import os
 import subprocess
 import sys
@@ -13,7 +14,9 @@ spec = importlib.util.spec_from_file_location("native_settings", "/opt/pi-home/n
 native = importlib.util.module_from_spec(spec); spec.loader.exec_module(native)
 Gtk.init()
 if "PI_HOME_SETTINGS_VIEWPORT" not in os.environ:
-    for size in ("1280x720", "800x480", "480x800", "720x1280", "1200x1920"):
+    matrix = json.loads(Path("/opt/pi-home/tools/viewports.json").read_text(encoding="utf-8"))["viewports"]
+    for viewport in matrix:
+        size = f'{viewport["width"]}x{viewport["height"]}'
         subprocess.run(["xvfb-run", "-a", "-s", "-screen 0 " + size + "x24", sys.executable, __file__], env={**os.environ, "PI_HOME_SETTINGS_VIEWPORT":size},check=True)
     raise SystemExit(0)
 def settle():

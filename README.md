@@ -48,6 +48,7 @@ Required system components are installed by `scripts/install-pi.sh`: Python/venv
 | `scripts/` | Installation, tagged-release updates, appliance setup and privileged action broker |
 | `systemd/` | Production service/path definitions |
 | `tests/` | Python regression tests; controller tests live beside the JavaScript modules |
+| `tools/` | Local-first verification, native screen rendering and development tools |
 | `docs/ARCHITECTURE.md` | Runtime boundaries and audit/verification notes |
 
 The Python service listens on port **8765**. The Node controller listens only on **127.0.0.1:8766**; web clients reach it through `/roon/` on the Python service. GTK talks to the local services directly. A path-activated privileged broker permits a fixed set of system actions; neither application has general sudo access.

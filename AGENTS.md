@@ -23,3 +23,15 @@ GitHub-hosted runtime is limited. Do not use repeated pushes or GitHub Actions r
 - Prefer one consolidated required workflow over multiple workflows that repeat setup, builds, or the same test suites.
 - Before pushing, inspect workflow triggers and batch commits so a single release candidate does not cause avoidable runs.
 - If a proposed change would materially increase GitHub Actions minutes, explain why and get the user's approval first.
+
+Use the repository's local entry point instead of reconstructing checks by hand:
+
+- `tools/check fast` for code and controller changes.
+- `tools/check screen <settings|discover|all>` while developing native layouts.
+- `tools/check candidate` before pushing a release candidate.
+- `tools/check image` only for stable, boot/provisioning/package, or explicitly requested image work.
+
+The viewport matrix lives only in `tools/viewports.json`. Do not duplicate it in
+workflow YAML or another test. Inspect the relevant gallery below
+`dist/native-review/` before
+pushing layout work. See `docs/DEVELOPMENT.md` for the complete release sequence.

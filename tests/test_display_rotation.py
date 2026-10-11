@@ -1,3 +1,4 @@
+import json
 import unittest
 from pathlib import Path
 
@@ -159,9 +160,14 @@ class DisplayRotationTests(unittest.TestCase):
 
     def test_visual_review_captures_real_landscape_and_portrait_viewports(self):
         workflow = (ROOT / ".github/workflows/alpine-image.yml").read_text(encoding="utf-8")
+        matrix = json.loads((ROOT / "tools/viewports.json").read_text(encoding="utf-8"))["viewports"]
         visual = (ROOT / "appliance/alpine/discover_visual_review.py").read_text(encoding="utf-8")
-        self.assertIn("PI_HOME_SCREEN_WIDTH=1280 PI_HOME_SCREEN_HEIGHT=720", workflow)
-        self.assertIn("PI_HOME_SCREEN_WIDTH=720 PI_HOME_SCREEN_HEIGHT=1280", workflow)
+        sizes = {(item["width"], item["height"]) for item in matrix}
+        self.assertIn((1280, 720), sizes)
+        self.assertIn((720, 1280), sizes)
+        self.assertIn((1920, 1200), sizes)
+        self.assertIn((1200, 1920), sizes)
+        self.assertIn("tools/check screen all", workflow)
         self.assertIn('display.adapt_display()', visual)
 
     def test_web_and_touchscreen_share_semantic_display_orientation(self):
