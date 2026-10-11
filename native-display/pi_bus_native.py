@@ -1383,13 +1383,6 @@ class Display(Gtk.Application):
         started = time.monotonic()
         target_response = get_json(BUS + "/api/display-target"); status = get_json(BUS + "/api/status"); roon = get_json(ROON + "/api/state"); device = get_json(BUS + "/api/device/controls") or {}
         capture_id = device.get("capture_request")
-        if capture_id and capture_id != getattr(self, "last_capture_id", None):
-            self.last_capture_id = capture_id
-            # GTK widgets may only be snapshotted on the main loop.  Scheduling
-            # the capture here also avoids relying solely on compositor
-            # screencopy, which can return a valid but black frame while Cage
-            # is directly scanning the fullscreen surface out to DRM.
-            GLib.idle_add(self.capture_display, capture_id)
         view_request = device.get("display_view_request") or {}
         view_id = view_request.get("id")
         if view_id and view_id != self.last_display_view_id:
@@ -1416,6 +1409,12 @@ class Display(Gtk.Application):
             self.detail_signature = None
         target = target_response.get("target") if isinstance(target_response, dict) else None
         GLib.idle_add(self.apply, target, status, roon, config, system, device, key, None)
+        if capture_id and capture_id != getattr(self, "last_capture_id", None):
+            self.last_capture_id = capture_id
+            # Apply the latest navigation/state first, then allow GTK and the
+            # panel a frame to settle. Capturing before apply() races wake and
+            # can snapshot the intentionally black sleep surface.
+            GLib.timeout_add(350, self.capture_display, capture_id, 0)
         self.polling = False
         image = get_bytes(f"{ROON}/api/image?key={quote(key, safe='')}") if key and key != self.image_key else None
         if image:
@@ -1428,13 +1427,22 @@ class Display(Gtk.Application):
         if self.refresh_count <= 5 and elapsed > .25:
             print(f"RoonDeck core refresh completed in {elapsed:.3f}s", flush=True)
 
-    def capture_display(self, capture_id):
+    def capture_display(self, capture_id, retry=0):
         data = {"id": capture_id}
         try:
             # Snapshot the actual live GTK tree.  This captures precisely what
             # RoonDeck rendered (including fetched artwork) and remains reliable
             # when Cage/wlroots uses direct scan-out, where grim can otherwise
             # return an all-black but syntactically valid PNG.
+            stack = getattr(self, "stack", None)
+            visible_page = stack.get_visible_child_name() if stack is not None else None
+            if retry == 0 and (getattr(self, "inactivity_sleeping", False) or visible_page == "sleep"):
+                self.wake("screen preview")
+                GLib.timeout_add(700, self.capture_display, capture_id, retry + 1)
+                return False
+            if hasattr(self, "set_screen_power"):
+                self.set_screen_power(True)
+            self.window.queue_draw()
             width, height = self.window.get_width(), self.window.get_height()
             if width <= 0 or height <= 0:
                 raise ValueError("Display has no drawable size")
@@ -1540,6 +1548,14 @@ class Display(Gtk.Application):
                 raise ValueError("Invalid screenshot")
             data["image"] = base64.b64encode(image).decode("ascii")
         except Exception as error:
+            transient = any(text in str(error).lower() for text in (
+                "no visible content", "no drawable size", "no visible page",
+                "no render node", "pixels are unavailable",
+            ))
+            if transient and retry < 4:
+                self.window.queue_draw()
+                GLib.timeout_add(250 * (retry + 1), self.capture_display, capture_id, retry + 1)
+                return False
             print(f"RoonDeck display capture failed: {error}", flush=True)
             detail = str(error).strip()[:240]
             data["error"] = f"Display capture failed: {detail}. The previous preview is unchanged."

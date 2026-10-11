@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.3-beta.28 Alpine — 11 October 2026
+
+- Fix Screen Preview captures racing the display wake-up and page navigation sequence.
+- Wake and redraw the physical display before capture, then retry transient blank frames across later GTK frames.
+- Preserve the previous good preview until a visible replacement has been captured.
+
 ## 1.1.3-beta.27 Alpine — 11 October 2026
 
 - Place the RoonDeck wordmark, Settings title and version on one explicit shared text baseline across portrait and landscape layouts.
