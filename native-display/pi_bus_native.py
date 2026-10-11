@@ -1207,9 +1207,10 @@ class Display(Gtk.Application):
         self.settings_wordmark.set_size_request(target_width, target_height)
         self.settings_wordmark_frame.set_size_request(target_width, target_height)
         # The supplied wordmark is drawn to its baseline at the bottom of the
-        # SVG, so its lower edge shares the label baseline without a separate
-        # vertical margin.
-        self.settings_wordmark_frame.set_margin_bottom(0)
+        # SVG. Lift that edge by the adjacent title font's descent so its
+        # visible baseline matches GTK labels rather than their bounding box.
+        baseline_lift = 10 if max(width, height) >= 1600 or (width >= 1200 and width > height) else 7 if height > width else 8
+        self.settings_wordmark_frame.set_margin_bottom(baseline_lift)
         if hasattr(self, "touch_diagnostics"):
             diagnostics_gap = 10 if max(width, height) >= 1600 else 4
             self.touch_diagnostics.set_margin_top(diagnostics_gap)

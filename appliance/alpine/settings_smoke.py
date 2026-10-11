@@ -45,7 +45,10 @@ for width, height in (tuple(map(int,os.environ["PI_HOME_SETTINGS_VIEWPORT"].spli
     title_baseline = display.settings_title_label.get_allocation().y + display.settings_title_label.get_baseline()
     version_baseline = display.device_status.get_allocation().y + display.device_status.get_baseline()
     assert title_baseline == version_baseline, (width,height,title_baseline,version_baseline)
-    wordmark_baseline = display.settings_wordmark_frame.get_allocation().y + display.settings_wordmark_frame.get_height() - display.settings_wordmark_frame.get_margin_bottom()
+    # GTK's allocated widget height already excludes its margins. The visible
+    # SVG baseline is therefore the allocated lower edge; subtracting the
+    # margin again would measure it twice.
+    wordmark_baseline = display.settings_wordmark_frame.get_allocation().y + display.settings_wordmark_frame.get_height()
     assert abs(wordmark_baseline-title_baseline) <= 1, (width,height,wordmark_baseline,title_baseline)
     rows = [display.touch_profile, display.touch_orientation, display.touch_mounting]
     heights = [row.get_height() for row in rows]
