@@ -250,7 +250,7 @@ const roon = new RoonApi({
   display_version: require('./package.json').version,
   publisher: 'RoonDeck',
   email: 'noreply@example.invalid',
-  website: 'https://github.com/impala84/pi-home',
+  website: 'https://github.com/impala84/roon-deck',
   core_paired: pairedCore => {
     core = pairedCore;
     discoveryTarget();

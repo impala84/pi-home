@@ -114,7 +114,7 @@ the Goodix rule explicitly clears `WL_OUTPUT` to prevent double input rotation.
 Region/theme remain a later step. This replaces the mapping strategy described
 in the historical notes below; physical acceptance is still required.
 
-Revision `2b48d7b`: [image build and native setup checks](https://github.com/impala84/pi-home/actions/runs/37192855390)
+Revision `2b48d7b`: [image build and native setup checks](https://github.com/impala84/roon-deck/actions/runs/37192855390)
 passed, including the real GTK first-page choice/reboot request and resume into
 device naming, API runtime, SSH policy and updater staging/rollback checks.
 Baseline checks passed 156 Python tests and 91 Node tests. For Pi 4B with the
@@ -122,7 +122,7 @@ Baseline checks passed 156 Python tests and 91 Node tests. For Pi 4B with the
 on the first screen, then Apply and restart. This is not physical-touch
 acceptance; nothing was flashed or remotely installed.
 
-Revision `764694f`: [combined ARM64 image and update checks](https://github.com/impala84/pi-home/actions/runs/37191573089)
+Revision `764694f`: [combined ARM64 image and update checks](https://github.com/impala84/roon-deck/actions/runs/37191573089)
 passed, including both API services, real GTK setup/icons, SSH policy, real
 Python/npm staging, atomic rollback after a simulated failed health check,
 and a real HTTP → private Unix socket → root updater privilege-boundary test
@@ -148,7 +148,7 @@ messages. This is a source-backed correction, not physical-touch acceptance.
 An attached USB mouse can complete onboarding and enable SSH on the already
 flashed image, allowing an in-place repair instead of another flash.
 
-Revision `c71d326`: [ARM64 image, GTK pages/icons and SSH policy checks](https://github.com/impala84/pi-home/actions/runs/37189662473)
+Revision `c71d326`: [ARM64 image, GTK pages/icons and SSH policy checks](https://github.com/impala84/roon-deck/actions/runs/37189662473)
 passed. Baseline checks passed 148 Python and 91 Node tests. Setup now starts
 portrait DSI panels in landscape, offers password visibility/confirmation and
 an enabled-by-default SSH option, uses a regional timezone chooser, and shows
@@ -169,7 +169,7 @@ normal cold-plug/device-module path. This is a confirmed image packaging bug
 and a strong explanation for the blank display, not a proven hardware diagnosis.
 The image's ext4 filesystem passed a read-only consistency check.
 
-Corrected revision `497b14e`: [image build and exported-root startup checks](https://github.com/impala84/pi-home/actions/runs/37187467742)
+Corrected revision `497b14e`: [image build and exported-root startup checks](https://github.com/impala84/roon-deck/actions/runs/37187467742)
 passed, alongside the Alpine runtime and native GTK checks. Baseline checks
 passed 144 Python and 91 Node tests. The user subsequently confirmed that
 this image booted on Pi 4B / 7-inch Touch Display 2; touch, onboarding and
@@ -185,7 +185,7 @@ Pi boot validation. Do not keep using the earlier `ce7da54` installer image.
 
 ## Verified factory build — 4 October 2026
 
-Installer revision `ce7da54`; [ARM64 installer image and native GTK checks](https://github.com/impala84/pi-home/actions/runs/37185600684)
+Installer revision `ce7da54`; [ARM64 installer image and native GTK checks](https://github.com/impala84/roon-deck/actions/runs/37185600684)
 passed. All six wizard pages and the touch keyboard were exercised under Xvfb
 at 800×480; both HTTP services passed in Alpine. Local verification passed
 142 Python tests. This supersedes the earlier image for first-boot setup.
@@ -195,7 +195,7 @@ does not move or overwrite an older installation's saved settings or pairing.
 
 Earlier image-factory baseline:
 
-Source revision `888d8cd`; [ARM64 image build and runtime checks](https://github.com/impala84/pi-home/actions/runs/37183838137)
+Source revision `888d8cd`; [ARM64 image build and runtime checks](https://github.com/impala84/roon-deck/actions/runs/37183838137)
 passed. Artifact `pi-home-alpine-prototype` contains the compressed image,
 SHA-256, source revision and resolved package manifest (about 319 MB total).
 The persistent root filesystem passed e2fsck. GTK/Graphene/Cairo imports and

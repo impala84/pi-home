@@ -42,7 +42,7 @@ Required system components are installed by `scripts/install-pi.sh`: Python/venv
 
 | Directory | Responsibility |
 | --- | --- |
-| `src/pi_bus_time_display/` | Python HTTP service: configuration, schedules, optional LTA/Home, admin, release selection and Roon proxy |
+| `src/pi_bus_time_display/` | Python HTTP service package (legacy import name): configuration, schedules, optional LTA/Home, admin, release selection and Roon proxy |
 | `roon-controller/` | Official Roon API integration, subscriptions, browse/search, queue, artwork, metadata and optional BluOS |
 | `native-display/` | GTK4 touchscreen and local SVG assets |
 | `scripts/` | Installation, tagged-release updates, appliance setup and privileged action broker |
@@ -63,8 +63,8 @@ Do not run these production commands on a development Mac.
 2. From that normal user's terminal, clone a published tag. For the current release:
 
    ```sh
-   git clone --branch v1.0.0 https://github.com/impala84/pi-home.git pi-home
-   cd pi-home
+   git clone --branch v1.0.0 https://github.com/impala84/roon-deck.git roon-deck
+   cd roon-deck
    sudo ./scripts/install-pi.sh
    ```
 
@@ -95,7 +95,9 @@ For a frozen v1.0 rebuild, use the `v1.0.0` tag, not an untagged `main` checkout
 
 Use encrypted/off-device backups for `/etc/pi-home/` and `/var/lib/pi-home/`. These contain secrets and personal state. Do not put them in the public repository.
 
-Internal `pi-home` directory and service names remain in place for updater, configuration and Roon-pairing compatibility. They are implementation identifiers, not the product name.
+New repository, package and command names use `roon-deck`. Installed `pi-home`
+paths and service aliases remain temporarily for updater, configuration and
+Roon-pairing compatibility; see [the naming migration policy](docs/NAMING.md).
 
 ## Configuration
 

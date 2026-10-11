@@ -14,7 +14,7 @@ import urllib.request
 from functools import total_ordering
 from pathlib import Path
 
-REPOSITORY = "impala84/pi-home"
+REPOSITORY = "impala84/roon-deck"
 VERSION = re.compile(r"^v?(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?$")
 
 

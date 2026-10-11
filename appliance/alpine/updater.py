@@ -21,7 +21,7 @@ import urllib.request
 
 APP = Path("/opt/pi-home")
 STATE = Path("/var/lib/pi-home")
-REPO = "https://api.github.com/repos/impala84/pi-home"
+REPO = "https://api.github.com/repos/impala84/roon-deck"
 BRANCH = "alpine-beta"
 DISPLAY_REVISION = Path("/run/pi-home/display-source-commit")
 MANAGED_RELEASE = re.compile(r"[0-9a-f]{40}-[0-9]+")
@@ -136,7 +136,7 @@ def verified_revision():
     runs = [build for build in runs if build.get("head_sha") == sha]
     if not runs: raise RuntimeError("No verified Alpine build is available")
     build = runs[0]
-    if build.get("head_branch") != BRANCH or build.get("conclusion") != "success" or build.get("event") not in {"push", "workflow_dispatch"} or build.get("head_repository", {}).get("full_name") != "impala84/pi-home" or not re.fullmatch(r"[0-9a-f]{40}", sha):
+    if build.get("head_branch") != BRANCH or build.get("conclusion") != "success" or build.get("event") not in {"push", "workflow_dispatch"} or build.get("head_repository", {}).get("full_name") != "impala84/roon-deck" or not re.fullmatch(r"[0-9a-f]{40}", sha):
         raise RuntimeError("Invalid verified build response")
     return sha
 
@@ -158,7 +158,7 @@ def extract_source(archive, destination):
 
 
 def download_source(sha, archive, attempts=3):
-    url = "https://codeload.github.com/impala84/pi-home/tar.gz/" + sha
+    url = "https://codeload.github.com/impala84/roon-deck/tar.gz/" + sha
     last_error = None
     for attempt in range(1, attempts + 1):
         try:

@@ -107,7 +107,7 @@ class AlpineUpdaterTests(unittest.TestCase):
 
     def test_only_successful_fixed_branch_builds_are_accepted(self):
         sha = "a" * 40
-        valid = {"workflow_runs": [{"head_sha": sha, "head_branch": updater.BRANCH, "conclusion": "success", "event": "push", "head_repository": {"full_name": "impala84/pi-home"}}]}
+        valid = {"workflow_runs": [{"head_sha": sha, "head_branch": updater.BRANCH, "conclusion": "success", "event": "push", "head_repository": {"full_name": "impala84/roon-deck"}}]}
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             (root / 'config.toml').write_text('release_channel = "stable"')
