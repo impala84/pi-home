@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.3-beta.26 Alpine — 11 October 2026
+
+- Retries interrupted verified-source downloads and reports the actual network or archive failure instead of a generic preparation message.
+- Repairs the native Settings smoke check for GTK's supported size-request API.
+- Runs real application staging and rollback immediately after the appliance runtime check, before slower visual review steps.
+
 ## 1.1.3-beta.25 Alpine — 11 October 2026
 
 - Consolidates RoonDeck’s Roon-theme accent colour around the approved brand violet (`#9868F9`) across the native touchscreen, web settings, Screen Preview, sign-in, Home controls, setup wizard, Roon controller and public website.

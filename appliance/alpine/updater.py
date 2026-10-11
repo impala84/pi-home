@@ -16,6 +16,7 @@ import tempfile
 import time
 import sys
 import tomllib
+import urllib.error
 import urllib.request
 
 APP = Path("/opt/pi-home")
@@ -156,6 +157,29 @@ def extract_source(archive, destination):
     return roots[0]
 
 
+def download_source(sha, archive, attempts=3):
+    url = "https://codeload.github.com/impala84/pi-home/tar.gz/" + sha
+    last_error = None
+    for attempt in range(1, attempts + 1):
+        try:
+            with urllib.request.urlopen(url, timeout=60) as response, archive.open("wb") as file:
+                total = 0
+                while chunk := response.read(65536):
+                    total += len(chunk)
+                    if total > 30_000_000: raise RuntimeError("Source download is too large")
+                    file.write(chunk)
+            return
+        except (urllib.error.URLError, TimeoutError, OSError) as error:
+            last_error = error
+            try: archive.unlink()
+            except FileNotFoundError: pass
+            if attempt < attempts:
+                status(f"Update · Source download interrupted; retrying ({attempt + 1}/{attempts})…")
+                time.sleep(2)
+    detail = getattr(last_error, "reason", last_error)
+    raise RuntimeError(f"Could not download the verified application files after {attempts} attempts: {detail}") from last_error
+
+
 def activate(target):
     temporary = APP.with_name(".pi-home-next")
     if temporary.is_symlink(): temporary.unlink()
@@ -232,14 +256,11 @@ def update():
         with tempfile.TemporaryDirectory(prefix="pi-home-source-") as folder:
             temporary = Path(folder); archive = temporary / "source.tar.gz"
             status("Update · Downloading verified application files…")
-            url = "https://codeload.github.com/impala84/pi-home/tar.gz/" + sha
-            with urllib.request.urlopen(url, timeout=60) as response, archive.open("wb") as file:
-                total = 0
-                while chunk := response.read(65536):
-                    total += len(chunk)
-                    if total > 30_000_000: raise RuntimeError("Source download is too large")
-                    file.write(chunk)
-            source = extract_source(archive, temporary / "unpacked")
+            download_source(sha, archive)
+            try:
+                source = extract_source(archive, temporary / "unpacked")
+            except (tarfile.TarError, OSError) as error:
+                raise RuntimeError(f"Downloaded application package could not be unpacked: {error}") from error
             source.rename(target)
         (target / ".source-commit").write_text(sha + "\n")
         status("Update · Creating Python environment…")

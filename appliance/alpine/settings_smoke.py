@@ -35,8 +35,9 @@ for width, height in (tuple(map(int,os.environ["PI_HOME_SETTINGS_VIEWPORT"].spli
     elif width>=1200: window.add_css_class("touch-landscape")
     display.configure_settings_layout(width,height)
     expected_logo_height = 44 if max(width,height)>=1600 else 43 if width>=1200 and width>height else 24 if height>width and width<600 else 30 if height>width else 32
-    assert display.settings_wordmark.get_height_request() == expected_logo_height, (width,height,display.settings_wordmark.get_height_request())
-    assert display.settings_wordmark.get_width_request() < width * .35, (width,height,display.settings_wordmark.get_width_request())
+    logo_width, logo_height = display.settings_wordmark.get_size_request()
+    assert logo_height == expected_logo_height, (width,height,logo_height)
+    assert logo_width < width * .35, (width,height,logo_width)
     display.device_status.set_text("v1.1.0 Alpine")
     display.touch_diagnostics.set_text("Memory 5.4%  ·  Load 1.53  ·  63.3°C  ·  Controller ready  ·  Bridge offline")
     display.render_touch_controls({"services":[{"name":name,"enabled":True} for name in ("40","42","401")]}, {"roon_bridge":"stopped"})

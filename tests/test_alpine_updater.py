@@ -5,6 +5,7 @@ from pathlib import Path
 import tarfile
 import tempfile
 import unittest
+import urllib.error
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -141,6 +142,14 @@ class AlpineUpdaterTests(unittest.TestCase):
             with patch.object(updater, "APP", app):
                 updater.activate(source); self.assertEqual(app.resolve(), source.resolve())
                 updater.activate(old); self.assertEqual(app.resolve(), old.resolve())
+
+    def test_source_download_retries_transient_network_failures(self):
+        response = type("Response", (), {"__enter__": lambda self: self, "__exit__": lambda *args: None, "read": lambda self, size: b""})()
+        with tempfile.TemporaryDirectory() as folder, patch("urllib.request.urlopen", side_effect=[urllib.error.URLError("temporary"), response]) as urlopen, patch.object(updater.time, "sleep"), patch.object(updater, "status"):
+            archive = Path(folder) / "source.tar.gz"
+            updater.download_source("a" * 40, archive)
+            self.assertTrue(archive.exists())
+            self.assertEqual(urlopen.call_count, 2)
 
     def test_current_revision_does_not_download_or_restart(self):
         with tempfile.TemporaryDirectory() as folder:
